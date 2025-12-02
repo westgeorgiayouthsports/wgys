@@ -1,0 +1,54 @@
+/* Force dark theme for auth page inputs only in dark mode */
+[data-theme="dark"] .ant-input,
+[data-theme="dark"] .ant-input-lg,
+[data-theme="dark"] .ant-input-password,
+[data-theme="dark"] .ant-input-affix-wrapper,
+[data-theme="dark"] .ant-input:focus,
+[data-theme="dark"] .ant-input-focused,
+[data-theme="dark"] .ant-input-affix-wrapper-focused {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border-color: #333333 !important;
+}
+
+[data-theme="dark"] .ant-input-affix-wrapper:hover,
+[data-theme="dark"] .ant-input:hover,
+[data-theme="dark"] .ant-input-affix-wrapper:focus,
+[data-theme="dark"] .ant-input:focus {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border-color: #00d4ff !important;
+}
+
+[data-theme="dark"] .ant-input::placeholder {
+  color: #b0b0b0 !important;
+}
+
+/* Handle input with value in dark mode */
+[data-theme="dark"] .ant-input[value]:not([value=""]),
+[data-theme="dark"] .ant-input-affix-wrapper input,
+[data-theme="dark"] .ant-input-affix-wrapper .ant-input,
+[data-theme="dark"] .ant-input-password input,
+[data-theme="dark"] .ant-input-password .ant-input {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+/* Force all input states in dark mode */
+[data-theme="dark"] input.ant-input,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"] {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border-color: #333333 !important;
+}
+
+/* Override any autofill or browser styling */
+[data-theme="dark"] input:-webkit-autofill,
+[data-theme="dark"] input:-webkit-autofill:hover,
+[data-theme="dark"] input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #1a1a1a inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: #1a1a1a !important;
+}

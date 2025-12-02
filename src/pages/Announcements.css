@@ -1,0 +1,15 @@
+/* Add to existing Announcements.css */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md, 16px);
+}
+
+.form-group label {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--color-text, #ffffff);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

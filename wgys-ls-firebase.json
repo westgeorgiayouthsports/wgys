@@ -1,0 +1,13 @@
+{
+  "apiKey": "AIzaSyDwydE5BFNWY99KAAlltP8ph30UTLT6Fpk",
+  "authDomain": "wgys-ls.firebaseapp.com",
+  "databaseURL": "https://wgys-ls-default-rtdb.firebaseio.com",
+  "projectId": "wgys-ls",
+  "storageBucket": "wgys-ls.firebasestorage.app",
+  "messagingSenderId": "115058670356",
+  "appId": "1:115058670356:web:f4e216241b8b534b74e001",
+  "measurementId": "G-CK303BGJZG",
+  "database": {
+    "rules": "database.rules.json"
+  }
+}
