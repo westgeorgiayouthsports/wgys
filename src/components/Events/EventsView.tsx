@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchTeamEvents } from '../../store/slices/eventsSlice';
-import { eventsService, Event } from '../../services/firebaseEvents';
+import type { Event } from '../../services/firebaseEvents';
+import { eventsService } from '../../services/firebaseEvents';
 import type { RootState } from '../../store/store';
 
 interface EventsViewProps {
@@ -26,7 +27,7 @@ export const EventsView: React.FC<EventsViewProps> = ({ teamId, isAdmin = false 
 
   useEffect(() => {
     if (teamId) {
-      dispatch(fetchTeamEvents(teamId));
+      (dispatch as any)(fetchTeamEvents(teamId));
     }
   }, [teamId, dispatch]);
 
@@ -52,10 +53,7 @@ export const EventsView: React.FC<EventsViewProps> = ({ teamId, isAdmin = false 
           ...formData,
         });
       } else {
-        await eventsService.createEvent({
-          teamId,
-          ...formData,
-        });
+        await eventsService.createEvent(teamId, formData.title, formData.type, formData.date, formData.location, formData.description);
       }
       
       setFormData({
@@ -69,7 +67,7 @@ export const EventsView: React.FC<EventsViewProps> = ({ teamId, isAdmin = false 
       setShowForm(false);
       
       if (teamId) {
-        dispatch(fetchTeamEvents(teamId));
+        (dispatch as any)(fetchTeamEvents(teamId));
       }
     } catch (err) {
       console.error('❌ Error saving event:', err);
@@ -81,7 +79,7 @@ export const EventsView: React.FC<EventsViewProps> = ({ teamId, isAdmin = false 
     setEditingEvent(event);
     setFormData({
       title: event.title,
-      type: event.type,
+      type: event.type as any,
       date: event.date,
       location: event.location,
       description: event.description,
@@ -94,7 +92,7 @@ export const EventsView: React.FC<EventsViewProps> = ({ teamId, isAdmin = false 
       try {
         await eventsService.deleteEvent(eventId);
         if (teamId) {
-          dispatch(fetchTeamEvents(teamId));
+          (dispatch as any)(fetchTeamEvents(teamId));
         }
       } catch (err) {
         console.error('❌ Error deleting event:', err);
@@ -109,14 +107,14 @@ export const EventsView: React.FC<EventsViewProps> = ({ teamId, isAdmin = false 
 
   const getEventTypeColor = (type: string) => {
     switch (type) {
-      case 'practice':
-        return 'bg-blue-500/20 text-blue-300';
-      case 'game':
-        return 'bg-green-500/20 text-green-300';
-      case 'tournament':
-        return 'bg-purple-500/20 text-purple-300';
-      default:
-        return 'bg-gray-500/20 text-gray-300';
+    case 'practice':
+      return 'bg-blue-500/20 text-blue-300';
+    case 'game':
+      return 'bg-green-500/20 text-green-300';
+    case 'tournament':
+      return 'bg-purple-500/20 text-purple-300';
+    default:
+      return 'bg-gray-500/20 text-gray-300';
     }
   };
 
@@ -288,7 +286,7 @@ export const EventsView: React.FC<EventsViewProps> = ({ teamId, isAdmin = false 
                 {isAdmin && (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleEdit(event)}
+                      onClick={() => { handleEdit(event); }}
                       className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition"
                     >
                       Edit

@@ -116,7 +116,7 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
           <Button
             type="primary"
             icon={<EditOutlined />}
-            onClick={() => setIsEditing(true)}
+            onClick={() => { setIsEditing(true); }}
           >
             Edit Profile
           </Button>
@@ -179,7 +179,7 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
               </Text>
               <Input
                 value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                onChange={(e) => { setDisplayName(e.target.value); }}
                 disabled={!isEditing || !canEdit}
                 placeholder="Enter display name"
                 size="large"
@@ -265,15 +265,15 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
       <Modal
         title="Change Profile Image"
         open={photoModalVisible}
-        onCancel={() => setPhotoModalVisible(false)}
-        onOk={() => setPhotoModalVisible(false)}
+        onCancel={() => { setPhotoModalVisible(false); }}
+        onOk={() => { setPhotoModalVisible(false); }}
         okText="Save"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <Text>Enter a valid image URL for your profile picture:</Text>
           <Input
             value={photoURL}
-            onChange={(e) => setPhotoURL(e.target.value)}
+            onChange={(e) => { setPhotoURL(e.target.value); }}
             placeholder="https://example.com/image.jpg"
             size="large"
             type="url"

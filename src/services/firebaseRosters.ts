@@ -21,7 +21,7 @@ export const rostersService = {
 
       const players: Player[] = [];
       snapshot.forEach((child) => {
-        const player = { id: child.key!, ...child.val() } as Player;
+        const player = { id: child.key, ...child.val() } as Player;
         players.push(player);
       });
 
@@ -55,7 +55,7 @@ export const rostersService = {
       await set(newPlayerRef, player);
 
       return {
-        id: newPlayerRef.key!,
+        id: newPlayerRef.key,
         ...player,
       };
     } catch (error) {
@@ -110,7 +110,7 @@ export const rostersService = {
 
       let foundPlayer: Player | null = null;
       snapshot.forEach((child) => {
-        const player = { id: child.key!, ...child.val() } as Player;
+        const player = { id: child.key, ...child.val() } as Player;
         if (player.number === number) {
           foundPlayer = player;
         }
@@ -136,7 +136,7 @@ export const rostersService = {
 
       const players: Player[] = [];
       snapshot.forEach((child) => {
-        const player = { id: child.key!, ...child.val() } as Player;
+        const player = { id: child.key, ...child.val() } as Player;
         if (player.position === position) {
           players.push(player);
         }

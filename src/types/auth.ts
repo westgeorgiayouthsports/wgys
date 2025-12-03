@@ -1,4 +1,4 @@
-import { User as FirebaseUser } from 'firebase/auth';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 export type UserRole = 'user' | 'admin' | 'coach' | 'owner';
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { rostersService, Player } from '../../services/firebaseRosters';
+import type { Player } from '../../services/firebaseRosters';
+import { rostersService } from '../../services/firebaseRosters';
 
 interface RostersViewProps {
   teamId?: string;
@@ -60,11 +61,7 @@ export const RostersView: React.FC<RostersViewProps> = ({ teamId, isAdmin = fals
           position: formData.position,
         });
       } else {
-        await rostersService.addPlayer(teamId, {
-          name: formData.name,
-          number: parseInt(formData.number),
-          position: formData.position,
-        });
+        await rostersService.addPlayer(teamId, formData.name, parseInt(formData.number), formData.position || '');
       }
 
       setFormData({ name: '', number: '', position: '' });
@@ -225,7 +222,7 @@ export const RostersView: React.FC<RostersViewProps> = ({ teamId, isAdmin = fals
               {isAdmin && (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleEdit(player)}
+                    onClick={() => { handleEdit(player); }}
                     className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition"
                   >
                     Edit

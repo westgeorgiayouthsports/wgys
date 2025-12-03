@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Input, Button, Space, Typography, Avatar, Spin, Empty } from 'antd';
 import { SendOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
-import { RootState } from '../../store/store';
+import type { RootState } from '../../store/store';
 import { setMessages, addMessage, deleteMessage as deleteMessageAction } from '../../store/slices/chatSlice';
 import { chatService } from '../../services/firebaseChat';
 
@@ -146,7 +146,7 @@ export default function ChatBox() {
       <Space.Compact style={{ width: '100%' }}>
         <Input
           value={messageText}
-          onChange={e => setMessageText(e.target.value)}
+          onChange={e => { setMessageText(e.target.value); }}
           placeholder="Type a message..."
           onPressEnter={handleSendMessage}
         />

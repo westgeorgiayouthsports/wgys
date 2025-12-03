@@ -22,14 +22,13 @@ import {
   Row, 
   Col, 
   Statistic 
-} from 'antd';
+  , Switch } from 'antd';
 import { 
   EditOutlined, 
   DeleteOutlined, 
   SendOutlined,
   EyeOutlined 
 } from '@ant-design/icons';
-import { Switch } from 'antd';
 
 const { Text } = Typography;
 
@@ -163,10 +162,10 @@ export default function Announcements() {
       const updatedAnnouncements = announcements.map(a =>
         a.id === id
           ? {
-              ...a,
-              status: 'published' as const,
-              publishedAt: new Date().toISOString(),
-            }
+            ...a,
+            status: 'published' as const,
+            publishedAt: new Date().toISOString(),
+          }
           : a
       );
       dispatch(setAnnouncements(updatedAnnouncements));
@@ -329,7 +328,7 @@ export default function Announcements() {
                   key: 'actions',
                   render: (record: any) => (
                     <Space>
-                      <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record.id)} />
+                      <Button size="small" icon={<EditOutlined />} onClick={() => { handleEdit(record.id); }} />
                       {record.status === 'draft' && (
                         <Button size="small" type="primary" icon={<SendOutlined />} onClick={() => handlePublish(record.id)} />
                       )}
@@ -368,7 +367,7 @@ export default function Announcements() {
               )
             )}
           >
-            <Button type="link" onClick={() => setView('list')} style={{ marginBottom: '16px' }}>
+            <Button type="link" onClick={() => { setView('list'); }} style={{ marginBottom: '16px' }}>
               ← Back to List
             </Button>
             <div style={{ marginTop: '16px' }}>

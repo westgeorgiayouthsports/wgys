@@ -13,7 +13,7 @@ export const peopleService = {
       Object.entries(data).filter(([_, value]) => value !== undefined)
     );
     
-    const person: Omit<Person, 'id'> = {
+    const person: any = {
       ...cleanData,
       hasAccount: false,
       relationships: [],
@@ -29,7 +29,7 @@ export const peopleService = {
     };
     
     await update(newPersonRef, person);
-    return newPersonRef.key!;
+    return newPersonRef.key;
   },
 
   async getPeople(): Promise<Person[]> {
@@ -108,7 +108,7 @@ export const peopleService = {
       updatedAt: new Date().toISOString(),
     });
     
-    return newFamilyRef.key!;
+    return newFamilyRef.key;
   },
 
   async getFamilies(): Promise<Family[]> {

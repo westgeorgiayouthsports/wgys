@@ -1,5 +1,5 @@
 import React from 'react';
-import { $getRoot, $getSelection, FORMAT_TEXT_COMMAND, FORMAT_ELEMENT_COMMAND } from 'lexical';
+import { $getRoot, $getSelection, FORMAT_TEXT_COMMAND, FORMAT_ELEMENT_COMMAND , $getSelection as getSelection, $isRangeSelection, $createParagraphNode } from 'lexical';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
@@ -11,8 +11,7 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { HeadingNode, QuoteNode, $createHeadingNode } from '@lexical/rich-text';
 import { ListItemNode, ListNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from '@lexical/list';
 import { LinkNode, AutoLinkNode } from '@lexical/link';
-import { TableNode, TableCellNode, TableRowNode, INSERT_TABLE_COMMAND, TablePlugin } from '@lexical/table';
-import { $getSelection as getSelection, $isRangeSelection, $createParagraphNode } from 'lexical';
+import { TableNode, TableCellNode, TableRowNode } from '@lexical/table';
 import './RichTextEditor.css';
 
 interface Props {
@@ -96,7 +95,7 @@ function ToolbarPlugin() {
         const selection = getSelection();
         if ($isRangeSelection(selection)) {
           const textContent = selection.getTextContent() || url;
-          selection.insertText(``);
+          selection.insertText('');
           const root = $getRoot();
           const linkHTML = `<a href="${url}" target="_blank">${textContent}</a>`;
           const parser = new DOMParser();
@@ -139,7 +138,7 @@ function ToolbarPlugin() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file?.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const src = event.target?.result as string;
@@ -150,44 +149,44 @@ function ToolbarPlugin() {
   };
 
   React.useEffect(() => {
-    const handleClickOutside = () => setShowImageDropdown(false);
+    const handleClickOutside = () => { setShowImageDropdown(false); };
     if (showImageDropdown) {
       document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
+      return () => { document.removeEventListener('click', handleClickOutside); };
     }
   }, [showImageDropdown]);
   
   return (
     <div className="toolbar">
       <div className="toolbar-group">
-        <button onClick={() => formatText('bold')} className="toolbar-btn" title="Bold">
+        <button onClick={() => { formatText('bold'); }} className="toolbar-btn" title="Bold">
           <strong>B</strong>
         </button>
-        <button onClick={() => formatText('italic')} className="toolbar-btn" title="Italic">
+        <button onClick={() => { formatText('italic'); }} className="toolbar-btn" title="Italic">
           <em>I</em>
         </button>
-        <button onClick={() => formatText('underline')} className="toolbar-btn" title="Underline">
+        <button onClick={() => { formatText('underline'); }} className="toolbar-btn" title="Underline">
           <u>U</u>
         </button>
       </div>
       
       <div className="toolbar-group">
-        <button onClick={() => formatHeading('h1')} className="toolbar-btn" title="Heading 1">
+        <button onClick={() => { formatHeading('h1'); }} className="toolbar-btn" title="Heading 1">
           H1
         </button>
-        <button onClick={() => formatHeading('h2')} className="toolbar-btn" title="Heading 2">
+        <button onClick={() => { formatHeading('h2'); }} className="toolbar-btn" title="Heading 2">
           H2
         </button>
-        <button onClick={() => formatHeading('h3')} className="toolbar-btn" title="Heading 3">
+        <button onClick={() => { formatHeading('h3'); }} className="toolbar-btn" title="Heading 3">
           H3
         </button>
       </div>
       
       <div className="toolbar-group">
-        <button onClick={() => insertList('bullet')} className="toolbar-btn" title="Bullet List">
+        <button onClick={() => { insertList('bullet'); }} className="toolbar-btn" title="Bullet List">
           • List
         </button>
-        <button onClick={() => insertList('number')} className="toolbar-btn" title="Numbered List">
+        <button onClick={() => { insertList('number'); }} className="toolbar-btn" title="Numbered List">
           1. List
         </button>
       </div>
@@ -209,7 +208,7 @@ function ToolbarPlugin() {
           </button>
           {showImageDropdown && (
             <div 
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); }}
               style={{
                 position: 'absolute',
                 top: '100%',
@@ -267,7 +266,7 @@ function ToolbarPlugin() {
           editor.update(() => {
             const selection = getSelection();
             if ($isRangeSelection(selection)) {
-              const tableHTML = `<table style="border-collapse: collapse; width: 100%; margin: 16px 0;"><thead><tr><th style="border: 1px solid #d1d5db; padding: 8px; background-color: #f3f4f6;">Header 1</th><th style="border: 1px solid #d1d5db; padding: 8px; background-color: #f3f4f6;">Header 2</th><th style="border: 1px solid #d1d5db; padding: 8px; background-color: #f3f4f6;">Header 3</th></tr></thead><tbody><tr><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 1</td><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 2</td><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 3</td></tr><tr><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 4</td><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 5</td><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 6</td></tr></tbody></table>`;
+              const tableHTML = '<table style="border-collapse: collapse; width: 100%; margin: 16px 0;"><thead><tr><th style="border: 1px solid #d1d5db; padding: 8px; background-color: #f3f4f6;">Header 1</th><th style="border: 1px solid #d1d5db; padding: 8px; background-color: #f3f4f6;">Header 2</th><th style="border: 1px solid #d1d5db; padding: 8px; background-color: #f3f4f6;">Header 3</th></tr></thead><tbody><tr><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 1</td><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 2</td><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 3</td></tr><tr><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 4</td><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 5</td><td style="border: 1px solid #d1d5db; padding: 8px;">Cell 6</td></tr></tbody></table>';
               const parser = new DOMParser();
               const dom = parser.parseFromString(tableHTML, 'text/html');
               const nodes = $generateNodesFromDOM(editor, dom);
@@ -388,6 +387,7 @@ export default function RichTextEditor({ value, onChange, placeholder = 'Start t
                   className="editor-input"
                   dir="ltr"
                   style={{ direction: 'ltr', textAlign: 'left', unicodeBidi: 'embed' }}
+                  aria-placeholder={placeholder}
                   placeholder={<div className="editor-placeholder">{placeholder}</div>}
                 />
               }

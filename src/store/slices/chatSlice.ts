@@ -1,4 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
 export interface Message {
   id: string;
@@ -9,7 +10,7 @@ export interface Message {
   read: boolean;
 }
 
-interface ChatState {
+export interface ChatState {
   messages: Message[];
   loading: boolean;
   error: string | null;

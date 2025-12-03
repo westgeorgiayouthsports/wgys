@@ -24,7 +24,7 @@ import {
   SaveOutlined,
   CloseOutlined,
 } from '@ant-design/icons';
-import { RootState } from '../store/store';
+import type { RootState } from '../store/store';
 import {
   setLoading,
   setTeams,
@@ -80,8 +80,6 @@ export default function Teams() {
     }
   };
 
-
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.uid) return;
@@ -117,6 +115,7 @@ export default function Teams() {
           spent: 0,
           status: formData.status,
           userId: user.uid,
+          createdAt: new Date().toISOString(),
         });
         dispatch(addTeam(newTeam));
       }
@@ -210,7 +209,7 @@ export default function Teams() {
           <Button
             size="small"
             icon={<EditOutlined />}
-            onClick={() => handleEdit(record.id)}
+            onClick={() => { handleEdit(record.id); }}
           />
           <Popconfirm
             title="Delete Team"
@@ -226,145 +225,145 @@ export default function Teams() {
 
   return (
     <div className="page-container">
-        <div style={{ marginBottom: '24px' }}>
-          <Title level={2} style={{ margin: 0 }}>Teams Management</Title>
-          <Text type="secondary">Manage your youth sports teams and budgets</Text>
-        </div>
+      <div style={{ marginBottom: '24px' }}>
+        <Title level={2} style={{ margin: 0 }}>Teams Management</Title>
+        <Text type="secondary">Manage your youth sports teams and budgets</Text>
+      </div>
 
-        {/* Form Section */}
-        <Card 
-          title={editingId ? 'Edit Team' : 'Add New Team'}
-          style={{ marginBottom: '24px' }}
-          extra={
-            editingId ? (
-              <Button icon={<CloseOutlined />} onClick={handleCancel}>
+      {/* Form Section */}
+      <Card 
+        title={editingId ? 'Edit Team' : 'Add New Team'}
+        style={{ marginBottom: '24px' }}
+        extra={
+          editingId ? (
+            <Button icon={<CloseOutlined />} onClick={handleCancel}>
                 Cancel
-              </Button>
-            ) : null
-          }
+            </Button>
+          ) : null
+        }
+      >
+        <Form
+          layout="vertical"
+          onFinish={(values) => {
+            const event = { preventDefault: () => {} } as React.FormEvent;
+            setFormData({
+              name: values.name,
+              budget: values.budget.toString(),
+              status: values.status,
+            });
+            handleSubmit(event);
+          }}
+          initialValues={formData}
         >
-          <Form
-            layout="vertical"
-            onFinish={(values) => {
-              const event = { preventDefault: () => {} } as React.FormEvent;
-              setFormData({
-                name: values.name,
-                budget: values.budget.toString(),
-                status: values.status,
-              });
-              handleSubmit(event);
-            }}
-            initialValues={formData}
-          >
-            <Row gutter={16}>
-              <Col span={8}>
-                <Form.Item
-                  name="name"
-                  label="Team Name"
-                  rules={[{ required: true, message: 'Please enter team name' }]}
-                >
-                  <Input
-                    placeholder="e.g., 12U Softball"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item
-                  name="budget"
-                  label="Budget ($)"
-                  rules={[{ required: true, message: 'Please enter budget' }]}
-                >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    min={0}
-                    step={0.01}
-                    placeholder="0.00"
-                    value={parseFloat(formData.budget) || 0}
-                    onChange={(value) => setFormData(prev => ({ ...prev, budget: (value || 0).toString() }))}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item name="status" label="Status">
-                  <Select
-                    value={formData.status}
-                    onChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-                  >
-                    <Select.Option value="active">Active</Select.Option>
-                    <Select.Option value="inactive">Inactive</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={editingId ? <SaveOutlined /> : <PlusOutlined />}
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                name="name"
+                label="Team Name"
+                rules={[{ required: true, message: 'Please enter team name' }]}
               >
-                {editingId ? 'Update Team' : 'Add Team'}
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-
-        {/* Summary Statistics */}
-        {teams.length > 0 && (
-          <Row gutter={16} style={{ marginBottom: '24px' }}>
-            <Col span={6}>
-              <Card>
-                <Statistic title="Total Teams" value={teams.length} />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="Total Budget"
-                  value={totalBudget}
-                  precision={2}
-                  prefix="$"
+                <Input
+                  placeholder="e.g., 12U Softball"
+                  value={formData.name}
+                  onChange={(e) => { setFormData(prev => ({ ...prev, name: e.target.value })); }}
                 />
-              </Card>
+              </Form.Item>
             </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="Total Spent"
-                  value={totalSpent}
-                  precision={2}
-                  prefix="$"
+            <Col span={8}>
+              <Form.Item
+                name="budget"
+                label="Budget ($)"
+                rules={[{ required: true, message: 'Please enter budget' }]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={0}
+                  step={0.01}
+                  placeholder="0.00"
+                  value={parseFloat(formData.budget) || 0}
+                  onChange={(value) => { setFormData(prev => ({ ...prev, budget: (value || 0).toString() })); }}
                 />
-              </Card>
+              </Form.Item>
             </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="Remaining"
-                  value={totalBudget - totalSpent}
-                  precision={2}
-                  prefix="$"
-                  styles={{ content: { color: totalBudget - totalSpent >= 0 ? '#3f8600' : '#cf1322' } }}
-                />
-              </Card>
+            <Col span={8}>
+              <Form.Item name="status" label="Status">
+                <Select
+                  value={formData.status}
+                  onChange={(value) => { setFormData(prev => ({ ...prev, status: value })); }}
+                >
+                  <Select.Option value="active">Active</Select.Option>
+                  <Select.Option value="inactive">Inactive</Select.Option>
+                </Select>
+              </Form.Item>
             </Col>
           </Row>
-        )}
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={editingId ? <SaveOutlined /> : <PlusOutlined />}
+            >
+              {editingId ? 'Update Team' : 'Add Team'}
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
 
-        {/* Teams Table */}
-        <Card title={`Your Teams (${teams.length})`}>
-          <Table
-            columns={columns}
-            dataSource={teams}
-            rowKey="id"
-            loading={loading}
-            locale={{
-              emptyText: 'No teams yet. Create your first team above!'
-            }}
-            pagination={false}
-          />
-        </Card>
+      {/* Summary Statistics */}
+      {teams.length > 0 && (
+        <Row gutter={16} style={{ marginBottom: '24px' }}>
+          <Col span={6}>
+            <Card>
+              <Statistic title="Total Teams" value={teams.length} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="Total Budget"
+                value={totalBudget}
+                precision={2}
+                prefix="$"
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="Total Spent"
+                value={totalSpent}
+                precision={2}
+                prefix="$"
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="Remaining"
+                value={totalBudget - totalSpent}
+                precision={2}
+                prefix="$"
+                styles={{ content: { color: totalBudget - totalSpent >= 0 ? '#3f8600' : '#cf1322' } }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* Teams Table */}
+      <Card title={`Your Teams (${teams.length})`}>
+        <Table
+          columns={columns}
+          dataSource={teams}
+          rowKey="id"
+          loading={loading}
+          locale={{
+            emptyText: 'No teams yet. Create your first team above!'
+          }}
+          pagination={false}
+        />
+      </Card>
     </div>
   );
 }

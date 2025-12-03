@@ -1,4 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
 export interface Team {
   id: string;
@@ -10,7 +11,7 @@ export interface Team {
   createdAt: string;
 }
 
-interface TeamsState {
+export interface TeamsState {
   teams: Team[];
   loading: boolean;
   error: string | null;

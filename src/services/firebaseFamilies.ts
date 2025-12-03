@@ -39,7 +39,7 @@ export const familiesService = {
 
       if (family) {
         const [id, data] = family;
-        return { id, ...data } as Family;
+        return { id, ...(data as any) } as Family;
       }
 
       return null;

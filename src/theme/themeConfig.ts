@@ -1,4 +1,5 @@
-import { ThemeConfig, theme } from 'antd';
+import type { ThemeConfig } from 'antd';
+import { theme } from 'antd';
 
 const { darkAlgorithm, defaultAlgorithm } = theme;
 
@@ -34,7 +35,6 @@ const baseTheme: ThemeConfig = {
     // Layout
     Layout: {
       headerHeight: 64,
-      siderWidth: 260,
     },
     
     // Menu

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { adminPagesService, AdminPage } from '../../services/firebaseAdminPages';
+import type { AdminPage } from '../../services/firebaseAdminPages';
+import { adminPagesService } from '../../services/firebaseAdminPages';
 import type { RootState } from '../../store/store';
 
 type PageType = 'policies' | 'about' | 'rules';
@@ -41,7 +42,7 @@ export const AdminPagesView: React.FC<AdminPagesViewProps> = ({ isAdmin = false 
     try {
       await adminPagesService.updatePage(currentPage, editedContent, user.uid);
       setMessage('✅ Page saved successfully!');
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => { setMessage(''); }, 3000);
       await loadPage();
     } catch (err) {
       console.error('❌ Error saving page:', err);
@@ -74,7 +75,7 @@ export const AdminPagesView: React.FC<AdminPagesViewProps> = ({ isAdmin = false 
         {(Object.keys(pageLabels) as PageType[]).map(page => (
           <button
             key={page}
-            onClick={() => setCurrentPage(page)}
+            onClick={() => { setCurrentPage(page); }}
             className={`px-4 py-2 rounded-lg transition ${
               currentPage === page
                 ? 'bg-blue-600 text-white'
@@ -105,37 +106,37 @@ export const AdminPagesView: React.FC<AdminPagesViewProps> = ({ isAdmin = false 
             <h3 className="font-medium text-gray-300">Quick Templates</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <button
-                onClick={() => insertTemplate('<h1>Heading</h1>')}
+                onClick={() => { insertTemplate('<h1>Heading</h1>'); }}
                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded transition"
               >
                 <code>H1</code>
               </button>
               <button
-                onClick={() => insertTemplate('<h2>Subheading</h2>')}
+                onClick={() => { insertTemplate('<h2>Subheading</h2>'); }}
                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded transition"
               >
                 <code>H2</code>
               </button>
               <button
-                onClick={() => insertTemplate('<p>Paragraph</p>')}
+                onClick={() => { insertTemplate('<p>Paragraph</p>'); }}
                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded transition"
               >
                 <code>P</code>
               </button>
               <button
-                onClick={() => insertTemplate('<ul><li>Item</li></ul>')}
+                onClick={() => { insertTemplate('<ul><li>Item</li></ul>'); }}
                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded transition"
               >
                 <code>List</code>
               </button>
               <button
-                onClick={() => insertTemplate('<strong>Bold</strong>')}
+                onClick={() => { insertTemplate('<strong>Bold</strong>'); }}
                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded transition"
               >
                 <code>B</code>
               </button>
               <button
-                onClick={() => insertTemplate('<em>Italic</em>')}
+                onClick={() => { insertTemplate('<em>Italic</em>'); }}
                 className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded transition"
               >
                 <code>I</code>
@@ -150,7 +151,7 @@ export const AdminPagesView: React.FC<AdminPagesViewProps> = ({ isAdmin = false 
             </label>
             <textarea
               value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
+              onChange={(e) => { setEditedContent(e.target.value); }}
               className="w-full h-96 px-4 py-3 bg-slate-800 border border-slate-700 rounded text-white font-mono text-sm focus:border-blue-500 focus:outline-none"
               placeholder="Enter HTML content..."
             />

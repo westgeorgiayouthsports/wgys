@@ -53,7 +53,7 @@ export const teamsService = {
       
       const teamData = {
         ...team,
-        id: newTeamRef.key!,
+        id: newTeamRef.key,
         createdAt: new Date().toISOString(),
       };
 

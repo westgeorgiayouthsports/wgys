@@ -17,7 +17,7 @@ import RegistrationHelp from './pages/RegistrationHelp';
 import Schedules from './pages/Schedules';
 import Settings from './pages/Settings';
 
-import UserManagement from './pages/UserManagement';
+
 import NotFound from './pages/NotFound';
 
 // Layouts
@@ -30,7 +30,6 @@ import EventsView from './components/Events/EventsView';
 import RegistrationsView from './components/Registrations/RegistrationsView';
 import RostersView from './components/Rosters/RostersView';
 import AdminPagesView from './components/AdminPages/AdminPagesView';
-
 
 function Router() {
   const { isAuthenticated, loading, role } = useSelector((state: RootState) => state.auth);
@@ -91,7 +90,6 @@ function Router() {
           <Route path="/my-family" element={isAuthenticated ? <MyFamily /> : <Navigate to="/signin" replace />} />
           <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/signin" replace />} />
 
-
           {/* New Feature Routes - Events */}
           <Route path="/events" element={isAuthenticated ? <EventsView isAdmin={role === 'admin'} /> : <Navigate to="/signin" replace />} />
           <Route path="/events/:teamId" element={isAuthenticated ? <EventsView isAdmin={role === 'admin'} /> : <Navigate to="/signin" replace />} />
@@ -117,7 +115,6 @@ function Router() {
               </ProtectedRoute>
             }
           />
-
 
         </Route>
 

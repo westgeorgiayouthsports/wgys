@@ -93,7 +93,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
         className="sidebar-mobile-toggle"
         type="text"
         icon={<MenuOutlined />}
-        onClick={() => setMobileOpen(true)}
+        onClick={() => { setMobileOpen(true); }}
         style={{
           position: 'fixed',
           top: 16,
@@ -108,7 +108,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
       {mobileOpen && (
         <div 
           className="sidebar-overlay" 
-          onClick={() => setMobileOpen(false)}
+          onClick={() => { setMobileOpen(false); }}
           style={{
             position: 'fixed',
             inset: 0,
@@ -166,7 +166,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
               className="sidebar-mobile-close"
               type="text"
               icon={<CloseOutlined />}
-              onClick={() => setMobileOpen(false)}
+              onClick={() => { setMobileOpen(false); }}
               style={{
                 display: 'none',
               }}
@@ -179,7 +179,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
           mode="inline"
           selectedKeys={[location.pathname]}
           onClick={handleMenuClick}
-          items={menuItems}
+          items={menuItems as any}
           style={{
             border: 'none',
             flex: 1,

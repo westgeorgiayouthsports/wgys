@@ -56,13 +56,13 @@ export default function AnnouncementList({
                     hoverable
                     actions={[
                       ...(userRole === 'admin' || userRole === 'owner' ? [
-                        <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(announcement.id)}>Edit</Button>,
+                        <Button type="text" icon={<EditOutlined />} onClick={() => { onEdit(announcement.id); }}>Edit</Button>,
                         announcement.status === 'draft' ? (
-                          <Button type="text" icon={<SendOutlined />} onClick={() => onPublish(announcement.id)}>Publish</Button>
+                          <Button type="text" icon={<SendOutlined />} onClick={() => { onPublish(announcement.id); }}>Publish</Button>
                         ) : (
                           <Button type="text" icon={<EyeOutlined />}>{announcement.views || 0}</Button>
                         ),
-                        <Button type="text" danger icon={<DeleteOutlined />} onClick={() => onDelete(announcement.id)}>Delete</Button>
+                        <Button type="text" danger icon={<DeleteOutlined />} onClick={() => { onDelete(announcement.id); }}>Delete</Button>
                       ] : [
                         <Button type="text" icon={<EyeOutlined />}>{announcement.views || 0}</Button>
                       ])

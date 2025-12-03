@@ -54,7 +54,7 @@ export const chatService = {
       }
       
       return {
-        id: newMessageRef.key!,
+        id: newMessageRef.key,
         userId,
         userEmail,
         text,

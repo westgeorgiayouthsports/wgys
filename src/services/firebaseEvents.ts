@@ -24,7 +24,7 @@ export const eventsService = {
 
       const events: Event[] = [];
       snapshot.forEach((child) => {
-        const event = { id: child.key!, ...child.val() } as Event;
+        const event = { id: child.key, ...child.val() } as Event;
         if (event.teamId === teamId) {
           events.push(event);
         }
@@ -49,7 +49,7 @@ export const eventsService = {
 
       const events: Event[] = [];
       snapshot.forEach((child) => {
-        const event = { id: child.key!, ...child.val() } as Event;
+        const event = { id: child.key, ...child.val() } as Event;
         events.push(event);
       });
 
@@ -88,7 +88,7 @@ export const eventsService = {
       await set(newEventRef, event);
 
       return {
-        id: newEventRef.key!,
+        id: newEventRef.key,
         ...event,
       };
     } catch (error) {

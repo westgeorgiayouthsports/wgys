@@ -375,14 +375,14 @@ export default function MyFamily() {
                 size="small"
                 type="primary"
                 icon={<FormOutlined />}
-                onClick={() => handleRegisterAthlete(record)}
+                onClick={() => { handleRegisterAthlete(record); }}
               >
                 Register
               </Button>
               <Button
                 size="small"
                 icon={<QuestionCircleOutlined />}
-                onClick={() => handleRegistrationHelp(record)}
+                onClick={() => { handleRegistrationHelp(record); }}
                 title="Registration Help"
               >
                 Help
@@ -392,7 +392,7 @@ export default function MyFamily() {
           <Button
             size="small"
             icon={<EditOutlined />}
-            onClick={() => handleEditPerson(record)}
+            onClick={() => { handleEditPerson(record); }}
           >
             Edit
           </Button>

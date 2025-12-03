@@ -16,7 +16,7 @@ export const commentsService = {
     
     const commentWithId: Comment = {
       ...comment,
-      id: newCommentRef.key!,
+      id: newCommentRef.key,
     };
     
     await set(newCommentRef, commentWithId);
@@ -32,6 +32,6 @@ export const commentsService = {
     }
     
     const commentsData = snapshot.val();
-    return Object.values(commentsData) as Comment[];
+    return Object.values(commentsData);
   }
 };
