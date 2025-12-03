@@ -48,6 +48,13 @@ jobs:
     - name: Build
       run: npm run build
       
+    - name: List dist contents
+      run: |
+        echo "Contents of dist folder:"
+        ls -la dist/
+        echo "Contents of index.html:"
+        head -20 dist/index.html
+      
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       if: github.ref == 'refs/heads/main'
