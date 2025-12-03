@@ -7,6 +7,7 @@ import { logout } from '../../store/slices/authSlice';
 import { toggleTheme } from '../../store/slices/themeSlice';
 import { signOut } from '../../services/firebaseAuth';
 import './Header.css';
+import wgysLogo from '../../assets/wgys.webp';
 
 export default function Header() {
   const dispatch = useDispatch();
@@ -53,7 +54,7 @@ export default function Header() {
       <div className="header-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img 
-            src="/src/assets/wgys.webp" 
+            src={wgysLogo} 
             alt="West Georgia Youth Sports, Inc." 
             style={{ height: '40px', width: 'auto' }}
           />

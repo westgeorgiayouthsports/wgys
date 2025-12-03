@@ -22,6 +22,8 @@ import {
 } from '@ant-design/icons';
 import type { RootState } from '../../store/store';
 import './Sidebar.css';
+import wgysLogoSmall from '../../assets/wgys-logo-small.png';
+import wgysLogo from '../../assets/wgys-logo.png';
 
 const { Sider } = Layout;
 const { Title } = Typography;
@@ -142,7 +144,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
           alignItems: 'center',
         }}>
           <img 
-            src={collapsed ? '/src/assets/wgys-logo-small.png' : '/src/assets/wgys-logo.png'} 
+            src={collapsed ? wgysLogoSmall : wgysLogo} 
             alt="WGYS Logo" 
             style={{ 
               height: collapsed ? '24px' : '94px', 
