@@ -18,9 +18,9 @@ export default defineConfig(() => ({
             if (id.includes('@reduxjs/toolkit') || id.includes('react-redux')) {
               return 'redux';
             }
-            if (id.includes('antd') || id.includes('@ant-design')) {
-              return 'antd';
-            }
+            // if (id.includes('antd') || id.includes('@ant-design')) {
+            //   return 'antd';
+            // }
             if (id.includes('firebase')) {
               return 'firebase';
             }
