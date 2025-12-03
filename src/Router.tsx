@@ -50,7 +50,7 @@ function Router() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/wgys">
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Auth Routes */}
