@@ -13,7 +13,7 @@ export const announcementsService = {
       
       const announcements: Announcement[] = [];
       snapshot.forEach((child) => {
-        const announcement = { id: child.key!, ...child.val() } as Announcement;
+        const announcement = { id: child.key, ...child.val() } as Announcement;
         if (userId) {
           // Show all for current user + published from others
           if (announcement.userId === userId || announcement.status === 'published') {
@@ -40,8 +40,8 @@ export const announcementsService = {
     userEmail: string,
     title: string,
     content: string,
-    showOnFeed: boolean = true,
-    allowComments: boolean = true
+    showOnFeed = true,
+    allowComments = true
   ): Promise<Announcement> {
     try {
       const announcementsRef = ref(db, 'announcements');
@@ -60,7 +60,7 @@ export const announcementsService = {
       };
       await set(newAnnouncementRef, announcement);
       return {
-        id: newAnnouncementRef.key!,
+        id: newAnnouncementRef.key,
         ...announcement,
       };
     } catch (error) {
@@ -125,7 +125,7 @@ export const announcementsService = {
       
       const announcements: Announcement[] = [];
       snapshot.forEach((child) => {
-        const announcement = { id: child.key!, ...child.val() } as Announcement;
+        const announcement = { id: child.key, ...child.val() } as Announcement;
         if (announcement.status === 'published') {
           announcements.push(announcement);
         }

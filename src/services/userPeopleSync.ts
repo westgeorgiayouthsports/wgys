@@ -28,16 +28,16 @@ export const userPeopleSync = {
       
       const users = usersSnapshot.val();
       
-      for (const [uid, userData] of Object.entries(users) as [string, any][]) {
+      for (const [uid, userData] of Object.entries(users)) {
         try {
           const existingPerson = peopleByUserId.get(uid);
           
           if (!existingPerson) {
             // Create person record for user
             const personData: PersonFormData = {
-              firstName: userData.displayName?.split(' ')[0] || 'User',
-              lastName: userData.displayName?.split(' ').slice(1).join(' ') || '',
-              email: userData.email || '',
+              firstName: (userData as any).displayName?.split(' ')[0] || 'User',
+              lastName: (userData as any).displayName?.split(' ').slice(1).join(' ') || '',
+              email: (userData as any).email || '',
               roles: ['parent'], // Default role for account holders
             };
             
@@ -67,7 +67,7 @@ export const userPeopleSync = {
   /**
    * Get users who don't have corresponding people records
    */
-  async getUnlinkedUsers(): Promise<Array<{ uid: string; email: string; displayName: string }>> {
+  async getUnlinkedUsers(): Promise<{ uid: string; email: string; displayName: string }[]> {
     try {
       const usersRef = ref(db, 'users');
       const usersSnapshot = await get(usersRef);
@@ -82,12 +82,12 @@ export const userPeopleSync = {
       const users = usersSnapshot.val();
       const unlinkedUsers = [];
       
-      for (const [uid, userData] of Object.entries(users) as [string, any][]) {
+      for (const [uid, userData] of Object.entries(users)) {
         if (!linkedUserIds.has(uid)) {
           unlinkedUsers.push({
             uid,
-            email: userData.email || 'No email',
-            displayName: userData.displayName || 'Unknown User'
+            email: (userData as any).email || 'No email',
+            displayName: (userData as any).displayName || 'Unknown User'
           });
         }
       }

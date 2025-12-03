@@ -76,8 +76,6 @@ export default function People() {
   const [syncing, setSyncing] = useState(false);
   const [form] = Form.useForm();
 
-
-
   useEffect(() => {
     loadPeople();
     loadUsers(); // Always load users to show linkage
@@ -346,7 +344,7 @@ export default function People() {
               style={{ 
                 backgroundColor: record.hasAccount ? 
                   (linkedUser?.systemRole === 'owner' ? '#722ed1' : 
-                   linkedUser?.systemRole === 'admin' ? '#f5222d' : '#52c41a') : '#d9d9d9' 
+                    linkedUser?.systemRole === 'admin' ? '#f5222d' : '#52c41a') : '#d9d9d9' 
               }}
               onError={() => true}
             />
@@ -356,11 +354,11 @@ export default function People() {
                 {record.hasAccount && (
                   <Tag 
                     color={linkedUser?.systemRole === 'owner' ? 'purple' : 
-                           linkedUser?.systemRole === 'admin' ? 'red' : 'green'}
+                      linkedUser?.systemRole === 'admin' ? 'red' : 'green'}
                     style={{ marginLeft: 8 }}
                   >
                     {linkedUser?.systemRole === 'owner' ? 'Owner Account' :
-                     linkedUser?.systemRole === 'admin' ? 'Admin Account' : 'User Account'}
+                      linkedUser?.systemRole === 'admin' ? 'Admin Account' : 'User Account'}
                   </Tag>
                 )}
               </div>
@@ -438,7 +436,7 @@ export default function People() {
           <Select
             value={linkedUser.systemRole}
             onChange={(value) => updateUserRole(linkedUser.uid, value)}
-            onBlur={() => setEditingUser(null)}
+            onBlur={() => { setEditingUser(null); }}
             style={{ width: 120 }}
             autoFocus
           >
@@ -450,9 +448,9 @@ export default function People() {
           <Space>
             <Tag 
               icon={linkedUser.systemRole === 'owner' ? <CrownOutlined /> : 
-                    linkedUser.systemRole === 'admin' ? <SafetyOutlined /> : <UserOutlined />}
+                linkedUser.systemRole === 'admin' ? <SafetyOutlined /> : <UserOutlined />}
               color={linkedUser.systemRole === 'owner' ? 'purple' : 
-                     linkedUser.systemRole === 'admin' ? 'red' : 'default'}
+                linkedUser.systemRole === 'admin' ? 'red' : 'default'}
             >
               {linkedUser.systemRole}
             </Tag>
@@ -460,7 +458,7 @@ export default function People() {
               <Button 
                 size="small" 
                 type="link"
-                onClick={() => setEditingUser(linkedUser.uid)}
+                onClick={() => { setEditingUser(linkedUser.uid); }}
               >
                 Edit
               </Button>
@@ -477,7 +475,7 @@ export default function People() {
           <Button
             size="small"
             icon={<EditOutlined />}
-            onClick={() => handleEditPerson(record)}
+            onClick={() => { handleEditPerson(record); }}
           >
             Edit
           </Button>
@@ -485,7 +483,7 @@ export default function People() {
             <Button
               size="small"
               icon={<SettingOutlined />}
-              onClick={() => setProfileModalVisible(true)}
+              onClick={() => { setProfileModalVisible(true); }}
             >
               Profile
             </Button>
@@ -522,7 +520,7 @@ export default function People() {
               icon={<UserOutlined />} 
               style={{ 
                 backgroundColor: record.systemRole === 'owner' ? '#722ed1' : 
-                                record.systemRole === 'admin' ? '#f5222d' : '#8c8c8c' 
+                  record.systemRole === 'admin' ? '#f5222d' : '#8c8c8c' 
               }}
             >
               {(record.displayName || record.email || 'U').charAt(0).toUpperCase()}
@@ -569,12 +567,12 @@ export default function People() {
         ) : (
           <Tag 
             icon={record.systemRole === 'owner' ? <CrownOutlined /> : 
-                  record.systemRole === 'admin' ? <SafetyOutlined /> : <UserOutlined />}
+              record.systemRole === 'admin' ? <SafetyOutlined /> : <UserOutlined />}
             color={record.systemRole === 'owner' ? 'purple' : 
-                   record.systemRole === 'admin' ? 'red' : 'default'}
+              record.systemRole === 'admin' ? 'red' : 'default'}
           >
             {record.systemRole === 'owner' ? 'Owner' : 
-             record.systemRole === 'admin' ? 'Admin' : 'User'}
+              record.systemRole === 'admin' ? 'Admin' : 'User'}
           </Tag>
         )
       ),
@@ -585,14 +583,14 @@ export default function People() {
       render: (record: User) => (
         role === 'owner' ? (
           editingUser === record.uid ? (
-            <Button size="small" onClick={() => setEditingUser(null)}>
+            <Button size="small" onClick={() => { setEditingUser(null); }}>
               Cancel
             </Button>
           ) : (
             <Button 
               size="small" 
               icon={<EditOutlined />}
-              onClick={() => setEditingUser(record.uid)}
+              onClick={() => { setEditingUser(record.uid); }}
             >
               Edit Role
             </Button>
@@ -604,16 +602,16 @@ export default function People() {
 
   const getFilteredPeople = () => {
     switch (activeTab) {
-      case 'accounts':
-        return people.filter(p => p.hasAccount);
-      case 'families':
-        return people.filter(p => p.familyId);
-      case 'athletes':
-        return people.filter(p => p.roles.includes('athlete'));
-      case 'parents':
-        return people.filter(p => p.roles.includes('parent') || p.roles.includes('guardian'));
-      default:
-        return people;
+    case 'accounts':
+      return people.filter(p => p.hasAccount);
+    case 'families':
+      return people.filter(p => p.familyId);
+    case 'athletes':
+      return people.filter(p => p.roles.includes('athlete'));
+    case 'parents':
+      return people.filter(p => p.roles.includes('parent') || p.roles.includes('guardian'));
+    default:
+      return people;
     }
   };
 
@@ -739,7 +737,7 @@ export default function People() {
         <Spin spinning={loading}>
           <Table
             columns={activeTab === 'accounts' ? userColumns : peopleColumns}
-            dataSource={activeTab === 'accounts' ? users : filteredPeople}
+            dataSource={activeTab === 'accounts' ? users as any : filteredPeople}
             rowKey={activeTab === 'accounts' ? 'uid' : 'id'}
             pagination={{
               current: pagination.current,
@@ -920,7 +918,7 @@ export default function People() {
       <Modal
         title="Profile Settings"
         open={profileModalVisible}
-        onCancel={() => setProfileModalVisible(false)}
+        onCancel={() => { setProfileModalVisible(false); }}
         onOk={handleProfileSave}
         okText="Save Changes"
         width={500}
@@ -941,7 +939,7 @@ export default function People() {
                 id="photoUrlInput"
                 placeholder="Enter image URL or click avatar above"
                 value={photoURL}
-                onChange={(e) => setPhotoURL(e.target.value)}
+                onChange={(e) => { setPhotoURL(e.target.value); }}
                 prefix={<CameraOutlined />}
               />
             </div>
@@ -952,7 +950,7 @@ export default function People() {
             <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Display Name</label>
             <Input
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              onChange={(e) => { setDisplayName(e.target.value); }}
               placeholder="Enter display name"
               maxLength={50}
             />

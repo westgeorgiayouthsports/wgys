@@ -180,7 +180,7 @@ export default function Programs() {
               </Text>
             </div>
           )}
-          {(record.minGrade !== undefined || record.maxGrade !== undefined) && (
+          {((record as any).minGrade !== undefined || (record as any).maxGrade !== undefined) && (
             <div>
               <Text type="secondary" style={{ fontSize: '12px' }}>
                 Max Grade: {record.maxGrade !== undefined ? (record.maxGrade === 0 ? 'K' : record.maxGrade) : '—'}
@@ -233,21 +233,21 @@ export default function Programs() {
           <Button
             size="small"
             icon={<EditOutlined />}
-            onClick={() => handleEditProgram(record)}
+            onClick={() => { handleEditProgram(record); }}
           >
             Edit
           </Button>
           <Button
             size="small"
-            onClick={() => handleDuplicateProgram(record)}
+            onClick={() => { handleDuplicateProgram(record); }}
           >
             Duplicate
           </Button>
           <Popconfirm
             title="Delete Program"
             description={record.currentRegistrants > 0 ? 
-              "Cannot delete program with existing registrants" : 
-              "Are you sure you want to delete this program?"
+              'Cannot delete program with existing registrants' : 
+              'Are you sure you want to delete this program?'
             }
             onConfirm={() => handleDeleteProgram(record.id)}
             okText="Yes"
@@ -270,172 +270,168 @@ export default function Programs() {
 
   return (
     <div className="page-container">
-        <div style={{ marginBottom: '24px' }}>
-          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-            <div>
-              <Title level={2}>Programs</Title>
-              <Text type="secondary">Manage sports programs and activities</Text>
-            </div>
-            <Space>
-              <Button icon={<ReloadOutlined />} onClick={loadPrograms} loading={loading}>
+      <div style={{ marginBottom: '24px' }}>
+        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+          <div>
+            <Title level={2}>Programs</Title>
+            <Text type="secondary">Manage sports programs and activities</Text>
+          </div>
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={loadPrograms} loading={loading}>
                 Refresh
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleAddProgram}>
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddProgram}>
                 Add Program
+            </Button>
+          </Space>
+        </Space>
+      </div>
+
+      <Card title="Program Directory">
+        <Spin spinning={loading}>
+          <Table
+            columns={columns}
+            dataSource={programs}
+            rowKey="id"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} programs`,
+            }}
+          />
+        </Spin>
+      </Card>
+
+      <Modal
+        title={editingProgram ? 'Edit Program' : 'Add New Program'}
+        open={modalVisible}
+        onCancel={() => {
+          setModalVisible(false);
+          form.resetFields();
+        }}
+        footer={null}
+        width={800}
+      >
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form.Item name="name" label="Program Name" rules={[{ required: true }]}>
+            <Input placeholder="e.g., Spring Baseball League" />
+          </Form.Item>
+
+          <Space style={{ width: '100%' }} size="large">
+            <Form.Item name="sport" label="Sport" rules={[{ required: true }]}>
+              <Select placeholder="Select sport" style={{ width: 150 }}>
+                <Select.Option value="baseball">Baseball</Select.Option>
+                <Select.Option value="softball">Softball</Select.Option>
+                <Select.Option value="basketball">Basketball</Select.Option>
+                <Select.Option value="soccer">Soccer</Select.Option>
+                <Select.Option value="tennis">Tennis</Select.Option>
+                <Select.Option value="other">Other</Select.Option>
+              </Select>
+            </Form.Item>
+
+            <Form.Item name="sexRestriction" label="Sex" rules={[{ required: true }]}>
+              <Select placeholder="Select restriction" style={{ width: 120 }}>
+                <Select.Option value="coed">Co-ed</Select.Option>
+                <Select.Option value="male">Male Only</Select.Option>
+                <Select.Option value="female">Female Only</Select.Option>
+              </Select>
+            </Form.Item>
+          </Space>
+
+          <Form.Item name="description" label="Description">
+            <TextArea rows={3} placeholder="Program description..." />
+          </Form.Item>
+
+          <Space style={{ width: '100%' }} size="large">
+            <Form.Item name="birthDateStart" label="Earliest Birth Date">
+              <DatePicker placeholder="Oldest allowed" />
+            </Form.Item>
+            <Form.Item name="birthDateEnd" label="Latest Birth Date">
+              <DatePicker placeholder="Youngest allowed" />
+            </Form.Item>
+          </Space>
+
+          <Space style={{ width: '100%' }} size="large">
+            <Form.Item
+              noStyle
+              shouldUpdate={(prevValues, currentValues) => 
+                prevValues.birthDateStart !== currentValues.birthDateStart ||
+                  prevValues.allowGradeExemption !== currentValues.allowGradeExemption
+              }
+            >
+              {({ getFieldValue }) => {
+                const allowGradeExemption = getFieldValue('allowGradeExemption');
+                const birthDateStart = getFieldValue('birthDateStart');
+                  
+                // Auto-compute max grade when birth date start changes and grade exemptions are enabled
+                if (allowGradeExemption && birthDateStart) {
+                  const now = dayjs();
+                  const currentYear = now.year();
+                  const isBeforeAugust = now.month() < 7; // January to July (months 0-6)
+                  const schoolYear = isBeforeAugust ? currentYear - 1 : currentYear;
+                    
+                  const calculatedMaxGrade = schoolYear - dayjs(birthDateStart).year() - 6;
+                  if (calculatedMaxGrade >= 0 && calculatedMaxGrade <= 12) {
+                    setTimeout(() => {
+                      form.setFieldValue('maxGrade', calculatedMaxGrade);
+                    }, 0);
+                  }
+                }
+                  
+                return (
+                  <Form.Item name="maxGrade" label="Max Grade">
+                    <Select placeholder="Max grade" style={{ width: 120 }}>
+                      <Select.Option value={0}>Kindergarten</Select.Option>
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <Select.Option key={i + 1} value={i + 1}>Grade {i + 1}</Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                );
+              }}
+            </Form.Item>
+            <Form.Item name="allowGradeExemption" label="Allow Grade Exemption" valuePropName="checked">
+              <Switch checkedChildren="Yes" unCheckedChildren="No" />
+            </Form.Item>
+          </Space>
+
+          <Space style={{ width: '100%' }} size="large">
+            <Form.Item name="registrationStart" label="Registration Start" rules={[{ required: true }]}>
+              <DatePicker />
+            </Form.Item>
+            <Form.Item name="registrationEnd" label="Registration End" rules={[{ required: true }]}>
+              <DatePicker />
+            </Form.Item>
+          </Space>
+
+          <Space style={{ width: '100%' }} size="large">
+            <Form.Item name="basePrice" label="Base Price ($)" rules={[{ required: true }]}>
+              <InputNumber min={0} step={0.01} placeholder="0.00" />
+            </Form.Item>
+            <Form.Item name="maxParticipants" label="Max Participants">
+              <InputNumber min={1} placeholder="Unlimited" />
+            </Form.Item>
+            <Form.Item name="status" label="Active Program" valuePropName="checked">
+              <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+            </Form.Item>
+          </Space>
+
+          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => {
+                setModalVisible(false);
+                form.resetFields();
+              }}>
+                  Cancel
+              </Button>
+              <Button type="primary" htmlType="submit">
+                {editingProgram ? 'Update Program' : 'Create Program'}
               </Button>
             </Space>
-          </Space>
-        </div>
-
-        <Card title="Program Directory">
-          <Spin spinning={loading}>
-            <Table
-              columns={columns}
-              dataSource={programs}
-              rowKey="id"
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} programs`,
-              }}
-            />
-          </Spin>
-        </Card>
-
-        <Modal
-          title={editingProgram ? 'Edit Program' : 'Add New Program'}
-          open={modalVisible}
-          onCancel={() => {
-            setModalVisible(false);
-            form.resetFields();
-          }}
-          footer={null}
-          width={800}
-        >
-          <Form form={form} layout="vertical" onFinish={handleSubmit}>
-            <Form.Item name="name" label="Program Name" rules={[{ required: true }]}>
-              <Input placeholder="e.g., Spring Baseball League" />
-            </Form.Item>
-
-            <Space style={{ width: '100%' }} size="large">
-              <Form.Item name="sport" label="Sport" rules={[{ required: true }]}>
-                <Select placeholder="Select sport" style={{ width: 150 }}>
-                  <Select.Option value="baseball">Baseball</Select.Option>
-                  <Select.Option value="softball">Softball</Select.Option>
-                  <Select.Option value="basketball">Basketball</Select.Option>
-                  <Select.Option value="soccer">Soccer</Select.Option>
-                  <Select.Option value="tennis">Tennis</Select.Option>
-                  <Select.Option value="other">Other</Select.Option>
-                </Select>
-              </Form.Item>
-
-
-
-              <Form.Item name="sexRestriction" label="Sex" rules={[{ required: true }]}>
-                <Select placeholder="Select restriction" style={{ width: 120 }}>
-                  <Select.Option value="coed">Co-ed</Select.Option>
-                  <Select.Option value="male">Male Only</Select.Option>
-                  <Select.Option value="female">Female Only</Select.Option>
-                </Select>
-              </Form.Item>
-            </Space>
-
-            <Form.Item name="description" label="Description">
-              <TextArea rows={3} placeholder="Program description..." />
-            </Form.Item>
-
-            <Space style={{ width: '100%' }} size="large">
-              <Form.Item name="birthDateStart" label="Earliest Birth Date">
-                <DatePicker placeholder="Oldest allowed" />
-              </Form.Item>
-              <Form.Item name="birthDateEnd" label="Latest Birth Date">
-                <DatePicker placeholder="Youngest allowed" />
-              </Form.Item>
-            </Space>
-
-            <Space style={{ width: '100%' }} size="large">
-              <Form.Item
-                noStyle
-                shouldUpdate={(prevValues, currentValues) => 
-                  prevValues.birthDateStart !== currentValues.birthDateStart ||
-                  prevValues.allowGradeExemption !== currentValues.allowGradeExemption
-                }
-              >
-                {({ getFieldValue }) => {
-                  const allowGradeExemption = getFieldValue('allowGradeExemption');
-                  const birthDateStart = getFieldValue('birthDateStart');
-                  
-                  // Auto-compute max grade when birth date start changes and grade exemptions are enabled
-                  if (allowGradeExemption && birthDateStart) {
-                    const now = dayjs();
-                    const currentYear = now.year();
-                    const isBeforeAugust = now.month() < 7; // January to July (months 0-6)
-                    const schoolYear = isBeforeAugust ? currentYear - 1 : currentYear;
-                    
-                    const calculatedMaxGrade = schoolYear - dayjs(birthDateStart).year() - 6;
-                    if (calculatedMaxGrade >= 0 && calculatedMaxGrade <= 12) {
-                      setTimeout(() => {
-                        form.setFieldValue('maxGrade', calculatedMaxGrade);
-                      }, 0);
-                    }
-                  }
-                  
-                  return (
-                    <Form.Item name="maxGrade" label="Max Grade">
-                      <Select placeholder="Max grade" style={{ width: 120 }}>
-                        <Select.Option value={0}>Kindergarten</Select.Option>
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <Select.Option key={i + 1} value={i + 1}>Grade {i + 1}</Select.Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
-                  );
-                }}
-              </Form.Item>
-              <Form.Item name="allowGradeExemption" label="Allow Grade Exemption" valuePropName="checked">
-                <Switch checkedChildren="Yes" unCheckedChildren="No" />
-              </Form.Item>
-            </Space>
-
-            <Space style={{ width: '100%' }} size="large">
-              <Form.Item name="registrationStart" label="Registration Start" rules={[{ required: true }]}>
-                <DatePicker />
-              </Form.Item>
-              <Form.Item name="registrationEnd" label="Registration End" rules={[{ required: true }]}>
-                <DatePicker />
-              </Form.Item>
-            </Space>
-
-
-
-            <Space style={{ width: '100%' }} size="large">
-              <Form.Item name="basePrice" label="Base Price ($)" rules={[{ required: true }]}>
-                <InputNumber min={0} step={0.01} placeholder="0.00" />
-              </Form.Item>
-              <Form.Item name="maxParticipants" label="Max Participants">
-                <InputNumber min={1} placeholder="Unlimited" />
-              </Form.Item>
-              <Form.Item name="status" label="Active Program" valuePropName="checked">
-                <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-              </Form.Item>
-            </Space>
-
-            <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-              <Space>
-                <Button onClick={() => {
-                  setModalVisible(false);
-                  form.resetFields();
-                }}>
-                  Cancel
-                </Button>
-                <Button type="primary" htmlType="submit">
-                  {editingProgram ? 'Update Program' : 'Create Program'}
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        </Modal>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

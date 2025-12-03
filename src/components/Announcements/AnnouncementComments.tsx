@@ -85,7 +85,7 @@ export default function AnnouncementComments({ announcementId, allowComments, on
         <TextArea
           rows={3}
           value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
+          onChange={(e) => { setNewComment(e.target.value); }}
           placeholder="Write a comment..."
           maxLength={500}
           showCount

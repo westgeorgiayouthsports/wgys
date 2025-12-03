@@ -70,7 +70,7 @@ export default function App() {
       }
     });
 
-    return () => unsubscribe();
+    return () => { unsubscribe(); };
   }, [dispatch]);
 
   if (loading) {

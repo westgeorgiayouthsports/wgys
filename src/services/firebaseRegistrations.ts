@@ -29,7 +29,7 @@ export const registrationsService = {
 
       const registrations: Registration[] = [];
       snapshot.forEach((child) => {
-        const reg = { id: child.key!, ...child.val() } as Registration;
+        const reg = { id: child.key, ...child.val() } as Registration;
         if (reg.teamId === teamId) {
           registrations.push(reg);
         }
@@ -55,7 +55,7 @@ export const registrationsService = {
 
       const registrations: Registration[] = [];
       snapshot.forEach((child) => {
-        const reg = { id: child.key!, ...child.val() } as Registration;
+        const reg = { id: child.key, ...child.val() } as Registration;
         registrations.push(reg);
       });
 
@@ -102,7 +102,7 @@ export const registrationsService = {
       await set(newRegRef, registration);
 
       return {
-        id: newRegRef.key!,
+        id: newRegRef.key,
         ...registration,
       };
     } catch (error) {
@@ -196,7 +196,7 @@ export const registrationsService = {
 
       const registrations: Registration[] = [];
       snapshot.forEach((child) => {
-        const reg = { id: child.key!, ...child.val() } as Registration;
+        const reg = { id: child.key, ...child.val() } as Registration;
         if (reg.teamId === teamId && reg.status === status) {
           registrations.push(reg);
         }

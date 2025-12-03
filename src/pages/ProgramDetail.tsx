@@ -186,7 +186,7 @@ export default function ProgramDetail() {
         <Card title="Program Details" style={{ marginBottom: '24px' }}>
           <Form form={programForm} layout="vertical" onFinish={(values) => {
             const updatedProgram = {
-              ...program!,
+              ...program,
               ...values,
               registrationStart: values.registrationStart?.format('YYYY-MM-DD'),
               registrationEnd: values.registrationEnd?.format('YYYY-MM-DD'),
@@ -306,11 +306,11 @@ export default function ProgramDetail() {
         </Card>
 
         <Card title="Registration Form Questions" 
-              extra={
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleAddQuestion}>
+          extra={
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddQuestion}>
                   Add Question
-                </Button>
-              }>
+            </Button>
+          }>
           <Table
             dataSource={(program.questions || []).sort((a, b) => a.order - b.order)}
             locale={{ emptyText: 'No questions added yet. Click "Add Question" to get started.' }}
@@ -341,23 +341,23 @@ export default function ProgramDetail() {
                       size="small" 
                       icon={<ArrowUpOutlined />} 
                       disabled={index === 0}
-                      onClick={() => handleMoveQuestion(question.id, 'up')}
+                      onClick={() => { handleMoveQuestion(question.id, 'up'); }}
                     />
                     <Button 
                       size="small" 
                       icon={<ArrowDownOutlined />} 
                       disabled={index === (program.questions || []).length - 1}
-                      onClick={() => handleMoveQuestion(question.id, 'down')}
+                      onClick={() => { handleMoveQuestion(question.id, 'down'); }}
                     />
                     <Button 
                       size="small" 
                       icon={<EditOutlined />} 
-                      onClick={() => handleEditQuestion(question)}
+                      onClick={() => { handleEditQuestion(question); }}
                     />
                     <Popconfirm
                       title="Delete Question"
                       description="Are you sure you want to delete this question?"
-                      onConfirm={() => handleDeleteQuestion(question.id)}
+                      onConfirm={() => { handleDeleteQuestion(question.id); }}
                     >
                       <Button size="small" danger icon={<DeleteOutlined />} />
                     </Popconfirm>

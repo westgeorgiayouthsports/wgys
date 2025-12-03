@@ -1,7 +1,8 @@
-import { Navigate, ReactNode } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store/store';
-import { UserRole } from '../../types';
+import type { UserRole } from '../../types';
 
 interface ProtectedRouteProps {
   isAuthenticated: boolean;

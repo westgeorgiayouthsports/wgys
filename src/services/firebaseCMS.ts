@@ -56,7 +56,7 @@ export const getPageBySlug = async (slug: string): Promise<CMSPage | null> => {
   
   let page: CMSPage | null = null;
   snapshot.forEach((child) => {
-    page = { id: child.key!, ...child.val() };
+    page = { id: child.key, ...child.val() };
   });
   return page;
 };

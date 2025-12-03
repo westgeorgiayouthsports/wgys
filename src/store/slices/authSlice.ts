@@ -9,7 +9,7 @@ interface User {
   createdAt?: number;
 }
 
-interface AuthState {
+export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;

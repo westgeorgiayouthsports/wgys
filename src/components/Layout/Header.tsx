@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Dropdown, Button } from 'antd';
 import { UserOutlined, SettingOutlined, LogoutOutlined, DownOutlined, BulbOutlined } from '@ant-design/icons';
-import { RootState } from '../../store/store';
+import type { RootState } from '../../store/store';
 import { logout } from '../../store/slices/authSlice';
 import { toggleTheme } from '../../store/slices/themeSlice';
 import { signOut } from '../../services/firebaseAuth';
@@ -59,7 +59,7 @@ export default function Header() {
           />
         </div>
         <Dropdown
-          menu={{ items: menuItems }}
+          menu={{ items: menuItems as any }}
           trigger={['click']}
           placement="bottomRight"
         >

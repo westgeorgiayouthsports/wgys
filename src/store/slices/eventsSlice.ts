@@ -1,7 +1,9 @@
-import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { eventsService, Event } from '../../services/firebaseEvents';
+import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { Event } from '../../services/firebaseEvents';
+import { eventsService } from '../../services/firebaseEvents';
 
-interface EventsState {
+export interface EventsState {
   events: Event[];
   loading: boolean;
   error: string | null;

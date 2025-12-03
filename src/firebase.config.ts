@@ -16,5 +16,5 @@ const missingKeys = requiredKeys.filter(key => !firebaseConfig[key as keyof type
 if (missingKeys.length > 0) {
   console.error('❌ Missing Firebase credentials:', missingKeys);
   console.error('📝 Add these to your .env.local file:');
-  missingKeys.forEach(key => console.error(` VITE_FIREBASE_${key.toUpperCase()}=your_value`));
+  missingKeys.forEach(key => { console.error(` VITE_FIREBASE_${key.toUpperCase()}=your_value`); });
 }

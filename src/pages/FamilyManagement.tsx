@@ -204,7 +204,7 @@ export default function FamilyManagement() {
           <Button
             size="small"
             icon={<EditOutlined />}
-            onClick={() => handleEditMember(record)}
+            onClick={() => { handleEditMember(record); }}
           >
             Edit
           </Button>
@@ -212,7 +212,7 @@ export default function FamilyManagement() {
             <Popconfirm
               title="Remove Family Member"
               description="Are you sure you want to remove this family member?"
-              onConfirm={() => handleDeleteMember(record.id)}
+              onConfirm={() => { handleDeleteMember(record.id); }}
             >
               <Button size="small" danger icon={<DeleteOutlined />}>
                 Remove
@@ -230,102 +230,102 @@ export default function FamilyManagement() {
 
   return (
     <div className="page-container">
-        <div style={{ marginBottom: '24px' }}>
-          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-            <div>
-              <Title level={2} style={{ margin: 0 }}>Family Management</Title>
-              <Text type="secondary">Manage your family members and athletes</Text>
-            </div>
-            <Button type="primary" icon={<UserAddOutlined />} onClick={handleAddMember}>
+      <div style={{ marginBottom: '24px' }}>
+        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+          <div>
+            <Title level={2} style={{ margin: 0 }}>Family Management</Title>
+            <Text type="secondary">Manage your family members and athletes</Text>
+          </div>
+          <Button type="primary" icon={<UserAddOutlined />} onClick={handleAddMember}>
               Add Family Member
-            </Button>
-          </Space>
-        </div>
+          </Button>
+        </Space>
+      </div>
 
-        <Card title={`${family.members.find(m => m.isPrimary)?.lastName || 'Family'} Family (${family.members.length} members)`}>
-          <Table
-            columns={columns}
-            dataSource={family.members}
-            rowKey="id"
-            pagination={false}
-          />
-        </Card>
+      <Card title={`${family.members.find(m => m.isPrimary)?.lastName || 'Family'} Family (${family.members.length} members)`}>
+        <Table
+          columns={columns}
+          dataSource={family.members}
+          rowKey="id"
+          pagination={false}
+        />
+      </Card>
 
-        <Modal
-          title={editingMember ? 'Edit Family Member' : 'Add Family Member'}
-          open={memberModalVisible}
-          onCancel={() => {
-            setMemberModalVisible(false);
-            form.resetFields();
-          }}
-          footer={null}
-          width={600}
-        >
-          <Form form={form} layout="vertical" onFinish={handleMemberSubmit}>
-            <Space style={{ width: '100%' }} size="large">
-              <Form.Item name="firstName" label="First Name" rules={[{ required: true }]}>
-                <Input placeholder="Enter first name" />
-              </Form.Item>
-              <Form.Item name="lastName" label="Last Name" rules={[{ required: true }]}>
-                <Input placeholder="Enter last name" />
-              </Form.Item>
-            </Space>
-
-            <Space style={{ width: '100%' }} size="large">
-              <Form.Item name="dateOfBirth" label="Date of Birth" rules={[{ required: true }]}>
-                <DatePicker />
-              </Form.Item>
-              <Form.Item name="sex" label="Sex" rules={[{ required: true }]}>
-                <Select placeholder="Select sex">
-                  <Select.Option value="male">Male</Select.Option>
-                  <Select.Option value="female">Female</Select.Option>
-                </Select>
-              </Form.Item>
-              <Form.Item name="relationship" label="Relationship" rules={[{ required: true }]}>
-                <Select placeholder="Select relationship">
-                  <Select.Option value="parent">Parent</Select.Option>
-                  <Select.Option value="guardian">Guardian</Select.Option>
-                  <Select.Option value="child">Child</Select.Option>
-                  <Select.Option value="sibling">Sibling</Select.Option>
-                  <Select.Option value="grandparent">Grandparent</Select.Option>
-                  <Select.Option value="other">Other</Select.Option>
-                </Select>
-              </Form.Item>
-            </Space>
-
-            <Space style={{ width: '100%' }} size="large">
-              <Form.Item name="schoolName" label="School Name">
-                <Input placeholder="Enter school name" />
-              </Form.Item>
-              <Form.Item name="graduationYear" label="Graduation Year">
-                <Input placeholder="e.g., 2030" />
-              </Form.Item>
-            </Space>
-
-            <Space style={{ width: '100%' }} size="large">
-              <Form.Item name="email" label="Email">
-                <Input placeholder="Enter email address" />
-              </Form.Item>
-              <Form.Item name="phone" label="Phone">
-                <Input placeholder="Enter phone number" />
-              </Form.Item>
-            </Space>
-
-            <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-              <Space>
-                <Button onClick={() => {
-                  setMemberModalVisible(false);
-                  form.resetFields();
-                }}>
-                  Cancel
-                </Button>
-                <Button type="primary" htmlType="submit">
-                  {editingMember ? 'Update Member' : 'Add Member'}
-                </Button>
-              </Space>
+      <Modal
+        title={editingMember ? 'Edit Family Member' : 'Add Family Member'}
+        open={memberModalVisible}
+        onCancel={() => {
+          setMemberModalVisible(false);
+          form.resetFields();
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form form={form} layout="vertical" onFinish={handleMemberSubmit}>
+          <Space style={{ width: '100%' }} size="large">
+            <Form.Item name="firstName" label="First Name" rules={[{ required: true }]}>
+              <Input placeholder="Enter first name" />
             </Form.Item>
-          </Form>
-        </Modal>
+            <Form.Item name="lastName" label="Last Name" rules={[{ required: true }]}>
+              <Input placeholder="Enter last name" />
+            </Form.Item>
+          </Space>
+
+          <Space style={{ width: '100%' }} size="large">
+            <Form.Item name="dateOfBirth" label="Date of Birth" rules={[{ required: true }]}>
+              <DatePicker />
+            </Form.Item>
+            <Form.Item name="sex" label="Sex" rules={[{ required: true }]}>
+              <Select placeholder="Select sex">
+                <Select.Option value="male">Male</Select.Option>
+                <Select.Option value="female">Female</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="relationship" label="Relationship" rules={[{ required: true }]}>
+              <Select placeholder="Select relationship">
+                <Select.Option value="parent">Parent</Select.Option>
+                <Select.Option value="guardian">Guardian</Select.Option>
+                <Select.Option value="child">Child</Select.Option>
+                <Select.Option value="sibling">Sibling</Select.Option>
+                <Select.Option value="grandparent">Grandparent</Select.Option>
+                <Select.Option value="other">Other</Select.Option>
+              </Select>
+            </Form.Item>
+          </Space>
+
+          <Space style={{ width: '100%' }} size="large">
+            <Form.Item name="schoolName" label="School Name">
+              <Input placeholder="Enter school name" />
+            </Form.Item>
+            <Form.Item name="graduationYear" label="Graduation Year">
+              <Input placeholder="e.g., 2030" />
+            </Form.Item>
+          </Space>
+
+          <Space style={{ width: '100%' }} size="large">
+            <Form.Item name="email" label="Email">
+              <Input placeholder="Enter email address" />
+            </Form.Item>
+            <Form.Item name="phone" label="Phone">
+              <Input placeholder="Enter phone number" />
+            </Form.Item>
+          </Space>
+
+          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => {
+                setMemberModalVisible(false);
+                form.resetFields();
+              }}>
+                  Cancel
+              </Button>
+              <Button type="primary" htmlType="submit">
+                {editingMember ? 'Update Member' : 'Add Member'}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

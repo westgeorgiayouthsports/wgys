@@ -1,7 +1,9 @@
-import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { registrationsService, Registration } from '../../services/firebaseRegistrations';
+import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { Registration } from '../../services/firebaseRegistrations';
+import { registrationsService } from '../../services/firebaseRegistrations';
 
-interface RegistrationsState {
+export interface RegistrationsState {
   registrations: Registration[];
   loading: boolean;
   error: string | null;

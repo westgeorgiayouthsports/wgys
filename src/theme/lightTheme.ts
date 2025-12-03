@@ -100,7 +100,6 @@ export const lightTheme: ThemeConfig = {
     Input: {
       colorBgContainer: '#ffffff',
       colorBorder: '#dee2e6',
-      colorBorderHover: '#0099cc',
       colorText: '#212529',
       colorTextPlaceholder: '#6c757d',
     },
@@ -109,7 +108,6 @@ export const lightTheme: ThemeConfig = {
     Select: {
       colorBgContainer: '#ffffff',
       colorBorder: '#dee2e6',
-      colorBorderHover: '#0099cc',
       colorText: '#212529',
       colorTextPlaceholder: '#6c757d',
       optionSelectedBg: 'rgba(0, 153, 204, 0.1)',
