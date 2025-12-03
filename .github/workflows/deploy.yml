@@ -48,12 +48,14 @@ jobs:
     - name: Build
       run: npm run build
       
-    - name: List dist contents
+    - name: Verify build output
       run: |
         echo "Contents of dist folder:"
         ls -la dist/
-        echo "Contents of index.html:"
-        head -20 dist/index.html
+        echo "\nContents of dist/index.html:"
+        cat dist/index.html
+        echo "\nVerifying assets folder:"
+        ls -la dist/assets/ | head -10
       
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v4
