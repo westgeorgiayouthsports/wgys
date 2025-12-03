@@ -33,7 +33,7 @@
     "@lexical/table": "^0.38.2",
     "@lexical/utils": "^0.38.2",
     "@reduxjs/toolkit": "^2.11.0",
-    "antd": "^6.0.0",
+    "antd": "^6.0.1",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
     "docx": "^9.5.1",
