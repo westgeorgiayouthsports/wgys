@@ -2,7 +2,7 @@
   "database": {
     "rules": "database.rules.json"
   },
-  "apiKey": "AIzaSyDwydE5BFNWY99KAAlltP8ph30UTLT6Fpk",
+  "apiKey": "dummy-api-key",
   "authDomain": "wgys-ls.firebaseapp.com",
   "databaseURL": "https://wgys-ls-default-rtdb.firebaseio.com",
   "projectId": "wgys-ls",
