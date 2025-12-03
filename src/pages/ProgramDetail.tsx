@@ -248,15 +248,16 @@ export default function ProgramDetail() {
                 <Form.Item 
                   noStyle
                   shouldUpdate={(prevValues, currentValues) => 
-                    prevValues.birthDateStart !== currentValues.birthDateStart
+                    prevValues.birthDateStart !== currentValues.birthDateStart ||
+                    prevValues.allowGradeExemption !== currentValues.allowGradeExemption
                   }
                 >
                   {({ getFieldValue }) => {
-                    const gradeExemptions = getFieldValue('gradeExemptions');
+                    const allowGradeExemption = getFieldValue('allowGradeExemption');
                     const birthDateStart = getFieldValue('birthDateStart');
                     
                     // Auto-set max grade when birth date start changes and grade exemptions are enabled
-                    if (gradeExemptions && birthDateStart) {
+                    if (allowGradeExemption && birthDateStart) {
                       const now = dayjs();
                       const currentYear = now.year();
                       const isBeforeAugust = now.month() < 7; // January to July (months 0-6)
@@ -296,7 +297,7 @@ export default function ProgramDetail() {
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item name="gradeExemptions" label="Grade Exemptions" valuePropName="checked">
+                <Form.Item name="allowGradeExemption" label="Allow Grade Exemptions" valuePropName="checked">
                   <Switch />
                 </Form.Item>
               </Col>

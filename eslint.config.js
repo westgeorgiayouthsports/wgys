@@ -1,39 +1,50 @@
-import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
+import { defineConfig } from 'eslint-define-config';
+import tseslint from 'typescript-eslint';
+import reactX from 'eslint-plugin-react-x';
+import reactDom from 'eslint-plugin-react-dom';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import jsxA11yPlugin from 'eslint-plugin-jsx-a11y';
 import importPlugin from 'eslint-plugin-import';
-import typescriptPlugin from '@typescript-eslint/eslint-plugin';
-import typescriptParser from '@typescript-eslint/parser';
 import eslint from '@eslint/js';
-import jestPlugin from 'eslint-plugin-jest';
 import globals from 'globals';
 
-export default [
+export default defineConfig([
+  {
+    ignores: ['dist/**/*']
+  },
   eslint.configs.recommended,
   {
-    files: ['**/*.{js,jsx,ts,tsx}'],
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      ...tseslint.configs.recommendedTypeChecked,
+      ...tseslint.configs.strictTypeChecked,
+      ...tseslint.configs.stylisticTypeChecked,
+      reactX.configs['recommended-typescript'],
+      reactDom.configs.recommended,
+    ],
     plugins: {
       import: importPlugin,
-      jest: jestPlugin,
       react: reactPlugin,
       'react-hooks': reactHooksPlugin,
       'jsx-a11y': jsxA11yPlugin,
-      '@typescript-eslint': typescriptPlugin,
+      'react-x': reactX,
+      'react-dom': reactDom,
     },
     languageOptions: {
-      parser: typescriptParser,
+      parser: tseslint.parser,
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
       ecmaVersion: 'latest',
       sourceType: 'module',
       globals: {
         ...globals.browser,
-        ...globals.jest,
         React: 'readonly'
       },
     },
     rules: {
-      // 'no-undef': 'off', // Disable no-undef for TypeScript files
-
       // React rules
       ...reactPlugin.configs.recommended.rules,
       ...reactHooksPlugin.configs.recommended.rules,
@@ -44,13 +55,16 @@ export default [
       // Import rules
       ...importPlugin.configs.recommended.rules,
 
-      // TypeScript rules
-      ...typescriptPlugin.configs.recommended.rules,
-
       // React-specific rules
-      'react/react-in-jsx-scope': 'off', // Not needed in React 17+
-      'react-hooks/rules-of-hooks': 'error', // Enforce Hooks rules
-      'react-hooks/exhaustive-deps': 'warn', // Warn about missing dependencies in useEffect
+      'react/react-in-jsx-scope': 'off',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+
+      // TypeScript strict rules
+      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/prefer-nullish-coalescing': 'error',
+      '@typescript-eslint/prefer-optional-chain': 'error',
 
       // Formatting rules
       'no-multiple-empty-lines': ['error', { max: 1, maxEOF: 1, maxBOF: 0 }],
@@ -59,21 +73,14 @@ export default [
       'semi': ['error', 'always'],
       'comma-dangle': ['error', 'only-multiline'],
       'object-curly-spacing': ['error', 'always'],
-      // 'arrow-parens': ['error', 'always'],
       'max-len': ['warn', { code: 200 }],
-      'lines-between-class-members': ['error', 'always', { exceptAfterSingleLine: true }],
-      // 'padding-line-between-statements': [
-      //     'error',
-      //     { blankLine: 'always', prev: 'interface', next: 'class' }, // Require a blank line between interface and class
-      //     { blankLine: 'never', prev: 'interface', next: 'interface' }, // Disallow multiple blank lines between interfaces
-      // ],
     },
     settings: {
       'import/resolver': {
-        typescript: createTypeScriptImportResolver({
+        typescript: {
           project: './tsconfig.json',
           alwaysTryTypes: true,
-        }),
+        },
       },
       react: {
         version: 'detect',
@@ -81,11 +88,15 @@ export default [
     },
   },
   {
-    files: ['**/*.{test,spec}.{js,jsx,ts,tsx}, setupTests.ts'],
+    files: ['**/*.{js,jsx}'],
+    extends: [eslint.configs.recommended],
     languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
       globals: {
-        ...globals.jest,
-      }
+        ...globals.browser,
+        ...globals.node,
+      },
     },
-  }
-];
+  },
+]);

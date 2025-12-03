@@ -14,11 +14,11 @@ import {
   Select,
   DatePicker,
   Tag,
-  message,
   Spin,
   Popconfirm,
   Avatar,
   Checkbox,
+  App,
 } from 'antd';
 import {
   UserOutlined,
@@ -40,6 +40,7 @@ import { useNavigate } from 'react-router-dom';
 const { Title, Text } = Typography;
 
 export default function MyFamily() {
+  const { message } = App.useApp();
   const { user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
   const [familyMembers, setFamilyMembers] = useState<Person[]>([]);
