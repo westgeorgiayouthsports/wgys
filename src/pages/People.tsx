@@ -42,6 +42,7 @@ import {
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
 import { peopleService } from '../services/firebasePeople';
+import { userPeopleSync } from '../services/userPeopleSync';
 import type { Person, PersonFormData, PersonRole } from '../types/person';
 import dayjs from 'dayjs';
 
@@ -72,6 +73,7 @@ export default function People() {
   const [photoURL, setPhotoURL] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 15 });
+  const [syncing, setSyncing] = useState(false);
   const [form] = Form.useForm();
 
 
@@ -230,6 +232,34 @@ export default function People() {
     } catch (error) {
       console.error('❌ Error deleting person:', error);
       message.error({ content: 'Failed to delete person' });
+    }
+  };
+
+  const handleSyncUsers = async () => {
+    setSyncing(true);
+    try {
+      const results = await userPeopleSync.syncUsersWithPeople();
+      
+      if (results.errors.length > 0) {
+        message.warning({ 
+          content: `Sync completed with ${results.errors.length} errors. Created: ${results.created}, Linked: ${results.linked}`,
+          duration: 5
+        });
+        console.error('Sync errors:', results.errors);
+      } else {
+        message.success({ 
+          content: `Sync completed successfully! Created: ${results.created} people, Linked: ${results.linked} accounts`,
+          duration: 3
+        });
+      }
+      
+      // Refresh data
+      await Promise.all([loadPeople(), loadUsers()]);
+    } catch (error) {
+      console.error('❌ Error syncing users:', error);
+      message.error({ content: 'Failed to sync users with people records' });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -484,23 +514,43 @@ export default function People() {
     {
       title: 'User',
       key: 'user',
-      render: (record: User) => (
-        <Space>
-          <Avatar 
-            icon={<UserOutlined />} 
-            style={{ 
-              backgroundColor: record.systemRole === 'owner' ? '#722ed1' : 
-                              record.systemRole === 'admin' ? '#f5222d' : '#8c8c8c' 
-            }}
-          >
-            {(record.displayName || record.email || 'U').charAt(0).toUpperCase()}
-          </Avatar>
-          <div>
-            <div style={{ fontWeight: 500 }}>{record.displayName || 'Unknown User'}</div>
-            <Text type="secondary">{record.email || 'No email'}</Text>
-          </div>
-        </Space>
-      ),
+      render: (record: User) => {
+        const linkedPerson = people.find(p => p.userId === record.uid);
+        return (
+          <Space>
+            <Avatar 
+              icon={<UserOutlined />} 
+              style={{ 
+                backgroundColor: record.systemRole === 'owner' ? '#722ed1' : 
+                                record.systemRole === 'admin' ? '#f5222d' : '#8c8c8c' 
+              }}
+            >
+              {(record.displayName || record.email || 'U').charAt(0).toUpperCase()}
+            </Avatar>
+            <div>
+              <div style={{ fontWeight: 500 }}>
+                {record.displayName || 'Unknown User'}
+                {!linkedPerson && (
+                  <Tag color="orange" style={{ marginLeft: 8 }}>
+                    Unlinked
+                  </Tag>
+                )}
+                {linkedPerson && (
+                  <Tag color="green" style={{ marginLeft: 8 }}>
+                    Linked
+                  </Tag>
+                )}
+              </div>
+              <Text type="secondary">{record.email || 'No email'}</Text>
+              {linkedPerson && (
+                <Text type="secondary" style={{ fontSize: '11px' }}>
+                  🔗 {linkedPerson.firstName} {linkedPerson.lastName}
+                </Text>
+              )}
+            </div>
+          </Space>
+        );
+      },
     },
     {
       title: 'System Role',
@@ -593,6 +643,15 @@ export default function People() {
               >
                 Refresh
               </Button>
+              {(role === 'admin' || role === 'owner') && (
+                <Button
+                  type="default"
+                  loading={syncing}
+                  onClick={handleSyncUsers}
+                >
+                  Sync Users
+                </Button>
+              )}
               <Button
                 type="primary"
                 icon={<PlusOutlined />}

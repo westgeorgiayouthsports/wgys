@@ -1,9 +1,71 @@
 {
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null",
-    "messages": {
-      ".indexOn": "timestamp"
+    "announcements": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      "$announcementId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "comments": {
+      ".read": "auth != null",
+      "$announcementId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$commentId": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      }
+    },
+    "users": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      "$userId": {
+        ".read": "auth != null && (auth.uid == $userId || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+        ".write": "auth != null && (auth.uid == $userId || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "teams": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$teamId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (data.child('userId').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "people": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$personId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (data.child('userId').val() == auth.uid || data.child('createdBy').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "families": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$familyId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (data.child('createdBy').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "programs": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      "$programId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "team-budgets": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$budgetId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
     }
   }
 }

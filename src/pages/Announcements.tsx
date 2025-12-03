@@ -219,7 +219,7 @@ export default function Announcements() {
       {view === 'list' && (
         <>
           <div style={{ marginBottom: '24px' }}>
-            <Typography.Title level={2} style={{ margin: 0 }}>📢 Announcements</Typography.Title>
+            <Typography.Title level={2} style={{ margin: 0 }}>Announcements</Typography.Title>
             <Typography.Text type="secondary">Manage team communications and announcements</Typography.Text>
           </div>
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card, Row, Col, Tag, Button, Space, Typography, Pagination, Spin, Empty, Avatar } from 'antd';
 import { EditOutlined, DeleteOutlined, SendOutlined, EyeOutlined, CalendarOutlined } from '@ant-design/icons';
-import { Announcement } from '../../store/slices/announcementsSlice';
+import type { Announcement } from '../../store/slices/announcementsSlice';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -44,7 +44,7 @@ export default function AnnouncementList({
     <div style={{ padding: '24px' }}>
       {/* Your Announcements Section */}
       <div style={{ marginBottom: '32px' }}>
-        <Title level={3}>📢 Announcements ({announcements.length})</Title>
+        <Title level={3}>Announcements ({announcements.length})</Title>
         {userAnnouncements.length === 0 ? (
           <Empty description="No announcements yet. Create your first one to get started!" />
         ) : (

@@ -184,8 +184,12 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
                 placeholder="Enter display name"
                 size="large"
                 maxLength={50}
-                showCount={isEditing}
               />
+              {isEditing && (
+                <Text type="secondary" style={{ fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  {displayName.length}/50 characters
+                </Text>
+              )}
             </div>
 
             {/* Email */}

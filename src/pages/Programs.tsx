@@ -355,13 +355,43 @@ export default function Programs() {
             </Space>
 
             <Space style={{ width: '100%' }} size="large">
-              <Form.Item name="maxGrade" label="Max Grade">
-                <Select placeholder="Max grade" style={{ width: 120 }}>
-                  <Select.Option value={0}>Kindergarten</Select.Option>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <Select.Option key={i + 1} value={i + 1}>Grade {i + 1}</Select.Option>
-                  ))}
-                </Select>
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) => 
+                  prevValues.birthDateStart !== currentValues.birthDateStart ||
+                  prevValues.allowGradeExemption !== currentValues.allowGradeExemption
+                }
+              >
+                {({ getFieldValue }) => {
+                  const allowGradeExemption = getFieldValue('allowGradeExemption');
+                  const birthDateStart = getFieldValue('birthDateStart');
+                  
+                  // Auto-compute max grade when birth date start changes and grade exemptions are enabled
+                  if (allowGradeExemption && birthDateStart) {
+                    const now = dayjs();
+                    const currentYear = now.year();
+                    const isBeforeAugust = now.month() < 7; // January to July (months 0-6)
+                    const schoolYear = isBeforeAugust ? currentYear - 1 : currentYear;
+                    
+                    const calculatedMaxGrade = schoolYear - dayjs(birthDateStart).year() - 6;
+                    if (calculatedMaxGrade >= 0 && calculatedMaxGrade <= 12) {
+                      setTimeout(() => {
+                        form.setFieldValue('maxGrade', calculatedMaxGrade);
+                      }, 0);
+                    }
+                  }
+                  
+                  return (
+                    <Form.Item name="maxGrade" label="Max Grade">
+                      <Select placeholder="Max grade" style={{ width: 120 }}>
+                        <Select.Option value={0}>Kindergarten</Select.Option>
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <Select.Option key={i + 1} value={i + 1}>Grade {i + 1}</Select.Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  );
+                }}
               </Form.Item>
               <Form.Item name="allowGradeExemption" label="Allow Grade Exemption" valuePropName="checked">
                 <Switch checkedChildren="Yes" unCheckedChildren="No" />
