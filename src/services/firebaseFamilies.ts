@@ -8,7 +8,7 @@ export const familiesService = {
       const familiesRef = ref(db, 'families');
       const snapshot = await get(familiesRef);
       if (!snapshot.exists()) return [];
-      const families = snapshot.val();
+      const families = snapshot.val() as Record<string, Omit<Family, 'id'>>;
       return Object.entries(families).map(([id, family]) => ({ id, ...family } as Family));
     } catch (error) {
       console.error('Error fetching families:', error);

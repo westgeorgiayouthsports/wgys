@@ -6,6 +6,7 @@ export interface Team {
     status: 'active' | 'inactive';
     userId: string;
     createdAt: string;
+    coachId?: string;
 }
 export interface TeamsState {
     teams: Team[];

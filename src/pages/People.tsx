@@ -1270,8 +1270,8 @@ export default function People() {
                 <Text strong>Select which value to keep for each field. Person 2 will be deleted.</Text>
               </div>
               {fields.map(({ key, label }) => {
-                const val1 = person1[key as keyof Person];
-                const val2 = person2[key as keyof Person];
+                const val1 = person1[key as keyof Person] as string | undefined;
+                const val2 = person2[key as keyof Person] as string | undefined;
                 if (!val1 && !val2) return null;
                 return (
                   <div key={key} style={{ marginBottom: 12, padding: 8, border: '1px solid #f0f0f0', borderRadius: 4 }}>
