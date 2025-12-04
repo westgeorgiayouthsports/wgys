@@ -39,11 +39,14 @@ import {
   SettingOutlined,
   CameraOutlined,
   BulbOutlined,
+  LinkOutlined,
+  MergeCellsOutlined,
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
 import { peopleService } from '../services/firebasePeople';
 import { userPeopleSync } from '../services/userPeopleSync';
-import type { Person, PersonFormData, PersonRole } from '../types/person';
+import { familiesService } from '../services/firebaseFamilies';
+import type { Person, PersonFormData, PersonRole, Family } from '../types/person';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -64,6 +67,7 @@ export default function People() {
   const { isDarkMode } = useSelector((state: RootState) => state.theme);
   const [people, setPeople] = useState<Person[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [families, setFamilies] = useState<Family[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
@@ -74,11 +78,18 @@ export default function People() {
   const [displayName, setDisplayName] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 15 });
   const [syncing, setSyncing] = useState(false);
+  const [linkModalVisible, setLinkModalVisible] = useState(false);
+  const [mergeModalVisible, setMergeModalVisible] = useState(false);
+  const [deletePrimaryModalVisible, setDeletePrimaryModalVisible] = useState(false);
+  const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
+  const [newPrimaryId, setNewPrimaryId] = useState<string>('');
+  const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [form] = Form.useForm();
 
   useEffect(() => {
     loadPeople();
-    loadUsers(); // Always load users to show linkage
+    loadUsers();
+    loadFamilies();
     setDisplayName(user?.displayName || '');
     setPhotoURL(user?.photoURL || '');
     loadUserPreferences();
@@ -109,6 +120,15 @@ export default function People() {
       } catch (error) {
         console.error('Failed to save user preferences:', error);
       }
+    }
+  };
+
+  const loadFamilies = async () => {
+    try {
+      const familiesList = await familiesService.getFamilies();
+      setFamilies(familiesList);
+    } catch (error) {
+      console.error('❌ Error loading families:', error);
     }
   };
 
@@ -285,9 +305,26 @@ export default function People() {
         message.success({ content: 'Person updated successfully' });
       } else {
         const newPersonId = await peopleService.createPerson(formData, user?.uid || '');
+        
+        // Create or assign family if not already set
+        let familyId = formData.familyId;
+        if (!familyId && (formData.roles?.includes('parent') || formData.roles?.includes('guardian'))) {
+          const familyName = `${formData.lastName} Family`;
+          familyId = await familiesService.createFamily({
+            name: familyName,
+            primaryPersonId: newPersonId,
+            memberIds: [newPersonId],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            createdBy: user?.uid || ''
+          });
+          await peopleService.updatePerson(newPersonId, { familyId });
+        }
+        
         const newPerson: Person = {
           id: newPersonId,
           ...formData,
+          familyId,
           hasAccount: false,
           relationships: [],
           contactPreferences: [],
@@ -301,6 +338,7 @@ export default function People() {
           isActive: true,
         };
         setPeople([...people, newPerson]);
+        await loadFamilies();
         message.success({ content: 'Person added successfully' });
       }
       setModalVisible(false);
@@ -406,15 +444,29 @@ export default function People() {
     {
       title: 'Family',
       key: 'family',
-      render: (record: Person) => (
-        record.familyId ? (
-          <Tag icon={<HomeOutlined />} color="blue">
-            Family Member
-          </Tag>
-        ) : (
-          <Text type="secondary">—</Text>
-        )
-      ),
+      render: (record: Person) => {
+        if (!record.familyId) return <Text type="secondary">—</Text>;
+        const family = families.find(f => f.id === record.familyId);
+        const primaryPerson = people.find(p => p.id === family?.primaryPersonId);
+        const familyMembers = people.filter(p => p.familyId === record.familyId && p.id !== record.id);
+        return (
+          <div>
+            <Tag icon={<HomeOutlined />} color="blue" style={{ marginBottom: 4 }}>
+              {family?.name || 'Family'}
+            </Tag>
+            {primaryPerson && (
+              <div style={{ fontSize: '12px', marginBottom: 2 }}>
+                <Text strong>Primary:</Text> {primaryPerson.firstName} {primaryPerson.lastName}
+              </div>
+            )}
+            {familyMembers.length > 0 && (
+              <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                {familyMembers.map(m => `${m.firstName} ${m.lastName}`).join(', ')}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: 'Source',
@@ -491,7 +543,15 @@ export default function People() {
           <Popconfirm
             title="Delete Person"
             description="Are you sure you want to delete this person?"
-            onConfirm={() => handleDeletePerson(record.id)}
+            onConfirm={() => {
+              const family = families.find(f => f.id === record.familyId);
+              if (family?.primaryPersonId === record.id) {
+                setPersonToDelete(record);
+                setDeletePrimaryModalVisible(true);
+                return;
+              }
+              handleDeletePerson(record.id);
+            }}
             okText="Yes"
             cancelText="No"
           >
@@ -651,6 +711,20 @@ export default function People() {
                 </Button>
               )}
               <Button
+                icon={<LinkOutlined />}
+                onClick={() => setLinkModalVisible(true)}
+                disabled={selectedPeople.length < 2}
+              >
+                Link Family ({selectedPeople.length})
+              </Button>
+              <Button
+                icon={<MergeCellsOutlined />}
+                onClick={() => setMergeModalVisible(true)}
+                disabled={selectedPeople.length !== 2}
+              >
+                Merge Duplicates
+              </Button>
+              <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={handleAddPerson}
@@ -739,6 +813,10 @@ export default function People() {
             columns={activeTab === 'accounts' ? userColumns : peopleColumns}
             dataSource={activeTab === 'accounts' ? users as any : filteredPeople}
             rowKey={activeTab === 'accounts' ? 'uid' : 'id'}
+            rowSelection={activeTab !== 'accounts' ? {
+              selectedRowKeys: selectedPeople,
+              onChange: (keys) => setSelectedPeople(keys as string[]),
+            } : undefined}
             pagination={{
               current: pagination.current,
               pageSize: pagination.pageSize,
@@ -887,6 +965,85 @@ export default function People() {
             </Col>
           </Row>
 
+          {/* Family Members */}
+          <Form.Item label="Family">
+            <Space orientation="vertical" style={{ width: '100%' }}>
+              {!editingPerson && (
+                <Form.Item name="familyId" noStyle>
+                  <Form.Item noStyle shouldUpdate={(prev, curr) => prev.lastName !== curr.lastName}>
+                    {({ getFieldValue }) => {
+                      const lastName = getFieldValue('lastName');
+                      return (
+                        <Select
+                          placeholder={lastName ? `Create new: ${lastName} Family` : 'Select existing family or create new'}
+                          allowClear
+                          showSearch
+                          filterOption={(input, option) =>
+                            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                          }
+                          options={families.map(f => {
+                            const primaryPerson = people.find(p => p.id === f.primaryPersonId);
+                            return {
+                              label: `${f.name} - ${primaryPerson?.firstName || ''} ${primaryPerson?.lastName || ''} (${primaryPerson?.email || 'No email'})`,
+                              value: f.id
+                            };
+                          })}
+                        />
+                      );
+                    }}
+                  </Form.Item>
+                </Form.Item>
+              )}
+              {editingPerson?.roles?.includes('athlete') && !editingPerson?.familyId && (
+                <div style={{ padding: 8, background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, marginBottom: 8 }}>
+                  <Text type="warning">Athletes cannot be primary family members. Link this athlete to a parent/guardian instead.</Text>
+                </div>
+              )}
+              {editingPerson?.familyId ? (() => {
+                const family = families.find(f => f.id === editingPerson.familyId);
+                return (
+                  <div>
+                    <Tag icon={<HomeOutlined />} color="blue" style={{ marginBottom: 8 }}>
+                      {family?.name || editingPerson.familyId}
+                    </Tag>
+                    <div style={{ marginBottom: 8, padding: 12, border: '1px solid var(--ant-color-border)', borderRadius: 4 }}>
+                      {people
+                        .filter(p => p.familyId === editingPerson.familyId)
+                        .map(m => (
+                          <div key={m.id} style={{ marginBottom: 4 }}>
+                            <Tag 
+                              color={m.id === family?.primaryPersonId ? 'blue' : 'default'}
+                              closable={m.id !== family?.primaryPersonId}
+                              onClose={async () => {
+                                await peopleService.updatePerson(m.id, { familyId: undefined });
+                                loadPeople();
+                              }}
+                            >
+                              {m.firstName} {m.lastName} {m.id === family?.primaryPersonId && '(Primary)'}
+                            </Tag>
+                            {m.email && <Text type="secondary" style={{ fontSize: '12px' }}>({m.email})</Text>}
+                          </div>
+                        ))}
+                    </div>
+                    <Button 
+                      size="small" 
+                      danger
+                      onClick={async () => {
+                        if (editingPerson?.id) {
+                          await peopleService.updatePerson(editingPerson.id, { familyId: undefined });
+                          setEditingPerson({ ...editingPerson, familyId: undefined });
+                          loadPeople();
+                        }
+                      }}
+                    >
+                      Unlink from Family
+                    </Button>
+                  </div>
+                );
+              })() : null}
+            </Space>
+          </Form.Item>
+
           {/* User ID - Only show if person has account */}
           {editingPerson?.userId && (
             <Form.Item label="User ID">
@@ -988,6 +1145,244 @@ export default function People() {
             />
           </div>
         </Space>
+      </Modal>
+
+      {/* Link Family Modal */}
+      <Modal
+        title="Link Family Members"
+        open={linkModalVisible}
+        onCancel={() => { setLinkModalVisible(false); setSelectedPeople([]); }}
+        onOk={async () => {
+          if (selectedPeople.length < 2) {
+            message.warning({ content: 'Select at least 2 people to link' });
+            return;
+          }
+          try {
+            const primaryPerson = people.find(p => p.id === selectedPeople[0]);
+            if (!primaryPerson) return;
+            
+            if (primaryPerson.roles.includes('athlete')) {
+              message.error({ content: 'First person must be parent/guardian, not athlete' });
+              return;
+            }
+            
+            const familyId = await familiesService.createFamily({
+              name: `${primaryPerson.lastName} Family`,
+              primaryPersonId: selectedPeople[0],
+              memberIds: selectedPeople,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              createdBy: user?.uid || ''
+            });
+            
+            for (const personId of selectedPeople) {
+              await peopleService.updatePerson(personId, { familyId });
+            }
+            
+            message.success({ content: `Created family with ${selectedPeople.length} members` });
+            setLinkModalVisible(false);
+            setSelectedPeople([]);
+            await Promise.all([loadPeople(), loadFamilies()]);
+          } catch (error) {
+            message.error({ content: 'Failed to link family members' });
+          }
+        }}
+        width={600}
+      >
+        <div style={{ marginBottom: 16, padding: 12, background: '#e6f7ff', borderRadius: 4 }}>
+          <Text strong>First person selected will be the primary family member (must be parent/guardian)</Text>
+        </div>
+        <Select
+          mode="multiple"
+          style={{ width: '100%' }}
+          placeholder="Select people to link as family"
+          value={selectedPeople}
+          onChange={setSelectedPeople}
+          filterOption={(input, option) =>
+            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+          }
+          options={people.filter(p => !p.familyId).map(p => ({
+            label: `${p.firstName} ${p.lastName} (${p.roles.join(', ')}) - ${p.email || 'No email'}`,
+            value: p.id
+          }))}
+        />
+      </Modal>
+
+      {/* Merge Duplicates Modal */}
+      <Modal
+        title="Merge Duplicate People"
+        open={mergeModalVisible}
+        onCancel={() => { setMergeModalVisible(false); }}
+        onOk={async () => {
+          if (selectedPeople.length !== 2) return;
+          try {
+            const person1 = people.find(p => p.id === selectedPeople[0]);
+            const person2 = people.find(p => p.id === selectedPeople[1]);
+            if (!person1 || !person2) return;
+            
+            const merged: any = { id: selectedPeople[0] };
+            const fields = ['firstName', 'lastName', 'email', 'phone', 'dateOfBirth', 'sex', 'address', 'city', 'state', 'zipCode', 'schoolName', 'graduationYear'];
+            
+            fields.forEach(field => {
+              const val1 = person1[field as keyof Person];
+              const val2 = person2[field as keyof Person];
+              merged[field] = document.querySelector(`input[name="merge-${field}"]:checked`)?.getAttribute('value') === '1' ? val1 : val2;
+            });
+            
+            merged.roles = [...new Set([...person1.roles, ...person2.roles])];
+            
+            await peopleService.updatePerson(selectedPeople[0], merged);
+            await peopleService.deletePerson(selectedPeople[1]);
+            
+            message.success({ content: 'People merged successfully' });
+            setMergeModalVisible(false);
+            setSelectedPeople([]);
+            loadPeople();
+          } catch (error) {
+            message.error({ content: 'Failed to merge people' });
+          }
+        }}
+        width={800}
+      >
+        {selectedPeople.length === 2 ? (() => {
+          const person1 = people.find(p => p.id === selectedPeople[0]);
+          const person2 = people.find(p => p.id === selectedPeople[1]);
+          if (!person1 || !person2) return null;
+          
+          const fields = [
+            { key: 'firstName', label: 'First Name' },
+            { key: 'lastName', label: 'Last Name' },
+            { key: 'email', label: 'Email' },
+            { key: 'phone', label: 'Phone' },
+            { key: 'dateOfBirth', label: 'Date of Birth' },
+            { key: 'sex', label: 'Sex' },
+            { key: 'address', label: 'Address' },
+            { key: 'city', label: 'City' },
+            { key: 'state', label: 'State' },
+            { key: 'zipCode', label: 'Zip Code' },
+            { key: 'schoolName', label: 'School' },
+            { key: 'graduationYear', label: 'Graduation Year' },
+          ];
+          
+          return (
+            <div>
+              <div style={{ marginBottom: 16, padding: 12, background: '#e6f7ff', borderRadius: 4 }}>
+                <Text strong>Select which value to keep for each field. Person 2 will be deleted.</Text>
+              </div>
+              {fields.map(({ key, label }) => {
+                const val1 = person1[key as keyof Person];
+                const val2 = person2[key as keyof Person];
+                if (!val1 && !val2) return null;
+                return (
+                  <div key={key} style={{ marginBottom: 12, padding: 8, border: '1px solid #f0f0f0', borderRadius: 4 }}>
+                    <div style={{ fontWeight: 500, marginBottom: 8 }}>{label}</div>
+                    <Space orientation="vertical">
+                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input type="radio" name={`merge-${key}`} value="1" defaultChecked style={{ marginRight: 8 }} />
+                        <Tag color="blue">Person 1:</Tag> {val1 || <Text type="secondary">Empty</Text>}
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input type="radio" name={`merge-${key}`} value="2" style={{ marginRight: 8 }} />
+                        <Tag color="green">Person 2:</Tag> {val2 || <Text type="secondary">Empty</Text>}
+                      </label>
+                    </Space>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })() : (
+          <Text type="secondary">Select exactly 2 people from the table using checkboxes</Text>
+        )}
+      </Modal>
+
+      {/* Delete Primary Member Modal */}
+      <Modal
+        title="Delete Primary Family Member"
+        open={deletePrimaryModalVisible}
+        onCancel={() => { setDeletePrimaryModalVisible(false); setPersonToDelete(null); setNewPrimaryId(''); }}
+        onOk={async () => {
+          if (!personToDelete) return;
+          const family = families.find(f => f.id === personToDelete.familyId);
+          if (!family) return;
+          
+          const otherAdults = people.filter(p => 
+            p.familyId === family.id && 
+            p.id !== personToDelete.id && 
+            (p.roles?.includes('parent') || p.roles?.includes('guardian'))
+          );
+          
+          if (otherAdults.length > 0 && !newPrimaryId) {
+            message.error({ content: 'Please select a new primary member' });
+            return;
+          }
+          
+          try {
+            if (otherAdults.length > 0) {
+              await familiesService.updateFamily(family.id, { primaryPersonId: newPrimaryId });
+              await peopleService.deletePerson(personToDelete.id);
+              setPeople(people.filter(p => p.id !== personToDelete.id));
+              message.success({ content: 'Primary member changed and person deleted' });
+            } else {
+              for (const personId of family.memberIds) {
+                if (personId !== personToDelete.id) {
+                  await peopleService.updatePerson(personId, { familyId: undefined });
+                }
+              }
+              await familiesService.deleteFamily(family.id);
+              await peopleService.deletePerson(personToDelete.id);
+              setPeople(people.filter(p => p.id !== personToDelete.id));
+              message.success({ content: 'Person and family deleted successfully' });
+            }
+            setDeletePrimaryModalVisible(false);
+            setPersonToDelete(null);
+            setNewPrimaryId('');
+            await Promise.all([loadPeople(), loadFamilies()]);
+          } catch (error) {
+            message.error({ content: 'Failed to delete person' });
+          }
+        }}
+        width={500}
+      >
+        {personToDelete && (() => {
+          const family = families.find(f => f.id === personToDelete.familyId);
+          if (!family) return null;
+          
+          const otherAdults = people.filter(p => 
+            p.familyId === family.id && 
+            p.id !== personToDelete.id && 
+            (p.roles?.includes('parent') || p.roles?.includes('guardian'))
+          );
+          
+          return (
+            <div>
+              {otherAdults.length > 0 ? (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <Text>This person is the primary family member. Please select a new primary member before deleting.</Text>
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>New Primary Member</label>
+                    <Select
+                      style={{ width: '100%' }}
+                      value={newPrimaryId}
+                      onChange={(value) => setNewPrimaryId(value)}
+                      placeholder="Select new primary member"
+                      options={otherAdults.map(p => ({
+                        label: `${p.firstName} ${p.lastName}`,
+                        value: p.id
+                      }))}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <Text type="warning">This is the only adult in the family. Deleting this person will also delete the entire family and unlink all members.</Text>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </Modal>
     </div>
   );

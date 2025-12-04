@@ -29,6 +29,7 @@ import {
   HomeOutlined,
   FormOutlined,
   QuestionCircleOutlined,
+  CrownOutlined,
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
 import { peopleService } from '../services/firebasePeople';
@@ -49,6 +50,10 @@ export default function MyFamily() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [sameAddress, setSameAddress] = useState(false);
+  const [familyModalVisible, setFamilyModalVisible] = useState(false);
+  const [currentFamily, setCurrentFamily] = useState<any>(null);
+  const [selectedPrimaryId, setSelectedPrimaryId] = useState<string>('');
+  const [familyName, setFamilyName] = useState<string>('');
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -68,6 +73,11 @@ export default function MyFamily() {
         // Load family members
         const family = await peopleService.getPeopleByFamily(userPerson.familyId);
         setFamilyMembers(family);
+        
+        // Load family details
+        const { familiesService } = await import('../services/firebaseFamilies');
+        const familyDetails = await familiesService.getFamily(userPerson.familyId);
+        setCurrentFamily(familyDetails);
       } else if (userPerson) {
         // User exists but no family - show just themselves
         setFamilyMembers([userPerson]);
@@ -268,6 +278,7 @@ export default function MyFamily() {
       athlete: 'green',
       coach: 'orange',
       volunteer: 'purple',
+      staff: 'gold',
       grandparent: 'magenta',
       relative: 'geekblue',
       other: 'default',
@@ -319,7 +330,7 @@ export default function MyFamily() {
             <div style={{ fontWeight: 500 }}>
               {record.firstName} {record.lastName}
               {record.userId === user?.uid && <Tag color="gold" style={{ marginLeft: 8 }}>You</Tag>}
-              {record.userId === user?.uid && <Tag color="blue" style={{ marginLeft: 8 }}>Primary</Tag>}
+              {currentFamily && record.id === currentFamily.primaryPersonId && <Tag color="blue" style={{ marginLeft: 8 }}>Primary</Tag>}
               {record.hasAccount && record.userId !== user?.uid && <Tag color="green" style={{ marginLeft: 8 }}>Account</Tag>}
             </div>
             <Text type="secondary">{record.email}</Text>
@@ -389,6 +400,25 @@ export default function MyFamily() {
               </Button>
             </>
           )}
+          {currentFamily && (record.roles?.includes('parent') || record.roles?.includes('guardian')) && record.id !== currentFamily.primaryPersonId && (
+            <Button
+              size="small"
+              type="primary"
+              icon={<CrownOutlined />}
+              onClick={async () => {
+                try {
+                  const { familiesService } = await import('../services/firebaseFamilies');
+                  await familiesService.updateFamily(currentFamily.id, { primaryPersonId: record.id });
+                  setCurrentFamily({ ...currentFamily, primaryPersonId: record.id });
+                  message.success({ content: `${record.firstName} ${record.lastName} is now the primary member` });
+                } catch (error) {
+                  message.error({ content: 'Failed to set primary member' });
+                }
+              }}
+            >
+              Set Primary
+            </Button>
+          )}
           <Button
             size="small"
             icon={<EditOutlined />}
@@ -396,7 +426,7 @@ export default function MyFamily() {
           >
             Edit
           </Button>
-          {record.userId !== user?.uid && (
+          {record.userId !== user?.uid && currentFamily?.primaryPersonId !== record.id && (
             <Popconfirm
               title="Remove Family Member"
               description="Are you sure you want to remove this family member?"
@@ -431,13 +461,27 @@ export default function MyFamily() {
             </Text>
           </Col>
           <Col>
-            <Button
-              type="primary"
-              icon={<UserAddOutlined />}
-              onClick={handleAddFamilyMember}
-            >
-              Add Family Member
-            </Button>
+            <Space>
+              {currentFamily && (
+                <Button
+                  icon={<HomeOutlined />}
+                  onClick={() => {
+                    setFamilyName(currentFamily.name);
+                    setSelectedPrimaryId(currentFamily.primaryPersonId);
+                    setFamilyModalVisible(true);
+                  }}
+                >
+                  Manage Family
+                </Button>
+              )}
+              <Button
+                type="primary"
+                icon={<UserAddOutlined />}
+                onClick={handleAddFamilyMember}
+              >
+                Add Family Member
+              </Button>
+            </Space>
           </Col>
         </Row>
       </div>
@@ -574,11 +618,6 @@ export default function MyFamily() {
                         return Promise.reject('Child/Athlete cannot have other relationships');
                       }
                       
-                      // Parent and grandparent cannot coexist
-                      if (value.includes('parent') && value.includes('grandparent')) {
-                        return Promise.reject('Cannot be both Parent and Grandparent');
-                      }
-                      
                       // Relative/other cannot be core family roles
                       const coreRoles = ['parent', 'guardian', 'athlete', 'grandparent'];
                       const peripheralRoles = ['relative', 'other'];
@@ -595,14 +634,15 @@ export default function MyFamily() {
                 ]}
               >
                 <Select mode="multiple" placeholder="Select relationship">
-                  <Select.Option value="parent">Parent</Select.Option>
-                  <Select.Option value="guardian">Guardian</Select.Option>
                   <Select.Option value="athlete">Child/Athlete</Select.Option>
-                  <Select.Option value="grandparent">Grandparent</Select.Option>
                   <Select.Option value="coach">Coach</Select.Option>
-                  <Select.Option value="volunteer">Volunteer</Select.Option>
-                  <Select.Option value="relative">Relative</Select.Option>
+                  <Select.Option value="grandparent">Grandparent</Select.Option>
+                  <Select.Option value="guardian">Guardian</Select.Option>
                   <Select.Option value="other">Other</Select.Option>
+                  <Select.Option value="parent">Parent</Select.Option>
+                  <Select.Option value="relative">Relative</Select.Option>
+                  <Select.Option value="staff">Staff</Select.Option>
+                  <Select.Option value="volunteer">Volunteer</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -778,6 +818,56 @@ export default function MyFamily() {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Manage Family Modal */}
+      <Modal
+        title="Manage Family"
+        open={familyModalVisible}
+        onCancel={() => setFamilyModalVisible(false)}
+        onOk={async () => {
+          try {
+            if (!selectedPrimaryId) {
+              message.error({ content: 'Please select a primary family member' });
+              return;
+            }
+            
+            const { familiesService } = await import('../services/firebaseFamilies');
+            await familiesService.updateFamily(currentFamily.id, {
+              name: familyName,
+              primaryPersonId: selectedPrimaryId
+            });
+            
+            message.success({ content: 'Family updated successfully' });
+            setFamilyModalVisible(false);
+            await loadFamilyData();
+          } catch (error) {
+            message.error({ content: 'Failed to update family' });
+          }
+        }}
+        width={500}
+      >
+        {currentFamily && (
+          <div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Family Name</label>
+              <Input value={familyName} onChange={(e) => setFamilyName(e.target.value)} placeholder="Enter family name" />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Primary Family Member</label>
+              <Select
+                style={{ width: '100%' }}
+                value={selectedPrimaryId}
+                onChange={(value) => setSelectedPrimaryId(value)}
+                placeholder="Select primary member"
+                options={familyMembers.filter(p => p.roles?.includes('parent') || p.roles?.includes('guardian')).map(p => ({
+                  label: `${p.firstName} ${p.lastName}`,
+                  value: p.id
+                }))}
+              />
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

@@ -16,6 +16,7 @@ import {
   Statistic,
   Row,
   Col,
+  Tooltip,
 } from 'antd';
 import {
   PlusOutlined,
@@ -46,6 +47,7 @@ interface FormData {
 export default function Teams() {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
+  const role = useSelector((state: RootState) => state.auth.role);
   const teams = useSelector((state: RootState) => state.teams.teams);
   const loading = useSelector((state: RootState) => state.teams.loading);
 
@@ -56,13 +58,33 @@ export default function Teams() {
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setLocalError] = useState<string>('');
+  const [coaches, setCoaches] = useState<any[]>([]);
+  const [selectedCoach, setSelectedCoach] = useState<string>('');
 
-  // Load teams on mount
+  // Load teams and coaches on mount
   useEffect(() => {
     if (user?.uid) {
       loadTeams();
+      loadCoaches();
     }
   }, [user?.uid]);
+
+  const loadCoaches = async () => {
+    try {
+      const { ref, get } = await import('firebase/database');
+      const { db } = await import('../services/firebase');
+      const usersSnapshot = await get(ref(db, 'users'));
+      if (usersSnapshot.exists()) {
+        const usersData = usersSnapshot.val();
+        const coachList = Object.entries(usersData || {})
+          .filter(([_, userData]: any) => ['coach', 'admin', 'owner'].includes(userData.role))
+          .map(([uid, userData]: any) => ({ uid, ...userData }));
+        setCoaches(coachList);
+      }
+    } catch (err) {
+      console.error('Failed to load coaches:', err);
+    }
+  };
 
   const loadTeams = async () => {
     if (!user?.uid) return;
@@ -116,6 +138,7 @@ export default function Teams() {
           status: formData.status,
           userId: user.uid,
           createdAt: new Date().toISOString(),
+          coachId: selectedCoach || undefined,
         });
         dispatch(addTeam(newTeam));
       }
@@ -131,10 +154,11 @@ export default function Teams() {
     const team = teams.find(t => t.id === teamId);
     if (team) {
       setFormData({
-        name: team.name,
-        budget: team.budget.toString(),
-        status: team.status,
+        name: team.name || '',
+        budget: (team.budget || 0).toString(),
+        status: team.status || 'active',
       });
+      setSelectedCoach(team.coachId || '');
       setEditingId(teamId);
     }
   };
@@ -157,23 +181,23 @@ export default function Teams() {
     setLocalError('');
   };
 
-  const totalBudget = teams.reduce((sum, t) => sum + t.budget, 0);
-  const totalSpent = teams.reduce((sum, t) => sum + t.spent, 0);
+  const totalBudget = teams.reduce((sum, t) => sum + (t.budget || 0), 0);
+  const totalSpent = teams.reduce((sum, t) => sum + (t.spent || 0), 0);
 
   const columns = [
     {
       title: 'Team Name',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string) => <Text strong>{name}</Text>,
+      render: (name: string) => <Text strong>{name || 'Unnamed Team'}</Text>,
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={status === 'active' ? 'green' : 'default'}>
-          {status.toUpperCase()}
+        <Tag color={(status || 'active') === 'active' ? 'green' : 'default'}>
+          {(status || 'active').toUpperCase()}
         </Tag>
       ),
     },
@@ -181,19 +205,19 @@ export default function Teams() {
       title: 'Budget',
       dataIndex: 'budget',
       key: 'budget',
-      render: (budget: number) => `$${budget.toFixed(2)}`,
+      render: (budget: number) => `$${(budget || 0).toFixed(2)}`,
     },
     {
       title: 'Spent',
       dataIndex: 'spent',
       key: 'spent',
-      render: (spent: number) => `$${spent.toFixed(2)}`,
+      render: (spent: number) => `$${(spent || 0).toFixed(2)}`,
     },
     {
       title: 'Remaining',
       key: 'remaining',
       render: (record: any) => {
-        const remaining = record.budget - record.spent;
+        const remaining = (record.budget || 0) - (record.spent || 0);
         return (
           <Text style={{ color: remaining >= 0 ? '#52c41a' : '#ff4d4f' }}>
             ${remaining.toFixed(2)}
@@ -201,25 +225,89 @@ export default function Teams() {
         );
       },
     },
+
+    {
+      title: 'Created By',
+      dataIndex: 'userId',
+      key: 'userId',
+      render: (userId: string) => userId === user?.uid ? user?.displayName || user?.email?.split('@')[0] : userId ? 'Other User' : <Text type="secondary">Demo</Text>,
+    },
+    {
+      title: 'Coach',
+      dataIndex: 'coachId',
+      key: 'coachId',
+      render: (coachId: string, record: any) => {
+        const coach = coaches.find(c => c.uid === coachId);
+        const isAdmin = role === 'admin' || role === 'owner';
+        
+        if (!isAdmin) {
+          return coach ? (
+            <Tooltip title={coach.email}>
+              {coach.displayName || coach.email?.split('@')[0]}
+            </Tooltip>
+          ) : <Text type="secondary">Unassigned</Text>;
+        }
+        
+        return (
+          <Select
+            size="small"
+            style={{ width: 150 }}
+            value={coachId || undefined}
+            placeholder="Select coach"
+            onChange={async (value) => {
+              try {
+                await teamsService.updateTeam(record.id, { coachId: value });
+                await loadTeams();
+              } catch (err) {
+                console.error('Failed to update coach:', err);
+              }
+            }}
+          >
+            <Select.Option value="">Unassigned</Select.Option>
+            {coaches.map(c => (
+              <Select.Option key={c.uid} value={c.uid} title={c.email}>
+                {c.displayName || c.email?.split('@')[0]}
+              </Select.Option>
+            ))}
+          </Select>
+        );
+      },
+    },
     {
       title: 'Actions',
       key: 'actions',
-      render: (record: any) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => { handleEdit(record.id); }}
-          />
-          <Popconfirm
-            title="Delete Team"
-            description="Are you sure you want to delete this team?"
-            onConfirm={() => handleDelete(record.id)}
-          >
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (record: any) => {
+        const isOwner = record.userId === user?.uid;
+        const isAdmin = role === 'admin' || role === 'owner';
+        const canEdit = isOwner || isAdmin;
+        const isDemoTeam = !record.userId;
+        
+        return (
+          <Space>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => { handleEdit(record.id); }}
+              disabled={isDemoTeam && !isAdmin}
+              title={isDemoTeam && !isAdmin ? 'Demo team - read only' : ''}
+            />
+            <Popconfirm
+              title="Delete Team"
+              description="Are you sure you want to delete this team?"
+              onConfirm={() => handleDelete(record.id)}
+              disabled={!canEdit || isDemoTeam}
+            >
+              <Button 
+                size="small" 
+                danger 
+                icon={<DeleteOutlined />} 
+                disabled={!canEdit || isDemoTeam}
+                title={isDemoTeam ? 'Demo team - cannot delete' : !canEdit ? 'Only team creator can delete' : ''}
+              />
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 

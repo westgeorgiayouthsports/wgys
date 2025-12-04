@@ -51,8 +51,10 @@ export const teamsService = {
       const teamsRef = ref(db, 'teams');
       const newTeamRef = push(teamsRef);
       
+      const { coachId, ...rest } = team;
       const teamData = {
-        ...team,
+        ...rest,
+        ...(coachId && { coachId }),
         id: newTeamRef.key,
         createdAt: new Date().toISOString(),
       };
