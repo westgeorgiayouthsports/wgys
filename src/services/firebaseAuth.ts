@@ -5,7 +5,7 @@ import {
   GoogleAuthProvider,
   updateProfile,
 } from 'firebase/auth';
-import { ref, set, get } from 'firebase/database';
+import { ref, set, get, push, update } from 'firebase/database';
 import { auth, db } from './firebase';
 
 const googleProvider = new GoogleAuthProvider();
@@ -27,6 +27,24 @@ export const signUpWithEmail = async (email: string, password: string, displayNa
       displayName,
       role: 'user',
       createdAt: new Date().toISOString(),
+    });
+
+    // Create corresponding People record
+    const nameParts = displayName.split(' ');
+    const peopleRef = ref(db, 'people');
+    const newPersonRef = push(peopleRef);
+    await set(newPersonRef, {
+      firstName: nameParts[0] || displayName,
+      lastName: nameParts.slice(1).join(' ') || '',
+      email,
+      userId: user.uid,
+      hasAccount: true,
+      roles: [],
+      source: 'signup',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: user.uid,
+      isActive: true,
     });
 
     return user;
@@ -60,6 +78,26 @@ export const signInWithGoogle = async () => {
         photoURL: user.photoURL || null,
         role: 'user',
         createdAt: new Date().toISOString(),
+      });
+
+      // Create corresponding People record
+      const displayName = user.displayName || 'User';
+      const nameParts = displayName.split(' ');
+      const peopleRef = ref(db, 'people');
+      const newPersonRef = push(peopleRef);
+      await set(newPersonRef, {
+        firstName: nameParts[0] || displayName,
+        lastName: nameParts.slice(1).join(' ') || '',
+        email: user.email,
+        photoURL: user.photoURL || null,
+        userId: user.uid,
+        hasAccount: true,
+        roles: [],
+        source: 'signup',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: user.uid,
+        isActive: true,
       });
     }
 

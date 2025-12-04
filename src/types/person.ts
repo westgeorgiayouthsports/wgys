@@ -1,4 +1,4 @@
-export type PersonRole = 'parent' | 'guardian' | 'athlete' | 'coach' | 'volunteer' | 'grandparent' | 'relative' | 'other';
+export type PersonRole = 'parent' | 'guardian' | 'athlete' | 'coach' | 'volunteer' | 'staff' | 'grandparent' | 'relative' | 'other';
 export type RelationshipType = 'parent' | 'child' | 'sibling' | 'guardian' | 'spouse' | 'grandparent' | 'other';
 export type ContactMethod = 'email' | 'sms' | 'phone' | 'app';
 
@@ -117,4 +117,7 @@ export interface PersonFormData {
   photoURL?: string;
   displayName?: string;
   themePreference?: 'light' | 'dark';
+  familyId?: string;
+  userId?: string;
+  hasAccount?: boolean;
 }

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="WGYS logo">
+  <rect width="100" height="100" rx="12" fill="#208085" />
+  <!-- Embedded official logo (hosted on S3) -->
+  <image href="https://s3.amazonaws.com/jerseywatch-files/production/organizations/26934/downloads/wgys-baseball-logo-9-small-transparent.png" x="10" y="10" width="80" height="80" preserveAspectRatio="xMidYMid meet" />
+</svg>

@@ -51,8 +51,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (teams.length > 0) {
-      const totalBudget = teams.reduce((sum, t) => sum + t.budget, 0);
-      const totalSpent = teams.reduce((sum, t) => sum + t.spent, 0);
+      const totalBudget = teams.reduce((sum, t) => sum + (t.budget || 0), 0);
+      const totalSpent = teams.reduce((sum, t) => sum + (t.spent || 0), 0);
       const totalRemaining = totalBudget - totalSpent;
       const activeTeams = teams.filter(t => t.status === 'active').length;
       const spendingPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
@@ -109,7 +109,7 @@ export default function Dashboard() {
       key: 'status',
       render: (status: string) => (
         <Tag color={status === 'active' ? 'green' : 'default'}>
-          {status.toUpperCase()}
+          {status?.toUpperCase() || 'UNKNOWN'}
         </Tag>
       ),
     },
@@ -117,19 +117,21 @@ export default function Dashboard() {
       title: 'Budget',
       dataIndex: 'budget',
       key: 'budget',
-      render: (budget: number) => `$${budget.toLocaleString()}`,
+      render: (budget: number) => `$${(budget || 0).toLocaleString()}`,
     },
     {
       title: 'Spent',
       dataIndex: 'spent',
       key: 'spent',
-      render: (spent: number) => `$${spent.toLocaleString()}`,
+      render: (spent: number) => `$${(spent || 0).toLocaleString()}`,
     },
     {
       title: 'Progress',
       key: 'progress',
       render: (record: any) => {
-        const percent = record.budget > 0 ? Math.round((record.spent / record.budget) * 100) : 0;
+        const budget = record.budget || 0;
+        const spent = record.spent || 0;
+        const percent = budget > 0 ? Math.round((spent / budget) * 100) : 0;
         return (
           <Progress 
             percent={percent} 

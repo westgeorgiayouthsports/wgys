@@ -1,125 +1,61 @@
-import { ref, push, get, update, remove, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, set, get, update, remove, push } from 'firebase/database';
 import { db } from './firebase';
-import type { Family, FamilyMember, Registration } from '../types/family';
+import type { Family } from '../types/person';
 
 export const familiesService = {
   async getFamilies(): Promise<Family[]> {
     try {
       const familiesRef = ref(db, 'families');
       const snapshot = await get(familiesRef);
-      
-      if (!snapshot.exists()) {
-        return [];
-      }
-
-      const familiesData = snapshot.val();
-      return Object.entries(familiesData).map(([id, data]: [string, any]) => ({
-        id,
-        ...data,
-      }));
+      if (!snapshot.exists()) return [];
+      const families = snapshot.val();
+      return Object.entries(families).map(([id, family]) => ({ id, ...family } as Family));
     } catch (error) {
       console.error('Error fetching families:', error);
       throw error;
     }
   },
 
-  async getFamilyByUserId(userId: string): Promise<Family | null> {
+  async getFamily(familyId: string): Promise<Family | null> {
     try {
-      const familiesRef = ref(db, 'families');
-      const snapshot = await get(familiesRef);
-      
-      if (!snapshot.exists()) {
-        return null;
-      }
-
-      const familiesData = snapshot.val();
-      const family = Object.entries(familiesData).find(([_, data]: [string, any]) => 
-        data.members?.some((member: FamilyMember) => member.userId === userId)
-      );
-
-      if (family) {
-        const [id, data] = family;
-        return { id, ...(data as any) } as Family;
-      }
-
-      return null;
+      const familyRef = ref(db, `families/${familyId}`);
+      const snapshot = await get(familyRef);
+      if (!snapshot.exists()) return null;
+      return { id: familyId, ...snapshot.val() } as Family;
     } catch (error) {
-      console.error('Error fetching family by user ID:', error);
+      console.error('Error fetching family:', error);
       throw error;
     }
   },
 
-  async createFamily(familyData: Omit<Family, 'id' | 'createdAt' | 'updatedAt'>, createdBy: string): Promise<string> {
+  async createFamily(family: Omit<Family, 'id'>): Promise<string> {
     try {
       const familiesRef = ref(db, 'families');
-      const now = new Date().toISOString();
-      
-      const newFamily = {
-        ...familyData,
-        createdAt: now,
-        updatedAt: now,
-        createdBy,
-      };
-
-      const result = await push(familiesRef, newFamily);
-      return result.key!;
+      const newFamilyRef = push(familiesRef);
+      await set(newFamilyRef, family);
+      return newFamilyRef.key!;
     } catch (error) {
       console.error('Error creating family:', error);
       throw error;
     }
   },
 
-  async updateFamily(familyId: string, familyData: Partial<Family>): Promise<void> {
+  async updateFamily(familyId: string, updates: Partial<Family>): Promise<void> {
     try {
       const familyRef = ref(db, `families/${familyId}`);
-      
-      const updateData = {
-        ...familyData,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await update(familyRef, updateData);
+      await update(familyRef, { ...updates, updatedAt: new Date().toISOString() });
     } catch (error) {
       console.error('Error updating family:', error);
       throw error;
     }
   },
 
-  async getRegistrations(): Promise<Registration[]> {
+  async deleteFamily(familyId: string): Promise<void> {
     try {
-      const registrationsRef = ref(db, 'registrations');
-      const snapshot = await get(registrationsRef);
-      
-      if (!snapshot.exists()) {
-        return [];
-      }
-
-      const registrationsData = snapshot.val();
-      return Object.entries(registrationsData).map(([id, data]: [string, any]) => ({
-        id,
-        ...data,
-      }));
+      const familyRef = ref(db, `families/${familyId}`);
+      await remove(familyRef);
     } catch (error) {
-      console.error('Error fetching registrations:', error);
-      throw error;
-    }
-  },
-
-  async createRegistration(registrationData: Omit<Registration, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    try {
-      const registrationsRef = ref(db, 'registrations');
-      const now = new Date().toISOString();
-      
-      const newRegistration = {
-        ...registrationData,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      const result = await push(registrationsRef, newRegistration);
-      return result.key!;
-    } catch (error) {
-      console.error('Error creating registration:', error);
+      console.error('Error deleting family:', error);
       throw error;
     }
   },
