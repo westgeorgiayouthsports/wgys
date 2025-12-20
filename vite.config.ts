@@ -6,6 +6,10 @@ import mkcert from 'vite-plugin-mkcert';
 export default defineConfig(() => ({
   plugins: [react(), ...(process.env.ENABLE_HTTPS !== 'false' ? [mkcert()] : [])],
   base: '/',
+  resolve: {
+    // Ensure only one copy of React/ReactDOM is bundled to avoid runtime interop issues
+    dedupe: ['react', 'react-dom']
+  },
   server: {
     port: 5173,
     strictPort: true,
