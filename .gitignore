@@ -115,13 +115,9 @@ firebase-debug.*.log
 
 # Testing
 coverage/
+/docs
 test-results/
 playwright-report/
 playwright/.cache/
-q-dev-chat-2025-12-02.md
 wgys-ls-firebase.json
-ANALYTICS_SETUP.md
-GA4_GITHUB_SETUP.md
-GA4_QUICK_CHECKLIST.md
-.github/copilot-instructions.md
 tests/e2e/.auth/adminStorageState.json
