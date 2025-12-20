@@ -80,6 +80,21 @@ jobs:
         # cat dist/index.html
         # echo "\nVerifying assets folder:"
         # ls -la dist/assets/ | head -10
+
+    - name: Verify built assets exist
+      run: |
+        node - <<'EOF'
+        const fs = require('fs'), p = 'dist/index.html';
+        const html = fs.readFileSync(p, 'utf8');
+        const needed = ['vendor-react', 'vendor-antd', 'index-'];
+        needed.forEach(k => {
+          if (!html.includes(k)) throw new Error(`index.html missing reference to ${k}`);
+        });
+        const assets = fs.readdirSync('dist/assets');
+        needed.forEach(k => {
+          if (!assets.some(f => f.startsWith(k))) throw new Error(`dist/assets missing ${k}*`);
+        });
+        EOF        
       
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v4
