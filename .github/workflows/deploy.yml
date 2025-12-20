@@ -65,7 +65,11 @@ jobs:
     - name: Build
       run: npm run build
       
-    - name: Verify build output
+    - name: Verify built assets exist
+      run: node scripts/verify-assets.js
+      shell: bash
+
+    - name: Verify no exposed API keys in build output
       run: |
         echo "Checking for exposed API keys in build output..."
         if grep -r "AIzaSy" dist/; then
@@ -74,28 +78,15 @@ jobs:
         fi
         echo "✓ No exposed API keys detected in build"
 
-        # echo "Contents of dist folder:"
-        # ls -la dist/
-        # echo "\nContents of dist/index.html:"
-        # cat dist/index.html
-        # echo "\nVerifying assets folder:"
-        # ls -la dist/assets/ | head -10
-
-    - name: Verify built assets exist
+    - name: Verify build
       run: |
-        node - <<'EOF'
-        const fs = require('fs'), p = 'dist/index.html';
-        const html = fs.readFileSync(p, 'utf8');
-        const needed = ['vendor-react', 'vendor-antd', 'index-'];
-        needed.forEach(k => {
-          if (!html.includes(k)) throw new Error(`index.html missing reference to ${k}`);
-        });
-        const assets = fs.readdirSync('dist/assets');
-        needed.forEach(k => {
-          if (!assets.some(f => f.startsWith(k))) throw new Error(`dist/assets missing ${k}*`);
-        });
-        EOF        
-      
+        echo "Contents of dist folder:"
+        ls -la dist/
+        echo "\nContents of dist/index.html:"
+        cat dist/index.html
+        echo "\nVerifying assets folder:"
+        ls -la dist/assets/ | head -10
+
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v4
       if: github.ref == 'refs/heads/main'
@@ -103,3 +94,4 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./dist
         force_orphan: true
+        cname: us.westgeorgiayouthsports.org
