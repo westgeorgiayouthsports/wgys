@@ -26,7 +26,8 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": [
-    "src"
+    "src",
+    "tests/__mocks__/fileMock.js"
   ],
   "references": [
     {

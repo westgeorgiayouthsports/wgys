@@ -13,6 +13,18 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
+!.env.example
+
+# Secrets
+*.secret
+*.secrets
+*.key
+*.pem
+*service-account*.json
+*adminsdk*.json
+*-firebase-adminsdk-*.json
+functions/.env
 
 # Logs
 npm-debug.log*
@@ -108,3 +120,8 @@ playwright-report/
 playwright/.cache/
 q-dev-chat-2025-12-02.md
 wgys-ls-firebase.json
+ANALYTICS_SETUP.md
+GA4_GITHUB_SETUP.md
+GA4_QUICK_CHECKLIST.md
+.github/copilot-instructions.md
+tests/e2e/.auth/adminStorageState.json

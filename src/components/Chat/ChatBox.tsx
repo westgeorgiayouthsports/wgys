@@ -1,19 +1,29 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Input, Button, Space, Typography, Avatar, Spin, Empty } from 'antd';
 import { SendOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
 import type { RootState } from '../../store/store';
 import { setMessages, addMessage, deleteMessage as deleteMessageAction } from '../../store/slices/chatSlice';
+import { makeSelectMessages } from '../../store/selectors/chatSelectors';
 import { chatService } from '../../services/firebaseChat';
 
 const { Text } = Typography;
 
-export default function ChatBox() {
+interface ChatBoxProps {
+  teamId?: string;
+  canPost?: boolean;
+}
+
+export default function ChatBox({ teamId }: ChatBoxProps) {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
-  const messages = useSelector((state: RootState) => state.chat.messages);
+  
+  // Create memoized selector for this component's teamId
+  const selectMessagesForTeam = useMemo(() => makeSelectMessages(teamId), [teamId]);
+  const messages = useSelector(selectMessagesForTeam);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [canPost] = useState<boolean | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Subscribe to messages on mount
@@ -22,19 +32,35 @@ export default function ChatBox() {
 
     setLoading(true);
     let unsubscribe: (() => void) | null = null;
+    let mounted = true;
+    let loadingTimeout: NodeJS.Timeout | null = null;
 
     try {
-      unsubscribe = chatService.subscribeToMessages(updatedMessages => {
-        dispatch(setMessages(updatedMessages));
-        setLoading(false);
-      });
+      unsubscribe = chatService.subscribeToMessages((updatedMessages) => {
+        if (mounted) {
+          dispatch(setMessages({ teamId, messages: updatedMessages }));
+          setLoading(false);
+          if (loadingTimeout) clearTimeout(loadingTimeout);
+        }
+      }, teamId);
+      
+      // If messages don't load within 5 seconds, stop showing loading spinner
+      loadingTimeout = setTimeout(() => {
+        if (mounted) {
+          setLoading(false);
+        }
+      }, 5000);
     } catch (error) {
       console.error('Error loading messages:', error);
-      setLoading(false);
+      if (mounted) {
+        setLoading(false);
+      }
     }
 
     return () => {
+      mounted = false;
       if (unsubscribe) unsubscribe();
+      if (loadingTimeout) clearTimeout(loadingTimeout);
     };
   }, [user?.uid, dispatch]);
 
@@ -48,8 +74,8 @@ export default function ChatBox() {
     if (!user?.uid || !messageText.trim()) return;
 
     try {
-      const newMessage = await chatService.sendMessage(user.uid, user.email || 'Unknown', messageText);
-      dispatch(addMessage(newMessage));
+      const newMessage = await chatService.sendMessage(user.uid, user.email || 'Unknown', messageText, teamId);
+      dispatch(addMessage({ teamId, message: newMessage }));
       setMessageText('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -58,8 +84,8 @@ export default function ChatBox() {
 
   const handleDeleteMessage = async (messageId: string) => {
     try {
-      await chatService.deleteMessage(messageId);
-      dispatch(deleteMessageAction(messageId));
+      await chatService.deleteMessage(messageId, teamId);
+      dispatch(deleteMessageAction({ teamId, id: messageId }));
     } catch (error) {
       console.error('Error deleting message:', error);
     }

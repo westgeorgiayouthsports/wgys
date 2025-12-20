@@ -10,9 +10,7 @@ import {
   Input,
   Select,
   Switch,
-
-  message,
-  Divider,
+  App,
   Table,
   Modal,
   Popconfirm,
@@ -30,7 +28,7 @@ import {
   ArrowLeftOutlined,
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
-import type { Program, ProgramQuestion, QuestionType } from '../types';
+import type { Program, ProgramQuestion } from '../types';
 import { programsService } from '../services/firebasePrograms';
 import dayjs from 'dayjs';
 
@@ -41,6 +39,7 @@ export default function ProgramDetail() {
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
   const { role } = useSelector((state: RootState) => state.auth);
+  const { message } = App.useApp();
   const [program, setProgram] = useState<Program | null>(null);
   const [loading, setLoading] = useState(true);
   const [questionModalVisible, setQuestionModalVisible] = useState(false);
@@ -73,6 +72,7 @@ export default function ProgramDetail() {
         setProgram(programWithQuestions);
         programForm.setFieldsValue({
           ...programWithQuestions,
+          femaleOnlyToggle: foundProgram.sexRestriction === 'female',
           registrationStart: programWithQuestions.registrationStart ? dayjs(programWithQuestions.registrationStart) : null,
           registrationEnd: programWithQuestions.registrationEnd ? dayjs(programWithQuestions.registrationEnd) : null,
           birthDateStart: programWithQuestions.birthDateStart ? dayjs(programWithQuestions.birthDateStart) : null,
@@ -129,7 +129,12 @@ export default function ProgramDetail() {
     
     const questionData: ProgramQuestion = {
       id: editingQuestion?.id || `q_${Date.now()}`,
-      ...values,
+      type: values.type,
+      title: values.title,
+      description: values.description || undefined,
+      required: values.required === true,
+      options: values.options && values.options.length > 0 ? values.options : undefined,
+      waiverText: values.waiverText || undefined,
       order: editingQuestion?.order ?? (program.questions || []).length,
     };
 
@@ -165,8 +170,8 @@ export default function ProgramDetail() {
     <div className="page-container">
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <div style={{ marginBottom: '24px' }}>
-          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-            <Space>
+          <Space style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Space orientation="vertical" style={{ flex: 1 }}>
               <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/programs')}>
                 Back to Programs
               </Button>
@@ -185,16 +190,53 @@ export default function ProgramDetail() {
 
         <Card title="Program Details" style={{ marginBottom: '24px' }}>
           <Form form={programForm} layout="vertical" onFinish={(values) => {
+            if (!program) return;
+            
+            // Convert female toggle to sexRestriction
+            const sexRestriction = values.femaleOnlyToggle ? 'female' : 'any';
+            
+            // Clean questions - remove undefined/null values from each question
+            const cleanedQuestions = (program.questions || []).map(q => {
+              const cleanedQuestion: any = {
+                id: q.id,
+                type: q.type,
+                title: q.title,
+                required: q.required === true,
+                order: q.order,
+              };
+              
+              // Only add optional fields if they have values
+              if (q.description) cleanedQuestion.description = q.description;
+              if (q.options && q.options.length > 0) cleanedQuestion.options = q.options;
+              if (q.waiverText) cleanedQuestion.waiverText = q.waiverText;
+              
+              return cleanedQuestion;
+            });
+            
             const updatedProgram = {
               ...program,
               ...values,
+              sexRestriction,
+              questions: cleanedQuestions,
               registrationStart: values.registrationStart?.format('YYYY-MM-DD'),
               registrationEnd: values.registrationEnd?.format('YYYY-MM-DD'),
               birthDateStart: values.birthDateStart?.format('YYYY-MM-DD'),
               birthDateEnd: values.birthDateEnd?.format('YYYY-MM-DD'),
             };
-            setProgram(updatedProgram);
-            message.success('Program updated successfully!');
+            
+            // Handle async save without blocking form submission
+            programsService.updateProgram(program.id, {
+              ...updatedProgram,
+              updatedAt: new Date().toISOString(),
+            })
+              .then(() => {
+                setProgram(updatedProgram);
+                message.success('Program updated successfully!');
+              })
+              .catch((error) => {
+                console.error('❌ Error saving program:', error);
+                message.error('Failed to save program');
+              });
           }}>
             <Row gutter={16}>
               <Col span={12}>
@@ -202,13 +244,14 @@ export default function ProgramDetail() {
                   <Input placeholder="Enter program name" />
                 </Form.Item>
               </Col>
-              <Col span={12}>
-                <Form.Item name="status" label="Status" rules={[{ required: true }]}>
-                  <Select>
-                    <Select.Option value="draft">Draft</Select.Option>
-                    <Select.Option value="active">Active</Select.Option>
-                    <Select.Option value="closed">Closed</Select.Option>
-                  </Select>
+              <Col span={6}>
+                <Form.Item name="active" label="Active" valuePropName="checked">
+                  <Switch checkedChildren="Yes" unCheckedChildren="No" />
+                </Form.Item>
+              </Col>
+              <Col span={6}>
+                <Form.Item name="femaleOnlyToggle" label="Female Only" valuePropName="checked">
+                  <Switch checkedChildren="Yes" unCheckedChildren="No" />
                 </Form.Item>
               </Col>
             </Row>
@@ -266,7 +309,7 @@ export default function ProgramDetail() {
                       const calculatedMaxGrade = schoolYear - dayjs(birthDateStart).year() - 6;
                       if (calculatedMaxGrade >= 0 && calculatedMaxGrade <= 12) {
                         setTimeout(() => {
-                          programForm.setFieldValue('maxGrade', calculatedMaxGrade);
+                          programForm.setFieldsValue({ maxGrade: calculatedMaxGrade });
                         }, 0);
                       }
                     }

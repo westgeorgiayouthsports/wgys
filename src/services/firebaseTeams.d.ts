@@ -5,4 +5,5 @@ export declare const teamsService: {
     createTeam(team: Omit<Team, "id">): Promise<Team>;
     updateTeam(id: string, updates: Partial<Team>): Promise<void>;
     deleteTeam(id: string): Promise<void>;
+    getTeamById(id: string): Promise<Team | null>;
 };

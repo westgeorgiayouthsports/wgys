@@ -8,6 +8,7 @@ import { setUser, setLoading } from './store/slices/authSlice';
 import type { RootState } from './store/store';
 import { darkTheme, lightTheme } from './theme/themeConfig';
 import Router from './Router';
+import { setUserProperties } from './services/analytics';
 import './App.css';
 import './styles/theme-variables.css';
 
@@ -15,6 +16,8 @@ export default function App() {
   const dispatch = useDispatch();
   const loading = useSelector((state: RootState) => state.auth.loading);
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
+  const user = useSelector((state: RootState) => state.auth.user);
+  const role = useSelector((state: RootState) => state.auth.role);
 
   // Set theme data attribute and body background
   useEffect(() => {
@@ -72,6 +75,11 @@ export default function App() {
 
     return () => { unsubscribe(); };
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!user) return;
+    setUserProperties({ role, user_id: user.uid });
+  }, [role, user]);
 
   if (loading) {
     return <div className="loading-screen">Loading...</div>;

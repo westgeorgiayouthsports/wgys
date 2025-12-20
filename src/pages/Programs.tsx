@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -33,7 +33,7 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-export default function Programs() {
+const Programs = forwardRef(function Programs(props, ref) {
   const navigate = useNavigate();
   const { role, user } = useSelector((state: RootState) => state.auth);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -41,6 +41,7 @@ export default function Programs() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [form] = Form.useForm();
+  useImperativeHandle(ref, () => ({ form }), [form]);
 
   if (role !== 'admin' && role !== 'owner') {
     return (
@@ -89,12 +90,14 @@ export default function Programs() {
     form.setFieldsValue({
       ...program,
       name: `${program.name} (Copy)`,
-      status: program.status === 'active',
+      active: program.active,
       birthDateStart: program.birthDateStart ? dayjs(program.birthDateStart) : null,
       birthDateEnd: program.birthDateEnd ? dayjs(program.birthDateEnd) : null,
-
       registrationStart: dayjs(program.registrationStart),
       registrationEnd: dayjs(program.registrationEnd),
+      paymentPlanEnabled: program.paymentPlanEnabled || false,
+      paymentPlanFrequency: program.paymentPlanFrequency,
+      paymentPlanInstallments: program.paymentPlanInstallments,
     });
     setModalVisible(true);
   };
@@ -118,7 +121,7 @@ export default function Programs() {
       
       const formData: any = {
         ...values,
-        status: values.status ? 'active' : 'inactive',
+        active: values.active || false,
         birthDateStart: values.birthDateStart?.format('YYYY-MM-DD'),
         birthDateEnd: values.birthDateEnd?.format('YYYY-MM-DD'),
         registrationStart: regStart.toISOString(),
@@ -159,10 +162,10 @@ export default function Programs() {
   const columns = [
     {
       title: 'Status',
-      key: 'status',
+      key: 'active',
       render: (record: Program) => (
-        <Tag color={record.status === 'active' ? 'green' : 'red'}>
-          {record.status === 'active' ? 'Active' : 'Inactive'}
+        <Tag color={record.active ? 'green' : 'red'}>
+          {record.active ? 'Active' : 'Inactive'}
         </Tag>
       ),
     },
@@ -332,9 +335,8 @@ export default function Programs() {
 
             <Form.Item name="sexRestriction" label="Sex" rules={[{ required: true }]}>
               <Select placeholder="Select restriction" style={{ width: 120 }}>
-                <Select.Option value="coed">Co-ed</Select.Option>
-                <Select.Option value="male">Male Only</Select.Option>
-                <Select.Option value="female">Female Only</Select.Option>
+                <Select.Option value="any">Any</Select.Option>
+                <Select.Option value="female">Female</Select.Option>
               </Select>
             </Form.Item>
           </Space>
@@ -370,11 +372,11 @@ export default function Programs() {
                   const currentYear = now.year();
                   const isBeforeAugust = now.month() < 7; // January to July (months 0-6)
                   const schoolYear = isBeforeAugust ? currentYear - 1 : currentYear;
-                    
+
                   const calculatedMaxGrade = schoolYear - dayjs(birthDateStart).year() - 6;
                   if (calculatedMaxGrade >= 0 && calculatedMaxGrade <= 12) {
                     setTimeout(() => {
-                      form.setFieldValue('maxGrade', calculatedMaxGrade);
+                      form.setFieldsValue({ maxGrade: calculatedMaxGrade });
                     }, 0);
                   }
                 }
@@ -412,8 +414,38 @@ export default function Programs() {
             <Form.Item name="maxParticipants" label="Max Participants">
               <InputNumber min={1} placeholder="Unlimited" />
             </Form.Item>
-            <Form.Item name="status" label="Active Program" valuePropName="checked">
+            <Form.Item name="active" label="Active Program" valuePropName="checked">
               <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+            </Form.Item>
+          </Space>
+
+          <Space style={{ width: '100%' }} size="large">
+            <Form.Item name="paymentPlanEnabled" label="Enable Payment Plan" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+            <Form.Item 
+              noStyle
+              shouldUpdate={(prevValues, currentValues) => 
+                prevValues.paymentPlanEnabled !== currentValues.paymentPlanEnabled
+              }
+            >
+              {({ getFieldValue }) => {
+                const paymentPlanEnabled = getFieldValue('paymentPlanEnabled');
+                return paymentPlanEnabled ? (
+                  <>
+                    <Form.Item name="paymentPlanFrequency" label="Payment Frequency" rules={[{ required: true }]}>
+                      <Select placeholder="Select frequency" style={{ width: 150 }}>
+                        <Select.Option value="weekly">Weekly</Select.Option>
+                        <Select.Option value="biweekly">Bi-weekly</Select.Option>
+                        <Select.Option value="monthly">Monthly</Select.Option>
+                      </Select>
+                    </Form.Item>
+                    <Form.Item name="paymentPlanInstallments" label="Number of Installments" rules={[{ required: true }]}>
+                      <InputNumber min={2} max={12} placeholder="e.g., 4" />
+                    </Form.Item>
+                  </>
+                ) : null;
+              }}
             </Form.Item>
           </Space>
 
@@ -434,4 +466,5 @@ export default function Programs() {
       </Modal>
     </div>
   );
-}
+});
+export default Programs;

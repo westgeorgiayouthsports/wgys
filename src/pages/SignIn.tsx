@@ -105,6 +105,7 @@ export default function SignIn() {
               prefix={<LockOutlined />}
               placeholder="Password"
               disabled={loading}
+              autoComplete="current-password"
             />
           </Form.Item>
 

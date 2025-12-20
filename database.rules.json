@@ -59,12 +59,83 @@
         ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
       }
     },
-    "team-budgets": {
+    "team_budgets": {
       ".read": "auth != null",
-      ".write": "auth != null",
+			".write": "auth != null && (auth.token.email == data.child('createdBy').val() || auth.token.email == 'westga.youthsports@gmail.com')",
       "$budgetId": {
         ".read": "auth != null",
+				".write": "auth != null && (auth.token.email == data.child('createdBy').val() || auth.token.email == 'westga.youthsports@gmail.com')"
+      }
+    },
+    "teamChats": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$teamId": {
+        ".read": "auth != null && (root.child('teams').child($teamId).child('userId').val() == auth.uid || root.child('teams').child($teamId).child('coachId').val() == auth.uid || root.child('teams').child($teamId).child('members').child(auth.uid).exists() || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+        ".write": false,
+        "messages": {
+          ".indexOn": ["timestamp","userId"],
+          ".read": "auth != null && (root.child('teams').child($teamId).child('userId').val() == auth.uid || root.child('teams').child($teamId).child('coachId').val() == auth.uid || root.child('teams').child($teamId).child('members').child(auth.uid).exists() || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+          ".write": "auth != null && (root.child('teams').child($teamId).child('userId').val() == auth.uid || root.child('teams').child($teamId).child('coachId').val() == auth.uid || root.child('teams').child($teamId).child('members').child(auth.uid).exists() || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+          "$messageId": {
+            ".read": "auth != null",
+            ".write": "auth != null && root.child('teamChats').child($teamId).child('messages').child($messageId).child('userId').val() == auth.uid"
+          }
+        }
+      }
+    }
+    ,
+    "seasonTeamChats": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$seasonId": {
+        "$teamId": {
+          ".read": "auth != null && (root.child('teams').child($teamId).child('userId').val() == auth.uid || root.child('teams').child($teamId).child('coachId').val() == auth.uid || root.child('teams').child($teamId).child('members').child(auth.uid).exists() || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+          ".write": false,
+          "messages": {
+            ".indexOn": ["timestamp","userId"],
+            ".read": "auth != null && (root.child('teams').child($teamId).child('userId').val() == auth.uid || root.child('teams').child($teamId).child('coachId').val() == auth.uid || root.child('teams').child($teamId).child('members').child(auth.uid).exists() || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+            ".write": "auth != null && (root.child('teams').child($teamId).child('userId').val() == auth.uid || root.child('teams').child($teamId).child('coachId').val() == auth.uid || root.child('teams').child($teamId).child('members').child(auth.uid).exists() || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+            "$messageId": {
+              ".read": "auth != null",
+              ".write": "auth != null && root.child('seasonTeamChats').child($seasonId).child($teamId).child('messages').child($messageId).child('userId').val() == auth.uid"
+            }
+          }
+        }
+      }
+    },
+    "programRegistrations": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".write": "auth != null",
+      ".indexOn": ["familyId", "programId", "registeredBy"],
+      "$registrationId": {
+        ".read": "auth != null && (data.child('registeredBy').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+        ".write": "auth != null && (data.child('registeredBy').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "teamAssignments": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      "$assignmentId": {
+        ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "mailQueue": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".write": "auth != null",
+      "$messageId": {
+        ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
         ".write": "auth != null"
+      }
+    },
+    "paymentMethods": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".write": "auth != null",
+      ".indexOn": ["userId"],
+      "$methodId": {
+        ".read": "auth != null && (data.child('userId').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+        ".write": "auth != null && (data.child('userId').val() == auth.uid || !data.exists() || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
       }
     }
   }

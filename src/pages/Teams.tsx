@@ -17,13 +17,17 @@ import {
   Row,
   Col,
   Tooltip,
+  Modal,
+  Spin,
 } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   SaveOutlined,
   CloseOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
 import {
@@ -38,11 +42,6 @@ import { teamsService } from '../services/firebaseTeams';
 
 const { Title, Text } = Typography;
 
-interface FormData {
-  name: string;
-  budget: string;
-  status: 'active' | 'inactive';
-}
 
 export default function Teams() {
   const dispatch = useDispatch();
@@ -51,12 +50,10 @@ export default function Teams() {
   const teams = useSelector((state: RootState) => state.teams.teams);
   const loading = useSelector((state: RootState) => state.teams.loading);
 
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    budget: '',
-    status: 'active',
-  });
+  
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [pendingTeam, setPendingTeam] = useState<any | null>(null);
   const [error, setLocalError] = useState<string>('');
   const [coaches, setCoaches] = useState<any[]>([]);
   const [selectedCoach, setSelectedCoach] = useState<string>('');
@@ -68,6 +65,86 @@ export default function Teams() {
       loadCoaches();
     }
   }, [user?.uid]);
+
+  useEffect(() => {
+    if (!modalVisible) {
+      setEditingId(null);
+      setSelectedCoach('');
+      setLocalError('');
+      setPendingTeam(null);
+    }
+  }, [modalVisible]);
+
+  // Child component: mounted only when modalVisible to own the Form instance
+  const TeamModalForm = ({ initialTeam, editingIdProp, onSubmit, onCancel, coachesProp }: any) => {
+    const [localForm] = Form.useForm();
+
+    useEffect(() => {
+      if (initialTeam && editingIdProp) {
+        localForm.setFieldsValue({
+          name: initialTeam.name || '',
+          budget: (initialTeam.budget || 0).toString(),
+          status: initialTeam.status || 'active',
+          coachId: initialTeam.coachId || undefined,
+        });
+      } else {
+        localForm.resetFields();
+        localForm.setFieldsValue({ status: 'active' });
+      }
+    }, [initialTeam, editingIdProp]);
+
+    return (
+      <Form form={localForm} layout="vertical" onFinish={onSubmit}>
+        {error && (
+          <div style={{ marginBottom: 12, color: '#ff4d4f' }}>{error}</div>
+        )}
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="name" label="Team Name" rules={[{ required: true, message: 'Please enter team name' }]}>
+              <Input placeholder="e.g., 12U Softball" />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item name="budget" label="Budget ($)" rules={[{ required: true, message: 'Please enter budget' }]}>
+              <InputNumber style={{ width: '100%' }} min={0} step={0.01} placeholder="0.00" />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item name="status" label="Status">
+              <Select>
+                <Select.Option value="active">Active</Select.Option>
+                <Select.Option value="inactive">Inactive</Select.Option>
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={24}>
+            <Form.Item name="coachId" label="Coach">
+              <Select allowClear placeholder="Assign a coach">
+                <Select.Option value="">Unassigned</Select.Option>
+                {coachesProp.map((c: any) => (
+                  <Select.Option key={c.uid} value={c.uid} title={c.email}>
+                    {c.displayName || c.email?.split('@')[0]}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
+          <Space>
+            <Button onClick={onCancel}>Cancel</Button>
+            <Button type="primary" htmlType="submit" icon={editingIdProp ? <SaveOutlined /> : <PlusOutlined />}>
+              {editingIdProp ? 'Update Team' : 'Add Team'}
+            </Button>
+          </Space>
+        </Form.Item>
+      </Form>
+    );
+  };
 
   const loadCoaches = async () => {
     try {
@@ -102,48 +179,44 @@ export default function Teams() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const navigate = useNavigate();
+
+  const submitTeam = async (values: any) => {
     if (!user?.uid) return;
 
-    if (!formData.name.trim() || !formData.budget) {
-      setLocalError('Please fill in all fields');
-      return;
-    }
-
     try {
+      const budget = parseFloat(values.budget || 0);
       setLocalError('');
-      const budget = parseFloat(formData.budget);
 
       if (editingId) {
-        // Update team
         await teamsService.updateTeam(editingId, {
-          name: formData.name,
+          name: values.name,
           budget,
-          status: formData.status,
+          status: values.status,
+          coachId: values.coachId || undefined,
         });
         const updatedTeams = teams.map(t =>
           t.id === editingId
-            ? { ...t, name: formData.name, budget, status: formData.status }
+            ? { ...t, name: values.name, budget, status: values.status, coachId: values.coachId }
             : t
         );
         dispatch(setTeams(updatedTeams));
-        setEditingId(null);
+        message.success('Team updated');
       } else {
-        // Create team
         const newTeam = await teamsService.createTeam({
-          name: formData.name,
+          name: values.name,
           budget,
           spent: 0,
-          status: formData.status,
+          status: values.status,
           userId: user.uid,
           createdAt: new Date().toISOString(),
-          coachId: selectedCoach || undefined,
+          coachId: values.coachId || undefined,
         });
         dispatch(addTeam(newTeam));
+        message.success('Team created');
       }
 
-      setFormData({ name: '', budget: '', status: 'active' });
+      setModalVisible(false);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Operation failed';
       setLocalError(errorMsg);
@@ -153,13 +226,10 @@ export default function Teams() {
   const handleEdit = (teamId: string) => {
     const team = teams.find(t => t.id === teamId);
     if (team) {
-      setFormData({
-        name: team.name || '',
-        budget: (team.budget || 0).toString(),
-        status: team.status || 'active',
-      });
+      setPendingTeam(team);
       setSelectedCoach(team.coachId || '');
       setEditingId(teamId);
+      setModalVisible(true);
     }
   };
 
@@ -176,9 +246,7 @@ export default function Teams() {
   };
 
   const handleCancel = () => {
-    setFormData({ name: '', budget: '', status: 'active' });
-    setEditingId(null);
-    setLocalError('');
+    setModalVisible(false);
   };
 
   const totalBudget = teams.reduce((sum, t) => sum + (t.budget || 0), 0);
@@ -284,6 +352,13 @@ export default function Teams() {
         
         return (
           <Space>
+              <Button
+                size="small"
+                onClick={() => { navigate(`/teams/${record.id}/chat`); }}
+                title="Open Team Chat"
+              >
+                Chat
+              </Button>
             <Button
               size="small"
               icon={<EditOutlined />}
@@ -314,88 +389,31 @@ export default function Teams() {
   return (
     <div className="page-container">
       <div style={{ marginBottom: '24px' }}>
-        <Title level={2} style={{ margin: 0 }}>Teams Management</Title>
-        <Text type="secondary">Manage your youth sports teams and budgets</Text>
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Title level={2} style={{ margin: 0 }}>Teams Management</Title>
+            <Text type="secondary">Manage your youth sports teams and budgets</Text>
+          </Col>
+          <Col>
+            <Space>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={loadTeams}
+                loading={loading}
+              >
+                Refresh
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => { setEditingId(null); setModalVisible(true); }}
+              >
+                Add Team
+              </Button>
+            </Space>
+          </Col>
+        </Row>
       </div>
-
-      {/* Form Section */}
-      <Card 
-        title={editingId ? 'Edit Team' : 'Add New Team'}
-        style={{ marginBottom: '24px' }}
-        extra={
-          editingId ? (
-            <Button icon={<CloseOutlined />} onClick={handleCancel}>
-                Cancel
-            </Button>
-          ) : null
-        }
-      >
-        <Form
-          layout="vertical"
-          onFinish={(values) => {
-            const event = { preventDefault: () => {} } as React.FormEvent;
-            setFormData({
-              name: values.name,
-              budget: values.budget.toString(),
-              status: values.status,
-            });
-            handleSubmit(event);
-          }}
-          initialValues={formData}
-        >
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="name"
-                label="Team Name"
-                rules={[{ required: true, message: 'Please enter team name' }]}
-              >
-                <Input
-                  placeholder="e.g., 12U Softball"
-                  value={formData.name}
-                  onChange={(e) => { setFormData(prev => ({ ...prev, name: e.target.value })); }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="budget"
-                label="Budget ($)"
-                rules={[{ required: true, message: 'Please enter budget' }]}
-              >
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={0}
-                  step={0.01}
-                  placeholder="0.00"
-                  value={parseFloat(formData.budget) || 0}
-                  onChange={(value) => { setFormData(prev => ({ ...prev, budget: (value || 0).toString() })); }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="status" label="Status">
-                <Select
-                  value={formData.status}
-                  onChange={(value) => { setFormData(prev => ({ ...prev, status: value })); }}
-                >
-                  <Select.Option value="active">Active</Select.Option>
-                  <Select.Option value="inactive">Inactive</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              icon={editingId ? <SaveOutlined /> : <PlusOutlined />}
-            >
-              {editingId ? 'Update Team' : 'Add Team'}
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
 
       {/* Summary Statistics */}
       {teams.length > 0 && (
@@ -440,6 +458,23 @@ export default function Teams() {
       )}
 
       {/* Teams Table */}
+      <Modal
+        title={editingId ? 'Edit Team' : 'Add New Team'}
+        open={modalVisible}
+        onCancel={handleCancel}
+        footer={null}
+        width={700}
+      >
+        {modalVisible && (
+          <TeamModalForm
+            initialTeam={pendingTeam}
+            editingIdProp={editingId}
+            onSubmit={submitTeam}
+            onCancel={handleCancel}
+            coachesProp={coaches}
+          />
+        )}
+      </Modal>
       <Card title={`Your Teams (${teams.length})`}>
         <Table
           columns={columns}

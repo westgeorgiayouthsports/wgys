@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Dropdown, Button } from 'antd';
-import { UserOutlined, SettingOutlined, LogoutOutlined, DownOutlined, BulbOutlined } from '@ant-design/icons';
+import { UserOutlined, SettingOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined } from '@ant-design/icons';
 import type { RootState } from '../../store/store';
 import { logout } from '../../store/slices/authSlice';
 import { toggleTheme } from '../../store/slices/themeSlice';
@@ -30,6 +30,12 @@ export default function Header() {
       key: 'profile',
       icon: <UserOutlined />,
       label: 'My Profile',
+      onClick: () => navigate('/profile'),
+    },
+    {
+      key: 'family',
+      icon: <TeamOutlined />,
+      label: 'My Family',
       onClick: () => navigate('/my-family'),
     },
     {

@@ -1,1 +1,6 @@
-export default function ChatBox(): import("react/jsx-runtime").JSX.Element;
+interface ChatBoxProps {
+    teamId?: string;
+    canPost?: boolean;
+}
+export default function ChatBox({ teamId }: ChatBoxProps): import("react/jsx-runtime").JSX.Element;
+export {};

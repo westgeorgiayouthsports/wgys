@@ -1,5 +1,5 @@
 import { ref, set, get, update, remove, query, orderByChild, equalTo, push } from 'firebase/database';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import type { Team } from '../store/slices/teamsSlice';
 
 export const teamsService = {
@@ -50,11 +50,14 @@ export const teamsService = {
     try {
       const teamsRef = ref(db, 'teams');
       const newTeamRef = push(teamsRef);
-      
+      const uid = auth.currentUser?.uid;
+      if (!uid) throw new Error('User must be authenticated to create a team');
+
       const { coachId, ...rest } = team;
       const teamData = {
         ...rest,
         ...(coachId && { coachId }),
+        userId: uid,
         id: newTeamRef.key,
         createdAt: new Date().toISOString(),
       };
@@ -91,6 +94,21 @@ export const teamsService = {
       await remove(teamRef);
     } catch (error) {
       console.error('Error deleting team:', error);
+      throw error;
+    }
+  },
+
+  // Get a single team by id
+  async getTeamById(id: string): Promise<Team | null> {
+    try {
+      if (!id) return null;
+      const teamRef = ref(db, `teams/${id}`);
+      const snapshot = await get(teamRef);
+      if (!snapshot.exists()) return null;
+      const data = snapshot.val();
+      return { id, ...data } as Team;
+    } catch (error) {
+      console.error('Error fetching team:', error);
       throw error;
     }
   },

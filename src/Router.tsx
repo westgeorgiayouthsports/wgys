@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import type { RootState } from './store/store';
+import { trackPageView } from './services/analytics';
 
 // Layouts (keep these as regular imports since they're always needed)
 import AuthLayout from './components/Layout/AuthLayout';
@@ -15,16 +16,25 @@ import SignUp from './pages/SignUp';
 // Lazy load all other pages for code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Teams = lazy(() => import('./pages/Teams'));
+const TeamChat = lazy(() => import('./pages/TeamChat'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Announcements = lazy(() => import('./pages/Announcements'));
 const People = lazy(() => import('./pages/People'));
 const MyFamily = lazy(() => import('./pages/MyFamily'));
+const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
+const PaymentMethods = lazy(() => import('./pages/PaymentMethods'));
+const MyRegistrations = lazy(() => import('./pages/MyRegistrations'));
 const Programs = lazy(() => import('./pages/Programs'));
 const ProgramDetail = lazy(() => import('./pages/ProgramDetail'));
 const RegistrationHelp = lazy(() => import('./pages/RegistrationHelp'));
+const RegistrationPage = lazy(() => import('./pages/Registration'));
+const RegistrationConfirmation = lazy(() => import('./pages/RegistrationConfirmation'));
 const Schedules = lazy(() => import('./pages/Schedules'));
 const Settings = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const AdminRegistrations = lazy(() => import('./pages/AdminRegistrations'));
+const AdminPayments = lazy(() => import('./pages/AdminPayments'));
 
 // Lazy load views
 const EventsView = lazy(() => import('./components/Events/EventsView'));
@@ -45,13 +55,29 @@ const PageLoader = () => (
 function Router() {
   const { isAuthenticated, loading, role } = useSelector((state: RootState) => state.auth);
 
+  const AnalyticsTracker = () => {
+    const location = useLocation();
+
+    useEffect(() => {
+      trackPageView({
+        page_path: location.pathname + location.search,
+        page_title: document.title,
+        page_location: window.location.href,
+      });
+    }, [location]);
+
+    return null;
+  };
+
   if (loading) {
     return <PageLoader />;
   }
 
   return (
-    <BrowserRouter basename="/wgys">
+    // <BrowserRouter basename="/wgys">
+     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
+        <AnalyticsTracker />
         <Routes>
           {/* Auth Routes */}
           <Route element={<AuthLayout />}>
@@ -64,6 +90,7 @@ function Router() {
             <Route path="/" element={isAuthenticated ? <Dashboard /> : <Navigate to="/signin" replace />} />
             <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/signin" replace />} />
             <Route path="/teams" element={isAuthenticated ? <Teams /> : <Navigate to="/signin" replace />} />
+            <Route path="/teams/:teamId/chat" element={isAuthenticated ? <TeamChat /> : <Navigate to="/signin" replace />} />
             <Route path="/announcements" element={isAuthenticated ? <Announcements /> : <Navigate to="/signin" replace />} />
             <Route
               path="/people"
@@ -91,7 +118,13 @@ function Router() {
             />
             <Route path="/schedules" element={isAuthenticated ? <Schedules /> : <Navigate to="/signin" replace />} />
             <Route path="/registration-help" element={isAuthenticated ? <RegistrationHelp /> : <Navigate to="/signin" replace />} />
+            <Route path="/register" element={isAuthenticated ? <RegistrationPage /> : <Navigate to="/signin" replace />} />
+            <Route path="/register/:programId" element={isAuthenticated ? <RegistrationPage /> : <Navigate to="/signin" replace />} />
+            <Route path="/register/confirmation/:id" element={isAuthenticated ? <RegistrationConfirmation /> : <Navigate to="/signin" replace />} />
             <Route path="/my-family" element={isAuthenticated ? <MyFamily /> : <Navigate to="/signin" replace />} />
+            <Route path="/profile" element={isAuthenticated ? <ProfileSettings /> : <Navigate to="/signin" replace />} />
+            <Route path="/payment-methods" element={isAuthenticated ? <PaymentMethods /> : <Navigate to="/signin" replace />} />
+            <Route path="/my-registrations" element={isAuthenticated ? <MyRegistrations /> : <Navigate to="/signin" replace />} />
             <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/signin" replace />} />
 
             {/* Feature Routes - Events */}
@@ -116,6 +149,32 @@ function Router() {
               element={
                 <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
                   <Admin />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Dashboard Detail Pages */}
+            <Route
+              path="/admin/analytics"
+              element={
+                <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/registrations"
+              element={
+                <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                  <AdminRegistrations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/payments"
+              element={
+                <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                  <AdminPayments />
                 </ProtectedRoute>
               }
             />

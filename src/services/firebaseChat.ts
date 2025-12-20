@@ -2,35 +2,45 @@ import { ref, push, set, get, remove, query, orderByChild, limitToLast, onValue 
 import { db } from './firebase';
 import type { Message } from '../store/slices/chatSlice';
 
+/* eslint-disable-next-line no-unused-vars */
+type MessageCallback = (messages: Message[]) => void;
+
 export const chatService = {
-  // Get all messages
-  async getMessages(): Promise<Message[]> {
+  // Build path for messages; if teamId provided, scope under teamChats/{teamId}/messages
+  _messagesPath(teamId?: string) {
+    return teamId ? `teamChats/${teamId}/messages` : 'messages';
+  },
+
+  // Get messages (optionally for a team)
+  async getMessages(teamId?: string): Promise<Message[]> {
     try {
-      const messagesRef = ref(db, 'messages');
+      const path = this._messagesPath(teamId);
+      const messagesRef = ref(db, path);
       const q = query(messagesRef, orderByChild('timestamp'), limitToLast(100));
       const snapshot = await get(q);
-      
+
       if (!snapshot.exists()) return [];
-      
-      const messages: Message[] = [];
+
+      const fetchedMessages: Message[] = [];
       snapshot.forEach((child) => {
         if (child.key) {
-          messages.push({ id: child.key, ...child.val() } as Message);
+          fetchedMessages.push({ id: child.key, ...child.val() } as Message);
         }
       });
-      
-      return messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+      return fetchedMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     } catch (error) {
       console.error('Error fetching messages:', error);
       throw error;
     }
   },
 
-  // Send a message
-  async sendMessage(userId: string, userEmail: string, text: string): Promise<Message> {
+  // Send a message (optionally scoped to a team)
+  async sendMessage(userId: string, userEmail: string, text: string, teamId?: string): Promise<Message> {
     try {
       if (!text.trim()) throw new Error('Message text cannot be empty');
-      const messagesRef = ref(db, 'messages');
+      const path = this._messagesPath(teamId);
+      const messagesRef = ref(db, path);
       let newMessageRef;
       try {
         newMessageRef = push(messagesRef);
@@ -38,7 +48,7 @@ export const chatService = {
         throw new Error('Failed to create message reference: ' + (pushError as Error).message);
       }
       const timestamp = new Date().toISOString();
-      
+
       const message = {
         userId,
         userEmail,
@@ -46,13 +56,13 @@ export const chatService = {
         timestamp,
         read: false,
       };
-      
+
       try {
         await set(newMessageRef, message);
       } catch (setError) {
         throw new Error('Failed to save message to database: ' + (setError as Error).message);
       }
-      
+
       return {
         id: newMessageRef.key,
         userId,
@@ -67,28 +77,29 @@ export const chatService = {
     }
   },
 
-  // Subscribe to messages
-  subscribeToMessages(callback: (messages: Message[]) => void) {
+  // Subscribe to messages (optionally for a team)
+  subscribeToMessages(callback: MessageCallback, teamId?: string) {
     try {
-      const messagesRef = ref(db, 'messages');
+      const path = this._messagesPath(teamId);
+      const messagesRef = ref(db, path);
       const q = query(messagesRef, orderByChild('timestamp'), limitToLast(100));
-      
+
       const unsubscribe = onValue(q, (snapshot) => {
         if (!snapshot.exists()) {
           callback([]);
           return;
         }
-        
-        const messages: Message[] = [];
+
+        const collectedMessages: Message[] = [];
         snapshot.forEach((child) => {
           if (child.key) {
-            messages.push({ id: child.key, ...child.val() } as Message);
+            collectedMessages.push({ id: child.key, ...child.val() } as Message);
           }
         });
-        
-        callback(messages);
+
+        callback(collectedMessages);
       });
-      
+
       return unsubscribe;
     } catch (error) {
       console.error('Error subscribing to messages:', error);
@@ -96,11 +107,12 @@ export const chatService = {
     }
   },
 
-  // Delete a message
-  async deleteMessage(id: string): Promise<void> {
+  // Delete a message (optionally scoped to a team)
+  async deleteMessage(id: string, teamId?: string): Promise<void> {
     try {
       if (!id) throw new Error('Message ID is required');
-      const messageRef = ref(db, `messages/${id}`);
+      const path = this._messagesPath(teamId);
+      const messageRef = ref(db, `${path}/${id}`);
       try {
         await remove(messageRef);
       } catch (removeError) {

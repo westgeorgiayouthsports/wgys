@@ -4,45 +4,18 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Layout, Menu, Button, Typography } from 'antd';
 import {
-  DashboardOutlined,
-  TeamOutlined,
-  SoundOutlined,
-  CalendarOutlined,
-  ContactsOutlined,
-  SettingOutlined,
-  TrophyOutlined,
-  UsergroupAddOutlined,
-  QuestionCircleOutlined,
-  UserOutlined,
-  CrownOutlined,
   MenuOutlined,
   CloseOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from '@ant-design/icons';
-import type { RootState } from '../../store/store';
+import { selectMenuItems } from '../../store/selectors/sidebarSelectors';
 import './Sidebar.css';
 import wgysLogoSmall from '../../assets/wgys-logo-small.png';
 import wgysLogo from '../../assets/wgys-logo.png';
 
 const { Sider } = Layout;
 const { Title } = Typography;
-
-const navItems = [
-  { key: '/dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
-  { key: '/teams', label: 'Teams', icon: <TeamOutlined /> },
-  { key: '/my-family', label: 'My Family', icon: <UsergroupAddOutlined /> },
-  { key: '/registration-help', label: 'Registration Help', icon: <QuestionCircleOutlined /> },
-  { key: '/programs', label: 'Programs', icon: <TrophyOutlined /> },
-  { key: '/announcements', label: 'Announcements', icon: <SoundOutlined /> },
-  { key: '/schedules', label: 'Schedules', icon: <CalendarOutlined /> },
-  { key: '/people', label: 'People', icon: <ContactsOutlined /> },
-  { key: '/settings', label: 'Settings', icon: <SettingOutlined /> },
-];
-
-const adminItems = [
-  { key: '/admin', label: 'Admin Panel', icon: <CrownOutlined /> },
-];
 
 interface SidebarProps {
   onCollapse?: (collapsed: boolean) => void;
@@ -53,7 +26,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { role } = useSelector((state: RootState) => state.auth);
+  const menuItems = useSelector(selectMenuItems);
 
   // Update CSS variables for sidebar width
   React.useEffect(() => {
@@ -65,28 +38,6 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
     navigate(key);
     setMobileOpen(false);
   };
-
-  const menuItems = [
-    ...navItems.filter(item => {
-      // Show People page only for admin/owner roles
-      if (item.key === '/people') {
-        return role === 'admin' || role === 'owner';
-      }
-      return true;
-    }).map(item => ({
-      key: item.key,
-      icon: item.icon,
-      label: item.label,
-    })),
-    ...(role === 'admin' || role === 'owner' ? [
-      { key: 'divider', type: 'divider' },
-      ...adminItems.map(item => ({
-        key: item.key,
-        icon: item.icon,
-        label: item.label,
-      }))
-    ] : []),
-  ];
 
   return (
     <>

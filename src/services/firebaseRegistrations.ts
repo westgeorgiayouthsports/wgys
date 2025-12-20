@@ -1,7 +1,7 @@
 import { ref, push, set, get, remove } from 'firebase/database';
 import { db } from './firebase';
 
-export interface Registration {
+export interface TeamAssignment {
   id: string;
   teamId: string;
   playerName: string;
@@ -11,65 +11,68 @@ export interface Registration {
   parentEmail: string;
   phoneNumber: string;
   fee: number;
-  paymentMethod: 'stripe' | 'paypal' | 'square' | 'check' | 'cash';
+  paymentMethod: 'stripe' | 'paypal' | 'square' | 'check' | 'cash' | 'venmo' | 'cashapp' | 'other';
   status: 'pending' | 'approved' | 'paid';
   rosterPlayerId?: string;
   createdAt: string;
   updatedAt?: string;
 }
 
+// Legacy export for backwards compatibility
+export type Registration = TeamAssignment;
+
 export const registrationsService = {
-  // Get all registrations for a team
-  async getTeamRegistrations(teamId: string): Promise<Registration[]> {
+  // Get all team assignments for a team
+  async getTeamRegistrations(teamId: string): Promise<TeamAssignment[]> {
     try {
-      const regsRef = ref(db, 'registrations');
-      const snapshot = await get(regsRef);
+      const assignmentsRef = ref(db, 'teamAssignments');
+      const snapshot = await get(assignmentsRef);
 
       if (!snapshot.exists()) return [];
 
-      const registrations: Registration[] = [];
+      const assignments: TeamAssignment[] = [];
       snapshot.forEach((child) => {
-        const reg = { id: child.key, ...child.val() } as Registration;
-        if (reg.teamId === teamId) {
-          registrations.push(reg);
+        const assignment = { id: child.key, ...child.val() } as TeamAssignment;
+        if (assignment.teamId === teamId) {
+          assignments.push(assignment);
         }
       });
 
-      return registrations.sort(
+      return assignments.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     } catch (error) {
-      console.error('❌ Error fetching team registrations:', error);
+      console.error('❌ Error fetching team assignments:', error);
       throw error;
     }
   },
 
-  // Get all registrations
-  async getAllRegistrations(): Promise<Registration[]> {
+  // Get all team assignments
+  async getAllRegistrations(): Promise<TeamAssignment[]> {
     try {
-      const regsRef = ref(db, 'registrations');
-      const snapshot = await get(regsRef);
+      const assignmentsRef = ref(db, 'teamAssignments');
+      const snapshot = await get(assignmentsRef);
 
       if (!snapshot.exists()) return [];
 
-      const registrations: Registration[] = [];
+      const assignments: TeamAssignment[] = [];
       snapshot.forEach((child) => {
-        const reg = { id: child.key, ...child.val() } as Registration;
-        registrations.push(reg);
+        const assignment = { id: child.key, ...child.val() } as TeamAssignment;
+        assignments.push(assignment);
       });
 
-      return registrations.sort(
+      return assignments.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     } catch (error) {
-      console.error('❌ Error fetching all registrations:', error);
+      console.error('❌ Error fetching all team assignments:', error);
       throw error;
     }
   },
 
-  // Create registration
+  // Create team assignment
   async createRegistration(
     teamId: string,
     playerName: string,
@@ -79,13 +82,13 @@ export const registrationsService = {
     parentEmail: string,
     phoneNumber: string,
     fee: number,
-    paymentMethod: 'stripe' | 'paypal' | 'square' | 'check' | 'cash'
-  ): Promise<Registration> {
+    paymentMethod: 'stripe' | 'paypal' | 'square' | 'check' | 'cash' | 'venmo' | 'cashapp' | 'other'
+  ): Promise<TeamAssignment> {
     try {
-      const regsRef = ref(db, 'registrations');
-      const newRegRef = push(regsRef);
+      const assignmentsRef = ref(db, 'teamAssignments');
+      const newAssignmentRef = push(assignmentsRef);
 
-      const registration = {
+      const assignment = {
         teamId,
         playerName,
         playerAge,
@@ -99,12 +102,12 @@ export const registrationsService = {
         createdAt: new Date().toISOString(),
       };
 
-      await set(newRegRef, registration);
+      await set(newAssignmentRef, assignment);
 
       return {
-        id: newRegRef.key,
-        ...registration,
-      };
+        id: newAssignmentRef.key,
+        ...assignment,
+      } as TeamAssignment;
     } catch (error) {
       console.error('❌ Error creating registration:', error);
       throw error;
@@ -187,27 +190,27 @@ export const registrationsService = {
   async getRegistrationsByStatus(
     teamId: string,
     status: 'pending' | 'approved' | 'paid'
-  ): Promise<Registration[]> {
+  ): Promise<TeamAssignment[]> {
     try {
-      const regsRef = ref(db, 'registrations');
-      const snapshot = await get(regsRef);
+      const assignmentsRef = ref(db, 'teamAssignments');
+      const snapshot = await get(assignmentsRef);
 
       if (!snapshot.exists()) return [];
 
-      const registrations: Registration[] = [];
+      const assignments: TeamAssignment[] = [];
       snapshot.forEach((child) => {
-        const reg = { id: child.key, ...child.val() } as Registration;
-        if (reg.teamId === teamId && reg.status === status) {
-          registrations.push(reg);
+        const assignment = { id: child.key, ...child.val() } as TeamAssignment;
+        if (assignment.teamId === teamId && assignment.status === status) {
+          assignments.push(assignment);
         }
       });
 
-      return registrations.sort(
+      return assignments.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     } catch (error) {
-      console.error('❌ Error fetching registrations by status:', error);
+      console.error('❌ Error fetching team assignments by status:', error);
       throw error;
     }
   },

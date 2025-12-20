@@ -120,6 +120,7 @@ export default function SignUp() {
               prefix={<LockOutlined />}
               placeholder="Password"
               disabled={loading}
+              autoComplete="new-password"
             />
           </Form.Item>
 
@@ -142,6 +143,7 @@ export default function SignUp() {
               prefix={<LockOutlined />}
               placeholder="Confirm password"
               disabled={loading}
+              autoComplete="new-password"
             />
           </Form.Item>
 

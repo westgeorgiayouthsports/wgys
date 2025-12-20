@@ -19,10 +19,10 @@ import {
   Avatar,
   Checkbox,
   App,
+  
 } from 'antd';
 import {
   UserOutlined,
-  PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   UserAddOutlined,
@@ -34,7 +34,6 @@ import {
 import type { RootState } from '../store/store';
 import { peopleService } from '../services/firebasePeople';
 import type { Person, PersonFormData, PersonRole } from '../types/person';
-import ProfileSettings from '../components/Profile/ProfileSettings';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 
@@ -47,6 +46,7 @@ export default function MyFamily() {
   const [familyMembers, setFamilyMembers] = useState<Person[]>([]);
   const [currentUser, setCurrentUser] = useState<Person | null>(null);
   const [loading, setLoading] = useState(true);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [sameAddress, setSameAddress] = useState(false);
@@ -113,7 +113,7 @@ export default function MyFamily() {
         setCurrentUser(newPerson);
         setFamilyMembers([newPerson]);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Error loading family data:', error);
       message.error('Failed to load family information');
     } finally {
@@ -292,14 +292,10 @@ export default function MyFamily() {
 
   const handleRegisterAthlete = (person: Person) => {
     const params = new URLSearchParams();
-    if (person.dateOfBirth) {
-      params.set('dateOfBirth', person.dateOfBirth);
-    }
-    if (person.sex) {
-      params.set('sex', person.sex);
-    }
-    params.set('athleteName', `${person.firstName} ${person.lastName}`);
-    navigate(`/registrations?${params.toString()}`);
+    if (person.dateOfBirth) params.set('dateOfBirth', person.dateOfBirth);
+    if (person.sex) params.set('sex', person.sex);
+    params.set('athleteId', person.id);
+    navigate(`/register?${params.toString()}`);
   };
 
   const handleRegistrationHelp = (person: Person) => {
@@ -411,7 +407,7 @@ export default function MyFamily() {
                   await familiesService.updateFamily(currentFamily.id, { primaryPersonId: record.id });
                   setCurrentFamily({ ...currentFamily, primaryPersonId: record.id });
                   message.success({ content: `${record.firstName} ${record.lastName} is now the primary member` });
-                } catch (error) {
+                } catch {
                   message.error({ content: 'Failed to set primary member' });
                 }
               }}
@@ -506,22 +502,6 @@ export default function MyFamily() {
           />
         </Spin>
       </Card>
-
-      {/* Profile Settings for Current User */}
-      {currentUser && (
-        <div style={{ marginTop: '24px' }}>
-          <ProfileSettings
-            person={currentUser}
-            onPersonUpdate={(updatedPerson) => {
-              setCurrentUser(updatedPerson);
-              setFamilyMembers(familyMembers.map(member => 
-                member.id === updatedPerson.id ? updatedPerson : member
-              ));
-            }}
-            showThemeToggle={true}
-          />
-        </div>
-      )}
 
       {/* Add/Edit Family Member Modal */}
       <Modal
@@ -841,7 +821,7 @@ export default function MyFamily() {
             message.success({ content: 'Family updated successfully' });
             setFamilyModalVisible(false);
             await loadFamilyData();
-          } catch (error) {
+          } catch {
             message.error({ content: 'Failed to update family' });
           }
         }}
