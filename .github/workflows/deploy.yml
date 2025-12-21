@@ -24,44 +24,20 @@ jobs:
       run: npm install
       
     - name: Create public environment file
-      # CRITICAL SECURITY: Never embed API keys in environment files!
-      # Vite will hardcode VITE_* variables into the JavaScript bundle at build time.
-      # This exposes secrets publicly in the source code of compiled assets.
-      # Only include non-sensitive, public-safe values here.
+      # Firebase credentials are SAFE to embed - they're public by design
+      # Security comes from Firebase Console: Auth domains, DB rules, API restrictions
       run: |
-        echo "# Public configuration - SAFE to embed in JS bundle" > .env.production
+        echo "# Firebase configuration - safe for client-side use" > .env.production
+        echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> .env.production
+        echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env.production
+        echo "VITE_FIREBASE_DATABASE_URL=${{ secrets.VITE_FIREBASE_DATABASE_URL }}" >> .env.production
+        echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> .env.production
+        echo "VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}" >> .env.production
+        echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}" >> .env.production
+        echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> .env.production
         echo "VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}" >> .env.production
         echo "VITE_METRICS_URL=${{ secrets.VITE_METRICS_URL }}" >> .env.production
-        echo "" >> .env.production
-        echo "# SECURITY NOTE:" >> .env.production
-        echo "# DO NOT add VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, etc." >> .env.production
-        echo "# These will be embedded directly in compiled JavaScript files" >> .env.production
-        echo "# and exposed in public GitHub repository." >> .env.production
-        echo "# Firebase config is loaded from index.html meta tags at runtime instead." >> .env.production
 
-    # - name: Debug environment secrets
-    #   run: |
-    #     echo "Checking environment secrets..."
-    #     echo "API_KEY length: ${#VITE_FIREBASE_API_KEY}"
-    #     echo "AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}"
-    #     echo "PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}"
-    #     echo "APP_ID length: ${#VITE_FIREBASE_APP_ID}"
-    #   env:
-    #     VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-    #     VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-        
-    # - name: Create environment file
-    #   run: |
-    #     echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> .env.production
-    #     echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env.production
-    #     echo "VITE_FIREBASE_DATABASE_URL=${{ secrets.VITE_FIREBASE_DATABASE_URL }}" >> .env.production
-    #     echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> .env.production
-    #     echo "VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}" >> .env.production
-    #     echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}" >> .env.production
-    #     echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> .env.production
-    #     echo "VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}" >> .env.production
-    #     echo "VITE_METRICS_URL=${{ secrets.VITE_METRICS_URL }}" >> .env.production
-        
     - name: Build
       run: npm run build
       
@@ -69,13 +45,20 @@ jobs:
       run: node scripts/verify-assets.cjs
       shell: bash
 
-    - name: Verify no exposed API keys in build output
+    - name: Verify no sensitive secrets in build output
       run: |
-        echo "Checking for exposed API keys in build output..."
-        if grep -r "AIzaSy" dist/; then
-          echo "ERROR: Potential API key found in build output!"
+        echo "Checking for sensitive API keys in build output..."
+        # Check for Stripe secret keys (these should NEVER be in frontend)
+        if grep -r "sk_test_\|sk_live_" dist/; then
+          echo "ERROR: Stripe secret key found in build output!"
           exit 1
         fi
+        # Check for Firebase Admin SDK keys (these should NEVER be in frontend)
+        if grep -r "firebase-adminsdk" dist/; then
+          echo "ERROR: Firebase Admin SDK credentials found in build output!"
+          exit 1
+        fi
+        echo "✅ No sensitive secrets detected"
         echo "✓ No exposed API keys detected in build"
 
     - name: Verify build
