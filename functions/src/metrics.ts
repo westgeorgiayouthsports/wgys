@@ -9,6 +9,8 @@ interface GaCreds {
 
 interface MetricsResponse {
   views: number;
+  realtimeViews?: number;
+  source?: 'standard' | 'eventCount' | 'realtime';
   error?: string;
 }
 
@@ -87,6 +89,8 @@ export const metricsViews = onRequest(
       });
 
       // Query GA4 for page views from last 7 days (standard report - may have latency)
+      let source: MetricsResponse['source'] = 'standard';
+      let realtimeViews = 0;
       const [response] = await client.runReport({
         property: `properties/${propertyId}`,
         dateRanges: [
@@ -124,7 +128,10 @@ export const metricsViews = onRequest(
         const fallbackVal = fallback.rows?.[0]?.metricValues?.[0]?.value;
         if (fallbackVal) {
           const n = Number(fallbackVal);
-          if (!Number.isNaN(n)) views = n;
+          if (!Number.isNaN(n)) {
+            views = n;
+            source = 'eventCount';
+          }
         }
       }
 
@@ -143,6 +150,8 @@ export const metricsViews = onRequest(
             const n = Number(rtVal);
             if (!Number.isNaN(n) && n > 0) {
               views = n; // treat as near-real-time indicator
+              realtimeViews = n;
+              source = 'realtime';
             }
           }
         } catch (rtErr) {
@@ -150,7 +159,7 @@ export const metricsViews = onRequest(
         }
       }
 
-      const metricsResponse: MetricsResponse = { views };
+      const metricsResponse: MetricsResponse = { views, realtimeViews, source };
       res.json(metricsResponse);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';

@@ -68,6 +68,8 @@ export const metricsViews = onRequest({
             },
         });
         // Query GA4 for page views from last 7 days (standard report - may have latency)
+        let source = 'standard';
+        let realtimeViews = 0;
         const [response] = await client.runReport({
             property: `properties/${propertyId}`,
             dateRanges: [
@@ -102,8 +104,10 @@ export const metricsViews = onRequest({
             const fallbackVal = fallback.rows?.[0]?.metricValues?.[0]?.value;
             if (fallbackVal) {
                 const n = Number(fallbackVal);
-                if (!Number.isNaN(n))
+                if (!Number.isNaN(n)) {
                     views = n;
+                    source = 'eventCount';
+                }
             }
         }
         // Fallback #2: new properties can take time to populate standard reports.
@@ -121,6 +125,8 @@ export const metricsViews = onRequest({
                     const n = Number(rtVal);
                     if (!Number.isNaN(n) && n > 0) {
                         views = n; // treat as near-real-time indicator
+                        realtimeViews = n;
+                        source = 'realtime';
                     }
                 }
             }
@@ -128,7 +134,7 @@ export const metricsViews = onRequest({
                 console.warn('Realtime fallback failed:', rtErr);
             }
         }
-        const metricsResponse = { views };
+        const metricsResponse = { views, realtimeViews, source };
         res.json(metricsResponse);
     }
     catch (err) {

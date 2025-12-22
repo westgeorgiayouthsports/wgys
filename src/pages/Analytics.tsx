@@ -13,6 +13,8 @@ export default function Analytics() {
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
   
   const [websiteViews, setWebsiteViews] = useState(0);
+  const [realtimeViews, setRealtimeViews] = useState<number | undefined>(undefined);
+  const [source, setSource] = useState<string | undefined>(undefined);
   const [metricsHealthy, setMetricsHealthy] = useState(false);
   const [loading, setLoading] = useState(true);
   const mpFallbackEnabled = Boolean(import.meta.env.VITE_GA4_API_SECRET);
@@ -21,8 +23,10 @@ export default function Analytics() {
     const loadAnalytics = async () => {
       try {
         setLoading(true);
-        const { views, healthy } = await fetchWebsiteMetrics();
+        const { views, healthy, realtimeViews, source } = await fetchWebsiteMetrics();
         setWebsiteViews(views);
+        setRealtimeViews(realtimeViews);
+        setSource(source);
         setMetricsHealthy(healthy);
       } catch (error) {
         console.error('Failed to load analytics:', error);
@@ -112,6 +116,22 @@ export default function Analytics() {
                       ? 'Connected: no views reported yet'
                       : 'Analytics data is being tracked')
                   : 'GA4 Cloud Function not yet deployed'}
+              </Text>
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={8}>
+            <Card 
+              hoverable 
+              style={{ backgroundColor: isDarkMode ? '#1f1f1f' : '#ffffff' }}
+            >
+              <Statistic
+                title="Realtime (Last ~30m)"
+                value={typeof realtimeViews === 'number' ? realtimeViews : '—'}
+                styles={{ content: { color: isDarkMode ? '#722ed1' : '#722ed1' } }}
+              />
+              <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px', display: 'block' }}>
+                Source: {source || 'pending'}
               </Text>
             </Card>
           </Col>
