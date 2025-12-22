@@ -128,7 +128,7 @@ export default function Analytics() {
                 <div>
                   <Text strong>Google Analytics 4 Property ID:</Text>
                   <Text code style={{ marginLeft: '8px' }}>
-                    {import.meta.env.VITE_FIREBASE_GA4_PROPERTY_ID || '373313184'}
+                    {import.meta.env.VITE_FIREBASE_GA4_PROPERTY_ID || '514640984'}
                   </Text>
                 </div>
                 <div>

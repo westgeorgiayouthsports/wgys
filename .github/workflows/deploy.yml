@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write # required for actions/checkout + gh-pages push
   pages: write
   id-token: write
 
