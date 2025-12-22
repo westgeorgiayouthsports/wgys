@@ -106,10 +106,11 @@ export default function Analytics() {
                 styles={{ content: { color: metricsHealthy ? '#52c41a' : '#faad14' } }}
               />
               <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px', display: 'block' }}>
-                {websiteViews === 0 
-                  ? 'GA4 Cloud Function not yet deployed'
-                  : 'Analytics data is being tracked'
-                }
+                {metricsHealthy
+                  ? (websiteViews === 0
+                      ? 'Connected: no views reported yet'
+                      : 'Analytics data is being tracked')
+                  : 'GA4 Cloud Function not yet deployed'}
               </Text>
             </Card>
           </Col>
@@ -126,7 +127,9 @@ export default function Analytics() {
               <Space orientation="vertical" style={{ width: '100%' }}>
                 <div>
                   <Text strong>Google Analytics 4 Property ID:</Text>
-                  <Text code style={{ marginLeft: '8px' }}>514640984</Text>
+                  <Text code style={{ marginLeft: '8px' }}>
+                    {import.meta.env.VITE_FIREBASE_GA4_PROPERTY_ID || '373313184'}
+                  </Text>
                 </div>
                 <div>
                   <Text strong>Tracking Method:</Text>

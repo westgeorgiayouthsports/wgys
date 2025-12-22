@@ -103,10 +103,30 @@ export const metricsViews = onRequest(
       });
 
       // Extract view count from response
-      const views =
+      let views =
         response.rows?.[0]?.metricValues?.[0]?.value
           ? Number(response.rows[0].metricValues[0].value)
           : 0;
+
+      // Fallback: some properties report views primarily via eventCount 'page_view'
+      if (!views) {
+        const [fallback] = await client.runReport({
+          property: `properties/${propertyId}`,
+          dateRanges: [
+            { startDate: '7daysAgo', endDate: 'today' },
+          ],
+          dimensions: [ { name: 'eventName' } ],
+          metrics: [ { name: 'eventCount' } ],
+          dimensionFilter: {
+            filter: { fieldName: 'eventName', stringFilter: { value: 'page_view' } }
+          }
+        });
+        const fallbackVal = fallback.rows?.[0]?.metricValues?.[0]?.value;
+        if (fallbackVal) {
+          const n = Number(fallbackVal);
+          if (!Number.isNaN(n)) views = n;
+        }
+      }
 
       const metricsResponse: MetricsResponse = { views };
       res.json(metricsResponse);

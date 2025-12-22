@@ -38,6 +38,7 @@ jobs:
         echo "VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}" >> .env.production
         echo "VITE_METRICS_URL=${{ secrets.VITE_METRICS_URL }}" >> .env.production
         echo "VITE_STRIPE_PUBLISHABLE_KEY=${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}" >> .env.production
+        echo "VITE_FIREBASE_GA4_PROPERTY_ID=${{ secrets.VITE_FIREBASE_GA4_PROPERTY_ID }}" >> .env.production
 
     - name: Build
       run: npm run build
