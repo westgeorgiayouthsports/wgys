@@ -4,7 +4,7 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
-import { fetchWebsiteViews } from '../services/analyticsClient';
+import { fetchWebsiteMetrics } from '../services/analyticsClient';
 
 const { Title, Text } = Typography;
 
@@ -13,14 +13,16 @@ export default function Analytics() {
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
   
   const [websiteViews, setWebsiteViews] = useState(0);
+  const [metricsHealthy, setMetricsHealthy] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadAnalytics = async () => {
       try {
         setLoading(true);
-        const views = await fetchWebsiteViews();
+        const { views, healthy } = await fetchWebsiteMetrics();
         setWebsiteViews(views);
+        setMetricsHealthy(healthy);
       } catch (error) {
         console.error('Failed to load analytics:', error);
       } finally {
@@ -100,8 +102,8 @@ export default function Analytics() {
             >
               <Statistic
                 title="Data Status"
-                value={websiteViews === 0 ? 'Pending' : 'Active'}
-                styles={{ content: { color: websiteViews === 0 ? '#faad14' : '#52c41a' } }}
+                value={metricsHealthy ? 'Active' : 'Pending'}
+                styles={{ content: { color: metricsHealthy ? '#52c41a' : '#faad14' } }}
               />
               <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px', display: 'block' }}>
                 {websiteViews === 0 
@@ -140,8 +142,8 @@ export default function Analytics() {
                 </div>
                 <div>
                   <Text strong>Setup Status:</Text>
-                  <Tag color={websiteViews > 0 ? 'green' : 'orange'} style={{ marginLeft: '8px' }}>
-                    {websiteViews > 0 ? 'Active' : 'Deployment Required'}
+                  <Tag color={metricsHealthy ? 'green' : 'orange'} style={{ marginLeft: '8px' }}>
+                    {metricsHealthy ? 'Active' : 'Deployment Required'}
                   </Tag>
                 </div>
               </Space>

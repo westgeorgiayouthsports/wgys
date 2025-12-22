@@ -1,4 +1,9 @@
 # Firebase GA4 Setup Script Template
+#
+# Go to https://console.cloud.google.com/iam-admin/serviceaccounts?project={$project-name}
+# Create or pick the service account you use for GA4 (e.g., “ga4-metrics”).
+# Click “Keys” → “Add key” → “Create new key” → choose JSON → “Create”.
+# A JSON file downloads; keep it private. This is what you paste into the GA4_KEY secret (verbatim).
 # 
 # IMPORTANT: This script contains sensitive information
 #
@@ -34,4 +39,4 @@ Write-Output $env:ALLOWED_ORIGIN | firebase functions:secrets:set ALLOWED_ORIGIN
 # ============================================================================
 Set-Location functions
 npm run build
-firebase deploy --only functions
+firebase deploy --only functions:metricsViews

@@ -23,3 +23,26 @@ export async function fetchWebsiteViews(): Promise<number> {
 
   return 0;
 }
+
+// Health-aware fetch that distinguishes between a successful call (even when views=0)
+// and a failure to reach any metrics endpoint.
+export async function fetchWebsiteMetrics(): Promise<{ views: number; healthy: boolean }> {
+  const urlsToTry = METRICS_URL === DEFAULT_METRICS_URL
+    ? [DEFAULT_METRICS_URL]
+    : [METRICS_URL, DEFAULT_METRICS_URL];
+
+  for (const url of urlsToTry) {
+    try {
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error(`Failed to fetch views: ${res.status}`);
+      const data = (await res.json()) as Partial<WebsiteViewsResponse>;
+      const views = typeof data.views === 'number' ? data.views : 0;
+      return { views, healthy: true };
+    } catch (error) {
+      console.error('fetchWebsiteMetrics error', url, error);
+      // try next URL
+    }
+  }
+
+  return { views: 0, healthy: false };
+}

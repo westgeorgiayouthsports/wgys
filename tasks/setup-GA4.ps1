@@ -22,7 +22,7 @@ $env:GA4_PROPERTY_ID = $ga4Id
 Write-Host "Setting GA4_PROPERTY_ID in Firebase Secrets..."
 Write-Output $env:GA4_PROPERTY_ID | firebase functions:secrets:set GA4_PROPERTY_ID
 
-$serviceKeyPath = Join-Path $projectRoot "wgys-ls-firebase.json"
+$serviceKeyPath = Join-Path $projectRoot "service-account.json"
 Get-Content $serviceKeyPath | firebase functions:secrets:set GA4_KEY
 
 $allowedOrigin = $null
@@ -48,5 +48,5 @@ Write-Host "Setting ALLOWED_ORIGIN in Firebase Secrets..."
 Write-Output $env:ALLOWED_ORIGIN | firebase functions:secrets:set ALLOWED_ORIGIN
 
 Set-Location (Join-Path $projectRoot "functions")
-npm run build
-firebase deploy --only functions
+# npm run build
+firebase deploy --only functions:metricsViews

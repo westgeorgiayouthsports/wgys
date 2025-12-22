@@ -23,7 +23,7 @@ export default defineConfig(() => ({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
         // Use explicit chunk definitions to ensure correct load order
@@ -33,7 +33,7 @@ export default defineConfig(() => ({
           'vendor-router': ['react-router-dom'],
           'vendor-redux': ['@reduxjs/toolkit', 'react-redux'],
           'vendor-antd': ['antd'],
-          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/database'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/database', 'firebase/storage'],
         },
       },
     },
