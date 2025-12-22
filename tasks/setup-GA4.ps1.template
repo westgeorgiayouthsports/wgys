@@ -1,0 +1,37 @@
+# Firebase GA4 Setup Script Template
+# 
+# IMPORTANT: This script contains sensitive information
+#
+# Purpose: Securely set Firebase Cloud Functions secrets for GA4 analytics
+#
+# Prerequisites:
+# 1. Download your Firebase service account key and save as: account-firebase.json
+# 2. Update GA4_PROPERTY_ID below with your GA4 property ID
+# 3. Update ALLOWED_ORIGIN with your production domains
+# 4. Run: .\Setup-GA4.ps1
+
+# ============================================================================
+# STEP 1: Set GA4 Property ID (numeric ID from Google Analytics)
+# ============================================================================
+$env:GA4_PROPERTY_ID="YOUR_GA4_PROPERTY_ID_HERE"  # e.g., 111111111
+Write-Output $env:GA4_PROPERTY_ID | firebase functions:secrets:set GA4_PROPERTY_ID
+
+# ============================================================================
+# STEP 2: Set GA4 Service Account Key from Firebase
+# ============================================================================
+# Download from: Google Cloud Console → Service Accounts → account-firebase
+# Save the JSON file as: account-firebase.json (in project root)
+Get-Content account-firebase.json | firebase functions:secrets:set GA4_KEY
+
+# ============================================================================
+# STEP 3: Set CORS Allowed Origins
+# ============================================================================
+$env:ALLOWED_ORIGIN="https://your-github-pages-domain.com,https://your-custom-domain.com"
+Write-Output $env:ALLOWED_ORIGIN | firebase functions:secrets:set ALLOWED_ORIGIN
+
+# ============================================================================
+# STEP 4: Build and Deploy Cloud Functions
+# ============================================================================
+Set-Location functions
+npm run build
+firebase deploy --only functions

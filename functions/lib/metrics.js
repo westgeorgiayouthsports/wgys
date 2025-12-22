@@ -8,7 +8,8 @@ export const metricsViews = onRequest({
     region: 'us-central1',
     memory: '256MiB',
     timeoutSeconds: 60,
-    cors: true // Enable CORS for all origins
+    cors: true, // Enable CORS for all origins
+    secrets: ['GA4_KEY', 'GA4_PROPERTY_ID', 'ALLOWED_ORIGIN'] // Load Firebase secrets
 }, async (req, res) => {
     // Additional CORS headers for explicit control (supports multiple origins)
     const allowedEnv = process.env.ALLOWED_ORIGIN || '*';

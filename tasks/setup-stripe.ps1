@@ -1,4 +1,5 @@
-$envFile = Join-Path $PSScriptRoot "functions/.env"
+$projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$envFile = Join-Path $projectRoot "functions/.env"
 $secret = $null
 
 if (Test-Path $envFile) {
@@ -26,6 +27,5 @@ $secret | firebase functions:secrets:set STRIPE_SECRET_KEY
 
 Write-Host "Done. Deploy functions to pick up the new secret: firebase deploy --only functions"
 
-# firebase deploy --only functions
-
-# firebase functions:list
+firebase deploy --only functions
+firebase functions:list
