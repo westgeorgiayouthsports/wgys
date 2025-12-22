@@ -23,7 +23,7 @@ export default function SignIn() {
     try {
       const userCredential = await signInWithEmail(values.email, values.password);
       dispatch(setUser({ user: userCredential.user }));
-      navigate('/dashboard');
+      navigate('/admin/dashboard');
     } catch (err: any) {
       message.error({ content: err.message || 'Failed to sign in' });
     } finally {
@@ -37,7 +37,7 @@ export default function SignIn() {
     try {
       const user = await signInWithGoogle();
       dispatch(setUser({ user }));
-      navigate('/dashboard');
+      navigate('/admin/dashboard');
     } catch (err: any) {
       message.error({ content: err.message || 'Failed to sign in with Google' });
     } finally {

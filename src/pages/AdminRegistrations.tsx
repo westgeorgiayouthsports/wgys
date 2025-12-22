@@ -91,7 +91,7 @@ export default function AdminRegistrations() {
         <Button 
           type="text" 
           icon={<ArrowLeftOutlined />} 
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/admin/dashboard')}
         >
           Back to Dashboard
         </Button>

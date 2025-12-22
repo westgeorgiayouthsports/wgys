@@ -67,46 +67,65 @@ export const metricsViews = onRequest({
                 private_key: creds.private_key,
             },
         });
-        // Query GA4 for page views from last 7 days (standard report - may have latency)
+        const daysParam = Number(req.query.days) || 30;
+        const days = Math.min(Math.max(1, daysParam), 365);
+        const wantTimeseries = req.query.timeseries === 'true' || req.query.timeseries === '1';
+        // Query GA4 for page views from last N days (standard report - may have latency)
         let source = 'standard';
         let realtimeViews = 0;
+        let timeseries = undefined;
+        const baseDateRange = [{ startDate: `${Math.max(0, days - 1)}daysAgo`, endDate: 'today' }];
         const [response] = await client.runReport({
             property: `properties/${propertyId}`,
-            dateRanges: [
-                {
-                    startDate: '7daysAgo',
-                    endDate: 'today',
-                },
-            ],
-            metrics: [
-                {
-                    name: 'screenPageViews',
-                },
-            ],
+            dateRanges: baseDateRange,
+            metrics: [{ name: 'screenPageViews' }],
+            dimensions: wantTimeseries ? [{ name: 'date' }] : undefined,
         });
         // Extract view count from response
-        let views = response.rows?.[0]?.metricValues?.[0]?.value
-            ? Number(response.rows[0].metricValues[0].value)
-            : 0;
+        let views = 0;
+        if (wantTimeseries && response.rows?.length) {
+            timeseries = response.rows.map((row) => {
+                const date = row.dimensionValues?.[0]?.value ?? '';
+                const v = Number(row.metricValues?.[0]?.value ?? '0');
+                views += Number.isNaN(v) ? 0 : v;
+                return { date, views: Number.isNaN(v) ? 0 : v, source };
+            });
+        }
+        else {
+            views = response.rows?.[0]?.metricValues?.[0]?.value
+                ? Number(response.rows[0].metricValues[0].value)
+                : 0;
+        }
         // Fallback #1: some properties report views primarily via eventCount 'page_view'
         if (!views) {
             const [fallback] = await client.runReport({
                 property: `properties/${propertyId}`,
-                dateRanges: [
-                    { startDate: '7daysAgo', endDate: 'today' },
-                ],
-                dimensions: [{ name: 'eventName' }],
+                dateRanges: baseDateRange,
+                dimensions: wantTimeseries ? [{ name: 'date' }] : [{ name: 'eventName' }],
                 metrics: [{ name: 'eventCount' }],
-                dimensionFilter: {
-                    filter: { fieldName: 'eventName', stringFilter: { value: 'page_view' } }
-                }
+                dimensionFilter: wantTimeseries
+                    ? { filter: { fieldName: 'eventName', stringFilter: { value: 'page_view' } } }
+                    : { filter: { fieldName: 'eventName', stringFilter: { value: 'page_view' } } }
             });
-            const fallbackVal = fallback.rows?.[0]?.metricValues?.[0]?.value;
-            if (fallbackVal) {
-                const n = Number(fallbackVal);
-                if (!Number.isNaN(n)) {
-                    views = n;
-                    source = 'eventCount';
+            if (wantTimeseries && fallback.rows?.length) {
+                timeseries = fallback.rows.map((row) => {
+                    const dim0 = row.dimensionValues?.[0]?.value ?? '';
+                    // When timeseries, dim0 is date; when aggregate, dim0 might be eventName
+                    const date = dim0.length === 8 ? dim0 : '';
+                    const v = Number(row.metricValues?.[0]?.value ?? '0');
+                    return { date, views: Number.isNaN(v) ? 0 : v, source: 'eventCount' };
+                });
+                views = timeseries.reduce((sum, r) => sum + (r.views || 0), 0);
+                source = 'eventCount';
+            }
+            else {
+                const fallbackVal = fallback.rows?.[0]?.metricValues?.[0]?.value;
+                if (fallbackVal) {
+                    const n = Number(fallbackVal);
+                    if (!Number.isNaN(n)) {
+                        views = n;
+                        source = 'eventCount';
+                    }
                 }
             }
         }
@@ -134,7 +153,13 @@ export const metricsViews = onRequest({
                 console.warn('Realtime fallback failed:', rtErr);
             }
         }
-        const metricsResponse = { views, realtimeViews, source };
+        // Sort timeseries chronologically if present
+        if (timeseries?.length) {
+            timeseries = timeseries
+                .filter((r) => r.date)
+                .sort((a, b) => a.date.localeCompare(b.date));
+        }
+        const metricsResponse = { views, realtimeViews, source, timeseries };
         res.json(metricsResponse);
     }
     catch (err) {

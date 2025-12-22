@@ -172,7 +172,7 @@ export default function ProgramDetail() {
         <div style={{ marginBottom: '24px' }}>
           <Space style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Space orientation="vertical" style={{ flex: 1 }}>
-              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/programs')}>
+              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/programs')}>
                 Back to Programs
               </Button>
               <div>

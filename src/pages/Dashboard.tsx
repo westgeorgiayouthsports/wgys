@@ -14,6 +14,7 @@ import {
   Button,
   Empty,
   Tooltip,
+  Segmented,
 } from 'antd';
 import {
   EyeOutlined,
@@ -30,7 +31,7 @@ import {
 import type { RootState } from '../store/store';
 import { setTeams, setLoading } from '../store/slices/teamsSlice';
 import { teamsService } from '../services/firebaseTeams';
-import { fetchWebsiteViews } from '../services/analyticsClient';
+import { fetchWebsiteTrends } from '../services/analyticsClient';
 import { programsService } from '../services/firebasePrograms';
 import { announcementsService } from '../services/firebaseAnnouncements';
 import { registrationsService } from '../services/firebaseRegistrations';
@@ -77,6 +78,7 @@ export default function Dashboard() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [websiteViewsRange, setWebsiteViewsRange] = useState<number>(30);
 
   // Load all dashboard data on mount
   useEffect(() => {
@@ -136,12 +138,13 @@ export default function Dashboard() {
     }));
   }, [teams, programs]);
 
-  // Load website views
+  // Load website views for selected range
   useEffect(() => {
     const loadViews = async () => {
       try {
-        const views = await fetchWebsiteViews();
-        setMetrics(prev => ({ ...prev, websiteViews: views }));
+        const { timeseries } = await fetchWebsiteTrends(websiteViewsRange);
+        const totalViews = timeseries?.reduce((sum, d) => sum + d.views, 0) || 0;
+        setMetrics(prev => ({ ...prev, websiteViews: totalViews }));
       } catch (error) {
         // Silently fail - metrics will show 0
         // Uncomment to see errors: console.error('Website views fetch failed:', error);
@@ -149,8 +152,8 @@ export default function Dashboard() {
     };
     // Temporarily disabled until Firebase Cloud Functions deployed on Blaze plan
     // To enable: Upgrade to Blaze plan, deploy functions, then uncomment line below
-    // loadViews();
-  }, []);
+    loadViews();
+  }, [websiteViewsRange]);
 
   // Format currency
   const formatCurrency = (value: number): string => {
@@ -279,10 +282,22 @@ export default function Dashboard() {
     >
       {/* Header */}
       <Space orientation="vertical" style={{ width: '100%', marginBottom: '32px' }} size={8}>
-        <Title level={2} style={{ margin: 0 }}>
-          Admin Dashboard
-        </Title>
-        <Text type="secondary">Welcome back, {user?.displayName || 'Admin'}! Here's your organization overview.</Text>
+        <Space style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <Title level={2} style={{ margin: 0 }}>
+              Dashboard
+            </Title>
+            <Text type="secondary">Welcome back, {user?.displayName || 'Admin'}! Here's your organization overview.</Text>
+          </div>
+          <Space direction="vertical" align="end" size={4}>
+            <Text type="secondary" style={{ fontSize: '12px' }}>Date Range</Text>
+            <Segmented
+              options={[7, 30, 90, 180, 365].map((d) => ({ label: `${d === 365 ? '1y' : d === 180 ? '6m' : `${d}d`}`, value: d }))}
+              value={websiteViewsRange}
+              onChange={(val) => setWebsiteViewsRange(Number(val))}
+            />
+          </Space>
+        </Space>
       </Space>
 
       {/* KPI Cards */}
@@ -290,7 +305,7 @@ export default function Dashboard() {
         <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
           <Col xs={24} sm={12} lg={6}>
             <KPICard
-              title="Website Views"
+              title={`Website Page Views (${websiteViewsRange}d)`}
               value={metrics.websiteViews}
               icon={<EyeOutlined />}
               onClick={() => navigate('/admin/analytics')}
@@ -318,7 +333,7 @@ export default function Dashboard() {
               title="Active Programs"
               value={metrics.activePrograms}
               icon={<AppstoreOutlined />}
-              onClick={() => navigate('/programs')}
+              onClick={() => navigate('/admin/programs')}
             />
           </Col>
         </Row>
@@ -330,7 +345,7 @@ export default function Dashboard() {
               title="Active Teams"
               value={metrics.activeTeams}
               icon={<TeamOutlined />}
-              onClick={() => navigate('/teams')}            />
+              onClick={() => navigate('/admin/teams')}            />
           </Col>
         </Row>
 

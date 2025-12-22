@@ -86,7 +86,7 @@ export default function TeamChat() {
           </div>
         </div>
         <div>
-          <Button onClick={() => navigate('/teams')}>Back to Teams</Button>
+          <Button onClick={() => navigate('/admin/teams')}>Back to Teams</Button>
         </div>
       </div>
 

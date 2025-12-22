@@ -23,7 +23,7 @@ export default function SignUp() {
     try {
       const user = await signUpWithEmail(values.email, values.password, values.displayName);
       dispatch(setUser({ user }));
-      navigate('/dashboard');
+      navigate('/admin/dashboard');
     } catch (err: any) {
       message.error({ content: err.message || 'Failed to create account' });
     } finally {
@@ -37,7 +37,7 @@ export default function SignUp() {
     try {
       const user = await signInWithGoogle();
       dispatch(setUser({ user }));
-      navigate('/dashboard');
+      navigate('/admin/dashboard');
     } catch (err: any) {
       message.error({ content: err.message || 'Failed to sign up with Google' });
     } finally {

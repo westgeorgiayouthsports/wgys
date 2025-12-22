@@ -81,41 +81,48 @@ function Router() {
         <Routes>
           {/* Auth Routes */}
           <Route element={<AuthLayout />}>
-            <Route path="/signin" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <SignIn />} />
-            <Route path="/signup" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <SignUp />} />
+            <Route path="/signin" element={isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <SignIn />} />
+            <Route path="/signup" element={isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <SignUp />} />
           </Route>
 
           {/* Protected Main Routes */}
           <Route element={<MainLayout />}>
             <Route path="/" element={isAuthenticated ? <Dashboard /> : <Navigate to="/signin" replace />} />
-            <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/signin" replace />} />
-            <Route path="/teams" element={isAuthenticated ? <Teams /> : <Navigate to="/signin" replace />} />
-            <Route path="/teams/:teamId/chat" element={isAuthenticated ? <TeamChat /> : <Navigate to="/signin" replace />} />
+            <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="/admin/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/signin" replace />} />
+            <Route path="/teams" element={<Navigate to="/admin/teams" replace />} />
+            <Route path="/teams/:teamId/chat" element={<Navigate to="/admin/teams/:teamId/chat" replace />} />
+            <Route path="/admin/teams" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                <Teams />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/teams/:teamId/chat" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                <TeamChat />
+              </ProtectedRoute>
+            } />
             <Route path="/announcements" element={isAuthenticated ? <Announcements /> : <Navigate to="/signin" replace />} />
+            <Route path="/people" element={<Navigate to="/admin/people" replace />} />
             <Route
-              path="/people"
+              path="/admin/people"
               element={
                 <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
                   <People />
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/programs"
-              element={
-                <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
-                  <Programs />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/programs/:programId"
-              element={
-                <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
-                  <ProgramDetail />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/programs" element={<Navigate to="/admin/programs" replace />} />
+            <Route path="/admin/programs" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                <Programs />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/programs/:programId" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                <ProgramDetail />
+              </ProtectedRoute>
+            } />
             <Route path="/schedules" element={isAuthenticated ? <Schedules /> : <Navigate to="/signin" replace />} />
             <Route path="/registration-help" element={isAuthenticated ? <RegistrationHelp /> : <Navigate to="/signin" replace />} />
             <Route path="/register" element={isAuthenticated ? <RegistrationPage /> : <Navigate to="/signin" replace />} />
@@ -125,7 +132,12 @@ function Router() {
             <Route path="/profile" element={isAuthenticated ? <ProfileSettings /> : <Navigate to="/signin" replace />} />
             <Route path="/payment-methods" element={isAuthenticated ? <PaymentMethods /> : <Navigate to="/signin" replace />} />
             <Route path="/my-registrations" element={isAuthenticated ? <MyRegistrations /> : <Navigate to="/signin" replace />} />
-            <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/signin" replace />} />
+            <Route path="/settings" element={<Navigate to="/admin/settings" replace />} />
+            <Route path="/admin/settings" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                <Settings />
+              </ProtectedRoute>
+            } />
 
             {/* Feature Routes - Events */}
             <Route path="/events" element={isAuthenticated ? <EventsView isAdmin={role === 'admin'} /> : <Navigate to="/signin" replace />} />

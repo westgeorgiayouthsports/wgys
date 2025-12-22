@@ -19,11 +19,11 @@ import {
 
 const navItems = [
   // Admin-only items (will be placed in Admin section via selector)
-  { key: '/dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
-  { key: '/teams', label: 'Teams', icon: <TeamOutlined /> },
-  { key: '/programs', label: 'Programs', icon: <TrophyOutlined /> },
-  { key: '/people', label: 'People', icon: <ContactsOutlined /> },
-  { key: '/settings', label: 'Settings', icon: <SettingOutlined /> },
+  { key: '/admin/dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
+  { key: '/admin/teams', label: 'Teams', icon: <TeamOutlined /> },
+  { key: '/admin/programs', label: 'Programs', icon: <TrophyOutlined /> },
+  { key: '/admin/people', label: 'People', icon: <ContactsOutlined /> },
+  { key: '/admin/settings', label: 'Settings', icon: <SettingOutlined /> },
 
   // User items
   { key: '/profile', label: 'My Profile', icon: <UserOutlined /> },
@@ -34,10 +34,6 @@ const navItems = [
   { key: '/registration-help', label: 'Registration Help', icon: <QuestionCircleOutlined /> },
   { key: '/announcements', label: 'Announcements', icon: <SoundOutlined /> },
   { key: '/schedules', label: 'Schedules', icon: <CalendarOutlined /> },
-];
-
-const adminItems = [
-  { key: '/admin', label: 'Admin Panel', icon: <CrownOutlined /> },
 ];
 
 const selectRole = (state: RootState) => state.auth.role;
@@ -55,11 +51,11 @@ const USER_KEYS = new Set([
 ]);
 
 const ADMIN_KEYS = new Set([
-  '/dashboard',
-  '/teams',
-  '/programs',
-  '/people',
-  '/settings',
+  '/admin/dashboard',
+  '/admin/teams',
+  '/admin/programs',
+  '/admin/people',
+  '/admin/settings',
 ]);
 
 export const selectMenuItems = createSelector([selectRole], (role) => {
@@ -73,16 +69,8 @@ export const selectMenuItems = createSelector([selectRole], (role) => {
     .filter((i) => ADMIN_KEYS.has(i.key))
     .map((item) => ({ key: item.key, icon: item.icon, label: item.label }));
 
-  const adminPanel = adminItems.map((item) => ({
-    key: item.key,
-    icon: item.icon,
-    label: item.label,
-  }));
-
   return [
     ...userItems,
-    ...(isAdmin
-      ? [{ key: 'divider', type: 'divider' } as any, ...adminCore, ...adminPanel]
-      : []),
+    ...(isAdmin ? [{ key: 'divider', type: 'divider' } as any, ...adminCore] : []),
   ];
 });

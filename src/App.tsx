@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -13,6 +13,7 @@ import './App.css';
 import './styles/theme-variables.css';
 
 export default function App() {
+  const [geoAllowed, setGeoAllowed] = useState<boolean | null>(null);
   const dispatch = useDispatch();
   const loading = useSelector((state: RootState) => state.auth.loading);
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
@@ -25,6 +26,32 @@ export default function App() {
     document.body.style.backgroundColor = isDarkMode ? '#141414' : '#ffffff';
     document.body.style.color = isDarkMode ? '#ffffff' : '#000000';
   }, [isDarkMode]);
+
+  // Geo gate: allow only North America (US, CA). Fail-open on lookup errors.
+  useEffect(() => {
+    let cancelled = false;
+    const checkGeo = async () => {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        if (!res.ok) throw new Error(`geo lookup failed ${res.status}`);
+        const data = await res.json();
+        const country = (data.country_code || '').toUpperCase();
+        const allowed = ['US', 'CA'];
+        const ok = allowed.includes(country);
+        if (!cancelled) {
+          setGeoAllowed(ok);
+          if (!ok) {
+            try { await auth.signOut(); } catch (e) { console.warn('signOut after geo block failed', e); }
+          }
+        }
+      } catch (err) {
+        console.warn('Geo check failed, default allow', err);
+        if (!cancelled) setGeoAllowed(true); // fail-open to avoid accidental lockout
+      }
+    };
+    checkGeo();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -81,8 +108,17 @@ export default function App() {
     setUserProperties({ role, user_id: user.uid });
   }, [role, user]);
 
-  if (loading) {
+  if (loading || geoAllowed === null) {
     return <div className="loading-screen">Loading...</div>;
+  }
+
+  if (geoAllowed === false) {
+    return (
+      <div className="loading-screen" style={{ textAlign: 'center', padding: '48px' }}>
+        <h2>Access not available in your region</h2>
+        <p style={{ marginTop: '12px', color: '#888' }}>This site is restricted to North America (US/CA).</p>
+      </div>
+    );
   }
 
   return (

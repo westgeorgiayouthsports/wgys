@@ -19,6 +19,13 @@ export default defineConfig(() => ({
       'X-XSS-Protection': '',
       'X-Content-Type-Options': 'nosniff',
     },
+    proxy: {
+      '/api/metrics': {
+        target: 'https://metricsviews-k5dtqbkowq-uc.a.run.app',
+        changeOrigin: true,
+        rewrite: (path) => path, // keeps /api/metrics/views
+      },
+    },
   },
   build: {
     outDir: 'dist',
