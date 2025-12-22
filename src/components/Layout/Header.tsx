@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Dropdown, Button } from 'antd';
-import { UserOutlined, SettingOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined } from '@ant-design/icons';
 import type { RootState } from '../../store/store';
 import { logout } from '../../store/slices/authSlice';
 import { toggleTheme } from '../../store/slices/themeSlice';
@@ -59,10 +59,14 @@ export default function Header() {
     <header className="header">
       <div className="header-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img 
-            src={wgysLogo} 
-            alt="West Georgia Youth Sports, Inc." 
-            style={{ height: '40px', width: 'auto' }}
+          <img
+            src={wgysLogo}
+            alt="West Georgia Youth Sports, Inc."
+            style={{ height: '40px', width: 'auto', cursor: 'pointer' }}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate('/')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/'); }}
           />
         </div>
         <Dropdown

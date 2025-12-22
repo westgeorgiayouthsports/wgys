@@ -24,7 +24,7 @@ import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
-export default function MyRegistrations() {
+export default function Registrations() {
   const { message } = App.useApp();
   const { user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();

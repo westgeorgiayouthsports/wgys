@@ -94,13 +94,18 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
           justifyContent: collapsed ? 'center' : 'space-between',
           alignItems: 'center',
         }}>
-          <img 
-            src={collapsed ? wgysLogoSmall : wgysLogo} 
-            alt="WGYS Logo" 
-            style={{ 
-              height: collapsed ? '24px' : '94px', 
-              width: 'auto'
+          <img
+            src={collapsed ? wgysLogoSmall : wgysLogo}
+            alt="WGYS Logo"
+            style={{
+              height: collapsed ? '24px' : '94px',
+              width: 'auto',
+              cursor: 'pointer',
             }}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate('/')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/'); }}
           />
           <div style={{ display: 'flex', gap: '8px' }}>
             <Button

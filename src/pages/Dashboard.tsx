@@ -198,7 +198,7 @@ export default function Dashboard() {
         setMetrics(prev => ({ ...prev, websiteViews: totalViews }));
       } catch (error) {
         // Silently fail - metrics will show 0
-        // Uncomment to see errors: console.error('Website views fetch failed:', error);
+        console.error('Website views fetch failed:', error);
       }
     };
     // Temporarily disabled until Firebase Cloud Functions deployed on Blaze plan

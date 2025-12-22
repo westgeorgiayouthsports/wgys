@@ -20,10 +20,10 @@ const TeamChat = lazy(() => import('./pages/TeamChat'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Announcements = lazy(() => import('./pages/Announcements'));
 const People = lazy(() => import('./pages/People'));
-const MyFamily = lazy(() => import('./pages/MyFamily'));
+const Family = lazy(() => import('./pages/Family'));
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 const PaymentMethods = lazy(() => import('./pages/PaymentMethods'));
-const MyRegistrations = lazy(() => import('./pages/MyRegistrations'));
+const Registrations = lazy(() => import('./pages/Registrations'));
 const Programs = lazy(() => import('./pages/Programs'));
 const ProgramDetail = lazy(() => import('./pages/ProgramDetail'));
 const RegistrationHelp = lazy(() => import('./pages/RegistrationHelp'));
@@ -128,10 +128,10 @@ function Router() {
             <Route path="/register" element={isAuthenticated ? <RegistrationPage /> : <Navigate to="/signin" replace />} />
             <Route path="/register/:programId" element={isAuthenticated ? <RegistrationPage /> : <Navigate to="/signin" replace />} />
             <Route path="/register/confirmation/:id" element={isAuthenticated ? <RegistrationConfirmation /> : <Navigate to="/signin" replace />} />
-            <Route path="/my-family" element={isAuthenticated ? <MyFamily /> : <Navigate to="/signin" replace />} />
+            <Route path="/my-family" element={isAuthenticated ? <Family /> : <Navigate to="/signin" replace />} />
             <Route path="/profile" element={isAuthenticated ? <ProfileSettings /> : <Navigate to="/signin" replace />} />
             <Route path="/payment-methods" element={isAuthenticated ? <PaymentMethods /> : <Navigate to="/signin" replace />} />
-            <Route path="/my-registrations" element={isAuthenticated ? <MyRegistrations /> : <Navigate to="/signin" replace />} />
+            <Route path="/my-registrations" element={isAuthenticated ? <Registrations /> : <Navigate to="/signin" replace />} />
             <Route path="/settings" element={<Navigate to="/admin/settings" replace />} />
             <Route path="/admin/settings" element={
               <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">

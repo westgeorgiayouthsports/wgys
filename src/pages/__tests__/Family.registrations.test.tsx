@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import MyFamily from '../MyFamily';
+import Family from '../Family';
 
 jest.mock('../../services/firebasePeople', () => ({
   peopleService: {
@@ -149,22 +149,22 @@ jest.mock('react-redux', () => ({
 }));
 
 // ---- Tests ----
-describe('MyFamily Page', () => {
+describe('Family Page', () => {
   /**
-   * NOTE: MyFamily component has complex async initialization with multiple
+   * NOTE: Family component has complex async initialization with multiple
    * interdependent service calls (getPeople, getPersonByUserId, getPeopleByFamily, etc.).
    * This makes unit testing with mocks difficult due to race conditions and
    * timing issues. These basic tests verify the component renders without crashing.
    *
    * For comprehensive testing of family member display and registration flows,
-   * see tests/e2e/myfamily.spec.ts for Playwright E2E tests which test the
+   * see tests/e2e/family.spec.ts for Playwright E2E tests which test the
    * actual async behavior with real timing.
    */
 
   test('renders page without crashing', async () => {
     const { container } = render(
       <BrowserRouter>
-        <MyFamily />
+        <Family />
       </BrowserRouter>,
     );
 
@@ -180,7 +180,7 @@ describe('MyFamily Page', () => {
   test('displays page description and buttons', async () => {
     render(
       <BrowserRouter>
-        <MyFamily />
+        <Family />
       </BrowserRouter>,
     );
 

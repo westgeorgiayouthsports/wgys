@@ -39,7 +39,7 @@ import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 
-export default function MyFamily() {
+export default function Family() {
   const { message } = App.useApp();
   const { user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
