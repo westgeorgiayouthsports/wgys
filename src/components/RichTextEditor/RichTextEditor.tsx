@@ -20,13 +20,14 @@ interface Props {
   placeholder?: string;
 }
 
-function MyOnChangePlugin({ onChange }: { onChange: (html: string) => void }) {
+function MyOnChangePlugin({ onChange, lastEditorContentRef }: { onChange: (html: string) => void; lastEditorContentRef: React.MutableRefObject<string>; }) {
   const [editor] = useLexicalComposerContext();
   return (
     <OnChangePlugin
       onChange={(editorState) => {
         editorState.read(() => {
           const html = $generateHtmlFromNodes(editor, null);
+          lastEditorContentRef.current = html;
           onChange(html);
         });
       }}
@@ -34,27 +35,36 @@ function MyOnChangePlugin({ onChange }: { onChange: (html: string) => void }) {
   );
 }
 
-function InitialContentPlugin({ content }: { content: string }) {
+function InitialContentPlugin({ content, lastEditorContentRef }: { content: string; lastEditorContentRef: React.MutableRefObject<string>; }) {
   const [editor] = useLexicalComposerContext();
+  const hasInitializedContent = React.useRef(false);
   
   React.useEffect(() => {
+    const isSameAsEditor = content === lastEditorContentRef.current;
+    if (hasInitializedContent.current && isSameAsEditor) {
+      return;
+    }
+
     editor.update(() => {
       const root = $getRoot();
       root.setDirection('ltr');
       root.clear();
-      
+
       if (content) {
         const parser = new DOMParser();
         const dom = parser.parseFromString(content, 'text/html');
         const nodes = $generateNodesFromDOM(editor, dom);
-        nodes.forEach(node => {
+        nodes.forEach((node) => {
           if (node.__type !== 'text') {
             root.append(node);
           }
         });
       }
     });
-  }, [editor, content]);
+
+    hasInitializedContent.current = true;
+    lastEditorContentRef.current = content;
+  }, [editor, content, lastEditorContentRef]);
   
   return null;
 }
@@ -284,6 +294,7 @@ function ToolbarPlugin() {
 export default function RichTextEditor({ value, onChange, placeholder = 'Start typing...' }: Props) {
   const [isHtmlMode, setIsHtmlMode] = React.useState(false);
   const [htmlContent, setHtmlContent] = React.useState(value);
+  const lastEditorContentRef = React.useRef<string>(value);
 
   const initialConfig = {
     namespace: 'MyEditor',
@@ -345,6 +356,11 @@ export default function RichTextEditor({ value, onChange, placeholder = 'Start t
     onChange(newValue);
   };
 
+  const handleEditorChange = React.useCallback((html: string) => {
+    lastEditorContentRef.current = html;
+    onChange(html);
+  }, [onChange]);
+
   return (
     <div className="rich-text-editor">
       <div className="toolbar">
@@ -394,8 +410,8 @@ export default function RichTextEditor({ value, onChange, placeholder = 'Start t
               ErrorBoundary={LexicalErrorBoundary}
             />
             <HistoryPlugin />
-            <MyOnChangePlugin onChange={onChange} />
-            <InitialContentPlugin content={value} />
+            <MyOnChangePlugin onChange={handleEditorChange} lastEditorContentRef={lastEditorContentRef} />
+            <InitialContentPlugin content={value} lastEditorContentRef={lastEditorContentRef} />
           </div>
         </LexicalComposer>
       )}
