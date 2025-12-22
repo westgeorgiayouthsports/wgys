@@ -115,7 +115,7 @@ export default function AdminRegistrations() {
               <Statistic
                 title="Total Registrations"
                 value={registrations.length}
-                valueStyle={{ color: isDarkMode ? '#1890ff' : '#1890ff' }}
+                styles={{ content: { color: isDarkMode ? '#1890ff' : '#1890ff' } }}
               />
             </Card>
           </Col>
@@ -127,7 +127,7 @@ export default function AdminRegistrations() {
               <Statistic
                 title="Paid"
                 value={paidCount}
-                valueStyle={{ color: '#52c41a' }}
+                styles={{ content: { color: '#52c41a' } }}
               />
             </Card>
           </Col>
@@ -139,7 +139,7 @@ export default function AdminRegistrations() {
               <Statistic
                 title="Approved (Unpaid)"
                 value={approvedCount}
-                valueStyle={{ color: '#1890ff' }}
+                styles={{ content: { color: '#1890ff' } }}
               />
             </Card>
           </Col>
@@ -151,7 +151,7 @@ export default function AdminRegistrations() {
               <Statistic
                 title="Pending"
                 value={pendingCount}
-                valueStyle={{ color: '#faad14' }}
+                styles={{ content: { color: '#faad14' } }}
               />
             </Card>
           </Col>
@@ -169,7 +169,7 @@ export default function AdminRegistrations() {
                 value={totalFees}
                 prefix="$"
                 precision={2}
-                valueStyle={{ color: isDarkMode ? '#52c41a' : '#52c41a', fontSize: '28px' }}
+                styles={{ content: { color: isDarkMode ? '#52c41a' : '#52c41a', fontSize: '28px' } }}
               />
             </Card>
           </Col>

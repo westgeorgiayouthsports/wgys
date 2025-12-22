@@ -30,15 +30,15 @@ export default function AnnouncementEditor({ announcement, onSave, onCancel }: P
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    console.log('📝 AnnouncementEditor received announcement:', announcement);
+    // console.log('📝 AnnouncementEditor received announcement:', announcement);
     if (announcement) {
-      console.log('📝 Loading existing announcement:', { title: announcement.title, content: announcement.content });
+      // console.log('📝 Loading existing announcement:', { title: announcement.title, content: announcement.content });
       setTitle(announcement.title);
       setContent(announcement.content);
       setShowOnFeed(announcement.showOnFeed ?? true);
       setAllowComments(announcement.allowComments ?? true);
     } else {
-      console.log('📝 Resetting form for new announcement');
+      // console.log('📝 Resetting form for new announcement');
       setTitle('');
       setContent('');
       setShowOnFeed(true);
@@ -51,8 +51,8 @@ export default function AnnouncementEditor({ announcement, onSave, onCancel }: P
       e.preventDefault();
     }
 
-    console.log('💾 Save Draft button clicked');
-    console.log('State:', { title, content, isEditing: !!announcement });
+    // console.log('💾 Save Draft button clicked');
+    // console.log('State:', { title, content, isEditing: !!announcement });
 
     // Validation
     if (!title || title.trim().length === 0) {
@@ -66,7 +66,7 @@ export default function AnnouncementEditor({ announcement, onSave, onCancel }: P
     }
 
     setIsSaving(true);
-    console.log('🔄 Saving...');
+    // console.log('🔄 Saving...');
 
     try {
       await onSave(title.trim(), content.trim(), showOnFeed, allowComments);

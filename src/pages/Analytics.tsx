@@ -68,7 +68,7 @@ export default function Analytics() {
               <Statistic
                 title="Website Views (Last 7 Days)"
                 value={websiteViews}
-                valueStyle={{ color: isDarkMode ? '#1890ff' : '#1890ff' }}
+                styles={{ content: { color: isDarkMode ? '#1890ff' : '#1890ff' } }}
               />
               <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px', display: 'block' }}>
                 Page views tracked from Google Analytics 4
@@ -85,7 +85,7 @@ export default function Analytics() {
                 title="Monthly Average"
                 value={websiteViews > 0 ? Math.round(websiteViews / 7) : 0}
                 suffix="views/day"
-                valueStyle={{ color: isDarkMode ? '#52c41a' : '#52c41a' }}
+                styles={{ content: { color: isDarkMode ? '#52c41a' : '#52c41a' } }}
               />
               <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px', display: 'block' }}>
                 Estimated daily average
@@ -101,7 +101,7 @@ export default function Analytics() {
               <Statistic
                 title="Data Status"
                 value={websiteViews === 0 ? 'Pending' : 'Active'}
-                valueStyle={{ color: websiteViews === 0 ? '#faad14' : '#52c41a' }}
+                styles={{ content: { color: websiteViews === 0 ? '#faad14' : '#52c41a' } }}
               />
               <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px', display: 'block' }}>
                 {websiteViews === 0 
@@ -121,7 +121,7 @@ export default function Analytics() {
               hoverable
               style={{ backgroundColor: isDarkMode ? '#1f1f1f' : '#ffffff' }}
             >
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" style={{ width: '100%' }}>
                 <div>
                   <Text strong>Google Analytics 4 Property ID:</Text>
                   <Text code style={{ marginLeft: '8px' }}>514640984</Text>

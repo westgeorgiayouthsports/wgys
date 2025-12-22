@@ -173,7 +173,7 @@ export default function MyRegistrations() {
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={
-              <Space direction="vertical" size="small">
+              <Space orientation="vertical" size="small">
                 <Text type="secondary">No registrations found</Text>
                 <Text type="secondary" style={{ fontSize: 12 }}>
                   Register your family members for programs to see them here

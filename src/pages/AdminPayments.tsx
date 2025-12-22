@@ -121,7 +121,7 @@ export default function AdminPayments() {
                 value={totalPaid}
                 prefix="$"
                 precision={2}
-                valueStyle={{ color: '#52c41a' }}
+                styles={{ content: { color: '#52c41a' } }}
               />
               <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px', display: 'block' }}>
                 {paidRegs.length} paid registrations
@@ -138,7 +138,7 @@ export default function AdminPayments() {
                 value={totalApproved}
                 prefix="$"
                 precision={2}
-                valueStyle={{ color: '#1890ff' }}
+                styles={{ content: { color: '#1890ff' } }}
               />
               <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px', display: 'block' }}>
                 {approvedRegs.length} awaiting payment
@@ -155,7 +155,7 @@ export default function AdminPayments() {
                 value={totalPending}
                 prefix="$"
                 precision={2}
-                valueStyle={{ color: '#faad14' }}
+                styles={{ content: { color: '#faad14' } }}
               />
               <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px', display: 'block' }}>
                 {pendingRegs.length} pending approval
@@ -172,7 +172,7 @@ export default function AdminPayments() {
                 value={totalRevenue}
                 prefix="$"
                 precision={2}
-                valueStyle={{ color: isDarkMode ? '#1890ff' : '#1890ff' }}
+                styles={{ content: { color: isDarkMode ? '#1890ff' : '#1890ff' } }}
               />
               <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px', display: 'block' }}>
                 Across all programs
