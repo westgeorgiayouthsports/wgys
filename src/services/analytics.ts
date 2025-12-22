@@ -83,21 +83,78 @@ function getClientIdFromCookie(): string | undefined {
   return m?.[1];
 }
 
+// --- Simple session management for GA4 MP so realtime 'Active users' appears ---
+const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const LS_SESSION_ID = 'ga_session_id';
+const LS_SESSION_NUM = 'ga_session_number';
+const LS_SESSION_START = 'ga_session_start';
+const LS_LAST_EVENT_TS = 'ga_last_event_ts';
+
+function nowMs() {
+  return Date.now();
+}
+
+function getOrCreateSession() {
+  const now = nowMs();
+  const storedId = localStorage.getItem(LS_SESSION_ID);
+  const storedStart = Number(localStorage.getItem(LS_SESSION_START) || '0');
+  let sessionId = storedId ? Number(storedId) : 0;
+  let sessionStart = storedStart;
+  let sessionNumber = Number(localStorage.getItem(LS_SESSION_NUM) || '0');
+  let isNew = false;
+
+  if (!sessionId || !sessionStart || now - sessionStart > SESSION_TTL_MS) {
+    // New session
+    sessionId = Math.floor(now / 1000); // seconds
+    sessionStart = now;
+    sessionNumber = sessionNumber + 1 || 1;
+    localStorage.setItem(LS_SESSION_ID, String(sessionId));
+    localStorage.setItem(LS_SESSION_NUM, String(sessionNumber));
+    localStorage.setItem(LS_SESSION_START, String(sessionStart));
+    isNew = true;
+  }
+
+  return { sessionId, sessionNumber, sessionStart, isNew };
+}
+
+// Track engagement time between events and store last event timestamp.
+function takeEngagementMs(): number {
+  const now = nowMs();
+  const last = Number(localStorage.getItem(LS_LAST_EVENT_TS) || '0');
+  let delta = last ? now - last : 0;
+  // GA recommends providing a small engagement time; clamp to sensible bounds
+  if (!delta || delta < 100) delta = 100; // minimum 100ms
+  if (delta > 60000) delta = 60000; // cap at 60s per event
+  localStorage.setItem(LS_LAST_EVENT_TS, String(now));
+  return delta;
+}
+
 async function sendMeasurementProtocolEvent(
   measurementId: string,
   apiSecret: string,
   name: string,
   params: Record<string, unknown>
 ) {
+  const { sessionId, sessionNumber, isNew } = getOrCreateSession();
   const cid = getClientIdFromCookie() || `${Math.floor(Math.random() * 1e10)}.${Date.now()}`;
+  const engagementMs = takeEngagementMs();
+  const baseParams = {
+    ...params,
+    session_id: sessionId,
+    session_number: sessionNumber,
+    engagement_time_msec: engagementMs,
+  } as Record<string, unknown>;
+
+  const events: Array<{ name: string; params?: Record<string, unknown> }> = [];
+  if (isNew) {
+    events.push({ name: 'session_start', params: { session_id: sessionId, session_number: sessionNumber } });
+  }
+  events.push({ name, params: baseParams });
+
   const payload = {
     client_id: cid,
-    events: [
-      {
-        name,
-        params,
-      },
-    ],
+    non_personalized_ads: false,
+    events,
   };
   const url = `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(
     measurementId

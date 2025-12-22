@@ -15,6 +15,7 @@ export default function Analytics() {
   const [websiteViews, setWebsiteViews] = useState(0);
   const [metricsHealthy, setMetricsHealthy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const mpFallbackEnabled = Boolean(import.meta.env.VITE_GA4_API_SECRET);
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -133,14 +134,18 @@ export default function Analytics() {
                 </div>
                 <div>
                   <Text strong>Tracking Method:</Text>
-                  <Text style={{ marginLeft: '8px' }}>
-                    gtag.js with custom events
-                  </Text>
+                  <Text style={{ marginLeft: '8px' }}>gtag.js</Text>
+                </div>
+                <div>
+                  <Text strong>Fallback Delivery (MP):</Text>
+                  <Tag color={mpFallbackEnabled ? 'green' : 'default'} style={{ marginLeft: '8px' }}>
+                    {mpFallbackEnabled ? 'Enabled' : 'Disabled'}
+                  </Tag>
                 </div>
                 <div>
                   <Text strong>Data Source:</Text>
                   <Text style={{ marginLeft: '8px' }}>
-                    Firebase Cloud Functions (GA4 Data API)
+                    Firebase Cloud Functions (GA4 Data API, realtime fallback)
                   </Text>
                 </div>
                 <div>

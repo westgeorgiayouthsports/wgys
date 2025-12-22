@@ -86,7 +86,7 @@ export const metricsViews = onRequest(
         },
       });
 
-      // Query GA4 for page views from last 7 days
+      // Query GA4 for page views from last 7 days (standard report - may have latency)
       const [response] = await client.runReport({
         property: `properties/${propertyId}`,
         dateRanges: [
@@ -108,7 +108,7 @@ export const metricsViews = onRequest(
           ? Number(response.rows[0].metricValues[0].value)
           : 0;
 
-      // Fallback: some properties report views primarily via eventCount 'page_view'
+      // Fallback #1: some properties report views primarily via eventCount 'page_view'
       if (!views) {
         const [fallback] = await client.runReport({
           property: `properties/${propertyId}`,
@@ -125,6 +125,28 @@ export const metricsViews = onRequest(
         if (fallbackVal) {
           const n = Number(fallbackVal);
           if (!Number.isNaN(n)) views = n;
+        }
+      }
+
+      // Fallback #2: new properties can take time to populate standard reports.
+      // Use Realtime API (last 30 minutes) to return a non-zero indicator if activity exists.
+      if (!views) {
+        try {
+          const [rt] = await client.runRealtimeReport({
+            property: `properties/${propertyId}`,
+            metrics: [ { name: 'eventCount' } ],
+            dimensions: [ { name: 'eventName' } ],
+            dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: 'page_view' } } },
+          });
+          const rtVal = rt.rows?.[0]?.metricValues?.[0]?.value;
+          if (rtVal) {
+            const n = Number(rtVal);
+            if (!Number.isNaN(n) && n > 0) {
+              views = n; // treat as near-real-time indicator
+            }
+          }
+        } catch (rtErr) {
+          console.warn('Realtime fallback failed:', rtErr);
         }
       }
 
