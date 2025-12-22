@@ -35,6 +35,7 @@ import { fetchWebsiteTrends } from '../services/analyticsClient';
 import { programsService } from '../services/firebasePrograms';
 import { announcementsService } from '../services/firebaseAnnouncements';
 import { registrationsService } from '../services/firebaseRegistrations';
+import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
 import type { Program } from '../types/program';
 import type { Announcement } from '../store/slices/announcementsSlice';
 import type { Registration } from '../services/firebaseRegistrations';
@@ -100,10 +101,60 @@ export default function Dashboard() {
         // Try to fetch registrations (may fail due to permissions)
         try {
           const registrationsData = await registrationsService.getAllRegistrations();
-          setRegistrations(registrationsData.slice(0, 5)); // Top 5 recent
+          if (registrationsData && registrationsData.length) {
+            setRegistrations(registrationsData.slice(0, 5)); // Top 5 recent
+          } else {
+            // Fallback: try program registrations (newer registration system)
+            try {
+              const progRegs = await programRegistrationsService.getAllProgramRegistrations();
+              const mapped = progRegs.map((r) => ({
+                id: r.id,
+                teamId: r.programId || '',
+                playerName: r.playerName || r.programName || 'Registrant',
+                playerAge: 0,
+                playerPosition: undefined,
+                parentName: '',
+                parentEmail: '',
+                phoneNumber: '',
+                fee: r.totalAmount || 0,
+                paymentMethod: (r.paymentMethod || 'other') as 'stripe' | 'paypal' | 'square' | 'check' | 'cash' | 'venmo' | 'cashapp' | 'other',
+                status: (r.status as any) || 'pending',
+                rosterPlayerId: undefined,
+                createdAt: r.createdAt || r.registrationDate || new Date().toISOString(),
+                updatedAt: r.updatedAt,
+              }));
+              setRegistrations(mapped.slice(0, 5));
+            } catch (progErr) {
+              console.warn('Could not fetch program registrations:', progErr);
+              setRegistrations([]);
+            }
+          }
         } catch (regError) {
           console.warn('Could not fetch registrations (permission denied):', regError);
-          setRegistrations([]); // Set empty array if no access
+          // Try program registrations as a fallback
+          try {
+            const progRegs = await programRegistrationsService.getAllProgramRegistrations();
+            const mapped = progRegs.map((r) => ({
+              id: r.id,
+              teamId: r.programId || '',
+              playerName: r.playerName || r.programName || 'Registrant',
+              playerAge: 0,
+              playerPosition: undefined,
+              parentName: '',
+              parentEmail: '',
+              phoneNumber: '',
+              fee: r.totalAmount || 0,
+              paymentMethod: (r.paymentMethod || 'other') as 'stripe' | 'paypal' | 'square' | 'check' | 'cash' | 'venmo' | 'cashapp' | 'other',
+              status: (r.status as any) || 'pending',
+              rosterPlayerId: undefined,
+              createdAt: r.createdAt || r.registrationDate || new Date().toISOString(),
+              updatedAt: r.updatedAt,
+            }));
+            setRegistrations(mapped.slice(0, 5));
+          } catch (progErr) {
+            console.warn('Could not fetch program registrations after fallback:', progErr);
+            setRegistrations([]);
+          }
         }
       } catch (error) {
         console.error('Failed to load dashboard data:', error);
@@ -289,7 +340,7 @@ export default function Dashboard() {
             </Title>
             <Text type="secondary">Welcome back, {user?.displayName || 'Admin'}! Here's your organization overview.</Text>
           </div>
-          <Space direction="vertical" align="end" size={4}>
+          <Space orientation="vertical" align="end" size={4}>
             <Text type="secondary" style={{ fontSize: '12px' }}>Date Range</Text>
             <Segmented
               options={[7, 30, 90, 180, 365].map((d) => ({ label: `${d === 365 ? '1y' : d === 180 ? '6m' : `${d}d`}`, value: d }))}

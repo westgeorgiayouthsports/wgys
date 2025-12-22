@@ -22,4 +22,5 @@ export declare const programRegistrationsService: {
     getProgramRegistration(id: string): Promise<ProgramRegistrationRecord>;
     getProgramRegistrationsByFamily(familyId: string): Promise<ProgramRegistrationRecord[]>;
     getProgramRegistrationsByAthlete(athleteId: string): Promise<ProgramRegistrationRecord[]>;
+    getAllProgramRegistrations(): Promise<ProgramRegistrationRecord[]>;
 };

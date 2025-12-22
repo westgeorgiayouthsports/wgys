@@ -46,8 +46,8 @@ export default function Analytics() {
   useEffect(() => {
     const loadRangedMetrics = async () => {
       try {
-        const { views } = await fetchWebsiteTrends(trendRange);
-        const totalViews = views.timeseries?.reduce((sum, d) => sum + d.views, 0) || 0;
+        const { timeseries } = await fetchWebsiteTrends(trendRange);
+        const totalViews = timeseries?.reduce((sum, d) => sum + d.views, 0) || 0;
         setWebsiteViews(totalViews);
       } catch (err) {
         console.error('Failed to load ranged metrics', err);

@@ -104,4 +104,17 @@ export const programRegistrationsService = {
       throw error;
     }
   },
+  async getAllProgramRegistrations() {
+    try {
+      const regsRef = ref(db, 'programRegistrations');
+      const snap = await get(regsRef);
+      if (!snap.exists()) return [];
+      const data = snap.val();
+      const list = Object.entries(data).map(([id, val]) => ({ id, ...(val as any) })) as ProgramRegistrationRecord[];
+      return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (error) {
+      console.error('❌ Error fetching all program registrations:', error);
+      throw error;
+    }
+  },
 };
