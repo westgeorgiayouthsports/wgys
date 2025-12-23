@@ -121,3 +121,8 @@ playwright-report/
 playwright/.cache/
 tests/e2e/.auth/adminStorageState.json
 tsconfig.tsbuildinfo
+
+# Playwright auth storage (per-browser + test-results)
+tests/e2e/.auth/
+tests/e2e/.auth/adminStorageState.*
+tests/e2e/test-results/.auth/
