@@ -23,7 +23,6 @@ node_modules/
 *.pem
 *service-account*.json
 *adminsdk*.json
-*firebase*.json
 functions/.env
 
 # Logs
