@@ -30,6 +30,7 @@
     "teams": {
       ".read": "auth != null",
       ".write": "auth != null",
+      ".indexOn": ["programId"],
       "$teamId": {
         ".read": "auth != null",
         ".write": "auth != null && (data.child('userId').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
@@ -55,6 +56,14 @@
       ".read": "auth != null",
       ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
       "$programId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "seasons": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      "$seasonId": {
         ".read": "auth != null",
         ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
       }
@@ -111,6 +120,15 @@
       "$registrationId": {
         ".read": "auth != null && (data.child('registeredBy').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
         ".write": "auth != null && (data.child('registeredBy').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "auditLogs": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".write": "auth != null && ( !data.exists() || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".indexOn": ["timestamp"],
+      "$logId": {
+        ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+        ".write": "auth != null && ( !data.exists() || root.child('users').child(auth.uid).child('role').val() == 'owner')"
       }
     },
     "teamAssignments": {

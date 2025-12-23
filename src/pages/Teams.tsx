@@ -18,7 +18,7 @@ import {
   Col,
   Tooltip,
   Modal,
-  Spin,
+  Tabs,
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,7 +26,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   SaveOutlined,
-  CloseOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
@@ -34,11 +33,11 @@ import {
   setLoading,
   setTeams,
   addTeam,
-  updateTeam,
   deleteTeam as deleteTeamAction,
   setError,
 } from '../store/slices/teamsSlice';
 import { teamsService } from '../services/firebaseTeams';
+import { programsService } from '../services/firebasePrograms';
 
 const { Title, Text } = Typography;
 
@@ -56,42 +55,56 @@ export default function Teams() {
   const [pendingTeam, setPendingTeam] = useState<any | null>(null);
   const [error, setLocalError] = useState<string>('');
   const [coaches, setCoaches] = useState<any[]>([]);
-  const [selectedCoach, setSelectedCoach] = useState<string>('');
+  const [managers, setManagers] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('teams');
+  const [programs, setPrograms] = useState<any[]>([]);
 
   // Load teams and coaches on mount
   useEffect(() => {
     if (user?.uid) {
       loadTeams();
       loadCoaches();
+      loadPrograms();
+      loadManagers();
     }
   }, [user?.uid]);
+  const loadPrograms = async () => {
+    try {
+      const list = await programsService.getPrograms();
+      setPrograms(list);
+    } catch (err) {
+      console.error('Failed to load programs:', err);
+    }
+  };
 
   useEffect(() => {
     if (!modalVisible) {
       setEditingId(null);
-      setSelectedCoach('');
       setLocalError('');
       setPendingTeam(null);
     }
   }, [modalVisible]);
 
   // Child component: mounted only when modalVisible to own the Form instance
-  const TeamModalForm = ({ initialTeam, editingIdProp, onSubmit, onCancel, coachesProp }: any) => {
+  const TeamModalForm = ({ initialTeam, editingIdProp, onSubmit, onCancel, coachesProp, managersProp }: any) => {
     const [localForm] = Form.useForm();
 
     useEffect(() => {
       if (initialTeam && editingIdProp) {
         localForm.setFieldsValue({
+          programId: initialTeam.programId || undefined,
           name: initialTeam.name || '',
-          budget: (initialTeam.budget || 0).toString(),
+          budget: initialTeam.budget || 0,
           status: initialTeam.status || 'active',
           coachId: initialTeam.coachId || undefined,
+          assistantCoachIds: initialTeam.assistantCoachIds || [],
+          teamManagerId: initialTeam.teamManagerId || undefined,
         });
       } else {
         localForm.resetFields();
         localForm.setFieldsValue({ status: 'active' });
       }
-    }, [initialTeam, editingIdProp]);
+    }, [initialTeam, editingIdProp, localForm]);
 
     return (
       <Form form={localForm} layout="vertical" onFinish={onSubmit}>
@@ -99,6 +112,17 @@ export default function Teams() {
           <div style={{ marginBottom: 12, color: '#ff4d4f' }}>{error}</div>
         )}
         <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="programId" label="Program" rules={[{ required: true, message: 'Select a program' }]}> 
+              <Select placeholder="Select program" showSearch optionFilterProp="label">
+                {programs.map((p: any) => (
+                  <Select.Option key={p.id} value={p.id} label={p.name}>
+                    {p.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
           <Col span={12}>
             <Form.Item name="name" label="Team Name" rules={[{ required: true, message: 'Please enter team name' }]}>
               <Input placeholder="e.g., 12U Softball" />
@@ -134,6 +158,32 @@ export default function Teams() {
           </Col>
         </Row>
 
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="assistantCoachIds" label="Assistant Coaches">
+              <Select mode="multiple" allowClear placeholder="Assign assistant coaches">
+                {coachesProp.map((c: any) => (
+                  <Select.Option key={c.uid} value={c.uid} title={c.email}>
+                    {c.displayName || c.email?.split('@')[0]}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="teamManagerId" label="Team Manager">
+              <Select allowClear placeholder="Assign a team manager">
+                <Select.Option value="">Unassigned</Select.Option>
+                {managersProp.map((m: any) => (
+                  <Select.Option key={m.uid} value={m.uid} title={m.email}>
+                    {m.displayName || m.email?.split('@')[0]}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
         <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
           <Space>
             <Button onClick={onCancel}>Cancel</Button>
@@ -154,12 +204,29 @@ export default function Teams() {
       if (usersSnapshot.exists()) {
         const usersData = usersSnapshot.val();
         const coachList = Object.entries(usersData || {})
-          .filter(([_, userData]: any) => ['coach', 'admin', 'owner'].includes(userData.role))
+          .filter(([, userData]: any) => ['coach', 'admin', 'owner'].includes(userData.role))
           .map(([uid, userData]: any) => ({ uid, ...userData }));
         setCoaches(coachList);
       }
     } catch (err) {
       console.error('Failed to load coaches:', err);
+    }
+  };
+
+  const loadManagers = async () => {
+    try {
+      const { ref, get } = await import('firebase/database');
+      const { db } = await import('../services/firebase');
+      const usersSnapshot = await get(ref(db, 'users'));
+      if (usersSnapshot.exists()) {
+        const usersData = usersSnapshot.val();
+        const managerList = Object.entries(usersData || {})
+          .filter(([, userData]: any) => ['teamManager', 'admin', 'owner'].includes(userData.role))
+          .map(([uid, userData]: any) => ({ uid, ...userData }));
+        setManagers(managerList);
+      }
+    } catch (err) {
+      console.error('Failed to load managers:', err);
     }
   };
 
@@ -189,20 +256,33 @@ export default function Teams() {
       setLocalError('');
 
       if (editingId) {
+        const program = programs.find(p => p.id === values.programId);
         await teamsService.updateTeam(editingId, {
           name: values.name,
           budget,
           status: values.status,
           coachId: values.coachId || undefined,
+          assistantCoachIds: values.assistantCoachIds || [],
+          teamManagerId: values.teamManagerId || undefined,
+          programId: values.programId,
+          seasonId: program?.seasonId,
+          season: program?.season,
+          year: program?.year,
+          ageGroup: program?.ageGroup,
         });
         const updatedTeams = teams.map(t =>
           t.id === editingId
-            ? { ...t, name: values.name, budget, status: values.status, coachId: values.coachId }
+            ? { ...t, name: values.name, budget, status: values.status, coachId: values.coachId, programId: values.programId,
+                seasonId: program?.seasonId,
+                season: program?.season,
+                year: program?.year,
+                ageGroup: program?.ageGroup }
             : t
         );
         dispatch(setTeams(updatedTeams));
         message.success('Team updated');
       } else {
+        const program = programs.find(p => p.id === values.programId);
         const newTeam = await teamsService.createTeam({
           name: values.name,
           budget,
@@ -211,6 +291,13 @@ export default function Teams() {
           userId: user.uid,
           createdAt: new Date().toISOString(),
           coachId: values.coachId || undefined,
+          assistantCoachIds: values.assistantCoachIds || [],
+          teamManagerId: values.teamManagerId || undefined,
+          programId: values.programId,
+          seasonId: program?.seasonId,
+          season: program?.season,
+          year: program?.year,
+          ageGroup: program?.ageGroup,
         });
         dispatch(addTeam(newTeam));
         message.success('Team created');
@@ -227,7 +314,6 @@ export default function Teams() {
     const team = teams.find(t => t.id === teamId);
     if (team) {
       setPendingTeam(team);
-      setSelectedCoach(team.coachId || '');
       setEditingId(teamId);
       setModalVisible(true);
     }
@@ -342,6 +428,19 @@ export default function Teams() {
       },
     },
     {
+      title: 'Staff',
+      key: 'staff',
+      render: (record: any) => (
+        <Space wrap>
+          <Tag color={record.coachId ? 'green' : 'default'}>Head Coach{record.coachId ? '' : ': none'}</Tag>
+          <Tag color={record.teamManagerId ? 'blue' : 'default'}>Manager{record.teamManagerId ? '' : ': none'}</Tag>
+          <Tag color={(record.assistantCoachIds?.length || 0) > 0 ? 'purple' : 'default'}>
+            Assistants: {record.assistantCoachIds?.length || 0}
+          </Tag>
+        </Space>
+      ),
+    },
+    {
       title: 'Actions',
       key: 'actions',
       render: (record: any) => {
@@ -383,6 +482,100 @@ export default function Teams() {
           </Space>
         );
       },
+    },
+  ];
+
+  const staffColumns = [
+    {
+      title: 'Team',
+      dataIndex: 'name',
+      key: 'name',
+      render: (name: string) => <Text strong>{name || 'Unnamed Team'}</Text>,
+    },
+    {
+      title: 'Head Coach',
+      dataIndex: 'coachId',
+      key: 'coachId',
+      render: (coachId: string, record: any) => (
+        <Select
+          size="small"
+          style={{ width: 180 }}
+          value={coachId || undefined}
+          placeholder="Select head coach"
+          onChange={async (value) => {
+            try {
+              await teamsService.updateTeam(record.id, { coachId: value || undefined });
+              await loadTeams();
+            } catch (err) {
+              console.error('Failed to update head coach:', err);
+            }
+          }}
+          allowClear
+        >
+          {coaches.map(c => (
+            <Select.Option key={c.uid} value={c.uid} title={c.email}>
+              {c.displayName || c.email?.split('@')[0]}
+            </Select.Option>
+          ))}
+        </Select>
+      ),
+    },
+    {
+      title: 'Assistant Coaches',
+      dataIndex: 'assistantCoachIds',
+      key: 'assistantCoachIds',
+      render: (assistantCoachIds: string[] = [], record: any) => (
+        <Select
+          mode="multiple"
+          size="small"
+          style={{ minWidth: 220 }}
+          value={assistantCoachIds}
+          placeholder="Select assistant coaches"
+          onChange={async (values) => {
+            try {
+              await teamsService.updateTeam(record.id, { assistantCoachIds: values });
+              await loadTeams();
+            } catch (err) {
+              console.error('Failed to update assistant coaches:', err);
+            }
+          }}
+          allowClear
+        >
+          {coaches.map(c => (
+            <Select.Option key={c.uid} value={c.uid} title={c.email}>
+              {c.displayName || c.email?.split('@')[0]}
+            </Select.Option>
+          ))}
+        </Select>
+      ),
+    },
+    {
+      title: 'Team Manager',
+      dataIndex: 'teamManagerId',
+      key: 'teamManagerId',
+      render: (teamManagerId: string, record: any) => (
+        <Select
+          size="small"
+          style={{ width: 200 }}
+          value={teamManagerId || undefined}
+          placeholder="Select team manager"
+          onChange={async (value) => {
+            try {
+              await teamsService.updateTeam(record.id, { teamManagerId: value || undefined });
+              await loadTeams();
+            } catch (err) {
+              console.error('Failed to update team manager:', err);
+            }
+          }}
+          allowClear
+        >
+          {managers.map(m => (
+            <Select.Option key={m.uid} value={m.uid} title={m.email}>
+              {m.displayName || m.email?.split('@')[0]}
+            </Select.Option>
+          ))}
+        </Select>
+      ),
     },
   ];
 
@@ -450,12 +643,18 @@ export default function Teams() {
                 value={totalBudget - totalSpent}
                 precision={2}
                 prefix="$"
-                styles={{ content: { color: totalBudget - totalSpent >= 0 ? '#3f8600' : '#cf1322' } }}
+                valueStyle={{ color: totalBudget - totalSpent >= 0 ? '#3f8600' : '#cf1322' }}
               />
             </Card>
           </Col>
         </Row>
       )}
+
+      {/* Tabs */}
+      <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
+        { key: 'teams', label: `Teams (${teams.length})` },
+        { key: 'staff', label: 'Staff' },
+      ]} />
 
       {/* Teams Table */}
       <Modal
@@ -472,21 +671,35 @@ export default function Teams() {
             onSubmit={submitTeam}
             onCancel={handleCancel}
             coachesProp={coaches}
+            managersProp={managers}
           />
         )}
       </Modal>
-      <Card title={`Your Teams (${teams.length})`}>
-        <Table
-          columns={columns}
-          dataSource={teams}
-          rowKey="id"
-          loading={loading}
-          locale={{
-            emptyText: 'No teams yet. Create your first team above!'
-          }}
-          pagination={false}
-        />
-      </Card>
+      {activeTab === 'teams' ? (
+        <Card title={`Your Teams (${teams.length})`}>
+          <Table
+            columns={columns}
+            dataSource={teams}
+            rowKey="id"
+            loading={loading}
+            locale={{
+              emptyText: 'No teams yet. Create your first team above!'
+            }}
+            pagination={false}
+          />
+        </Card>
+      ) : (
+        <Card title="Team Staff">
+          <Table
+            columns={staffColumns}
+            dataSource={teams}
+            rowKey="id"
+            loading={loading}
+            pagination={false}
+            locale={{ emptyText: 'No teams available' }}
+          />
+        </Card>
+      )}
     </div>
   );
 }

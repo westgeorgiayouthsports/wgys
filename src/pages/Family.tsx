@@ -276,9 +276,6 @@ export default function Family() {
       parent: 'blue',
       guardian: 'cyan',
       athlete: 'green',
-      coach: 'orange',
-      volunteer: 'purple',
-      staff: 'gold',
       grandparent: 'magenta',
       relative: 'geekblue',
       other: 'default',
@@ -615,14 +612,11 @@ export default function Family() {
               >
                 <Select mode="multiple" placeholder="Select relationship">
                   <Select.Option value="athlete">Child/Athlete</Select.Option>
-                  <Select.Option value="coach">Coach</Select.Option>
                   <Select.Option value="grandparent">Grandparent</Select.Option>
                   <Select.Option value="guardian">Guardian</Select.Option>
                   <Select.Option value="other">Other</Select.Option>
                   <Select.Option value="parent">Parent</Select.Option>
                   <Select.Option value="relative">Relative</Select.Option>
-                  <Select.Option value="staff">Staff</Select.Option>
-                  <Select.Option value="volunteer">Volunteer</Select.Option>
                 </Select>
               </Form.Item>
             </Col>

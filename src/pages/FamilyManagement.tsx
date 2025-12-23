@@ -16,13 +16,12 @@ import {
   Popconfirm,
 } from 'antd';
 import {
-  PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   UserAddOutlined,
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
-import type { Family, FamilyMember, Sex, RelationshipType } from '../types';
+import type { Family, FamilyMember, Sex } from '../types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -30,7 +29,7 @@ const { Title, Text } = Typography;
 export default function FamilyManagement() {
   const { user } = useSelector((state: RootState) => state.auth);
   const [family, setFamily] = useState<Family | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [memberModalVisible, setMemberModalVisible] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [form] = Form.useForm();

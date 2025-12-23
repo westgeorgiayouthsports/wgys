@@ -23,10 +23,14 @@ const BASE_URL = process.env.PW_BASE_URL || process.env.PLAYWRIGHT_BASE_URL || '
 // Extend the base test to provide an automatic storageState fixture.
 export const test = base.extend({
   // Override storageState so contexts created by Playwright use the saved auth state.
-  storageState: async ({ browser }, use) => {
-    // If storage state already exists on disk, use it
-    if (fs.existsSync(storagePath)) {
-      await use(storagePath);
+  // Use a per-browser storage file so storageState captured for Chromium doesn't
+  // get re-used for Firefox/WebKit (which can be incompatible across engines).
+  storageState: async ({ browser, browserName }, use) => {
+    const perBrowserStoragePath = path.join(storageDir, `adminStorageState.${browserName}.json`);
+
+    // If storage state already exists on disk for this browser, use it
+    if (fs.existsSync(perBrowserStoragePath)) {
+      await use(perBrowserStoragePath);
       return;
     }
 
@@ -57,10 +61,10 @@ export const test = base.extend({
     await page.waitForURL(/.*dashboard/);
 
     // Save storage state
-    await context.storageState({ path: storagePath });
+    await context.storageState({ path: perBrowserStoragePath });
     await context.close();
 
-    await use(storagePath);
+    await use(perBrowserStoragePath);
   },
 });
 

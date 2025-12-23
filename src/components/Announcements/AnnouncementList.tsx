@@ -21,7 +21,7 @@ export default function AnnouncementList({
   onEdit,
   onPublish,
   onDelete,
-  userId,
+  userId: _userId,
   userRole,
 }: Props) {
   const [currentPage, setCurrentPage] = useState(1);

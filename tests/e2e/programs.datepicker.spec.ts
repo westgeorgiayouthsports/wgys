@@ -71,7 +71,19 @@ test.describe('Programs Date Picker', () => {
     const day = String(today.getDate() + 2);
     const dayCell = page.locator('.ant-picker-cell-inner', { hasText: day }).first();
     await dayCell.waitFor({ state: 'attached', timeout: 5000 });
-    await dayCell.click({ timeout: 10000 });
+    try {
+      await dayCell.waitFor({ state: 'visible', timeout: 5000 });
+      await dayCell.scrollIntoViewIfNeeded();
+      await dayCell.click({ timeout: 5000 });
+    } catch (err) {
+      // Fallback to DOM click if Playwright considers the element unstable in this engine
+      try {
+        await dayCell.evaluate((el: HTMLElement) => (el as HTMLElement).click());
+      } catch (e) {
+        // Last resort: force click
+        await dayCell.click({ force: true });
+      }
+    }
 
     // Submit the form
     // Fill required base price

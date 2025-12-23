@@ -28,11 +28,16 @@ export default function App() {
   }, [isDarkMode]);
 
   // Geo gate: allow only North America (US, CA). Fail-open on lookup errors.
+  // Use an AbortController so the fetch can be cancelled on unmount and
+  // keep sign-out as a separate effect for safer async updates and easier testing.
   useEffect(() => {
+    const controller = new AbortController();
+    // Fail-open quickly if geo lookup is slow: abort after 3s to avoid blocking UI/tests
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
     let cancelled = false;
     const checkGeo = async () => {
       try {
-        const res = await fetch('https://ipapi.co/json/');
+        const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
         if (!res.ok) throw new Error(`geo lookup failed ${res.status}`);
         const data = await res.json();
         const country = (data.country_code || '').toUpperCase();
@@ -40,18 +45,32 @@ export default function App() {
         const ok = allowed.includes(country);
         if (!cancelled) {
           setGeoAllowed(ok);
-          if (!ok) {
-            try { await auth.signOut(); } catch (e) { console.warn('signOut after geo block failed', e); }
-          }
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err && err.name === 'AbortError') return; // expected on unmount
         console.warn('Geo check failed, default allow', err);
         if (!cancelled) setGeoAllowed(true); // fail-open to avoid accidental lockout
       }
     };
     checkGeo();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); clearTimeout(timeoutId); };
   }, []);
+
+  // When geo check determines access is blocked, perform sign-out as a separate
+  // side-effect. Keeping this separate avoids doing auth side-effects inside the
+  // same async function that updates React state and makes the flow easier to
+  // test and reason about.
+  useEffect(() => {
+    if (geoAllowed === false) {
+      (async () => {
+        try {
+          await auth.signOut();
+        } catch (e) {
+          console.warn('signOut after geo block failed', e);
+        }
+      })();
+    }
+  }, [geoAllowed]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

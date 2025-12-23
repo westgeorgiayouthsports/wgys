@@ -1,4 +1,4 @@
-import { ref, push, set, get, remove, query, orderByChild, equalTo, runTransaction } from 'firebase/database';
+import { ref, push, set, get, remove, query as _query, orderByChild as _orderByChild, equalTo as _equalTo, runTransaction } from 'firebase/database';
 import { db } from './firebase';
 import type { Announcement } from '../store/slices/announcementsSlice';
 

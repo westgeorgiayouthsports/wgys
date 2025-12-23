@@ -1,11 +1,16 @@
 import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
 import { db } from './firebase';
+import { auditLogService } from './auditLog';
 import type { ProgramFormResponse } from '../types/programForm';
+import type { SeasonType } from '../types/season';
 
 export interface ProgramRegistrationRecord {
   id: string;
   programId: string;
   programName?: string;
+  season?: SeasonType;
+  year?: number;
+  ageGroup?: string;
   athleteId?: string;
   playerName?: string;
   familyId?: string;
@@ -54,6 +59,17 @@ export const programRegistrationsService = {
       };
 
       await set(newRef, record);
+
+      try {
+        await auditLogService.log({
+          action: 'program.registration.created',
+          entityType: 'program',
+          entityId: newRef.key ?? null,
+          details: { programId, registeredBy, totalAmount, paymentMethod },
+        });
+      } catch (e) {
+        console.error('Error auditing program.registration.created:', e);
+      }
 
       return {
         id: newRef.key as string,
@@ -104,6 +120,19 @@ export const programRegistrationsService = {
       throw error;
     }
   },
+  async getProgramRegistrationsByProgram(programId: string) {
+    try {
+      const regsRef = ref(db, 'programRegistrations');
+      const q = query(regsRef, orderByChild('programId'), equalTo(programId));
+      const snap = await get(q);
+      if (!snap.exists()) return [];
+      const data = snap.val();
+      return Object.entries(data).map(([id, val]) => ({ id, ...(val as any) })) as ProgramRegistrationRecord[];
+    } catch (error) {
+      console.error('❌ Error querying registrations by program:', error);
+      throw error;
+    }
+  },
   async getAllProgramRegistrations() {
     try {
       const regsRef = ref(db, 'programRegistrations');
@@ -114,6 +143,63 @@ export const programRegistrationsService = {
       return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (error) {
       console.error('❌ Error fetching all program registrations:', error);
+      throw error;
+    }
+  },
+  async updateProgramRegistration(id: string, updates: Partial<ProgramRegistrationRecord>): Promise<void> {
+    try {
+      const rRef = ref(db, `programRegistrations/${id}`);
+      const snap = await get(rRef);
+      if (!snap.exists()) throw new Error('Registration not found');
+      const existing = snap.val();
+      const updated = {
+        ...existing,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+      await set(rRef, updated);
+      try {
+        await auditLogService.log({
+          action: 'program.registration.updated',
+          entityType: 'program',
+          entityId: id,
+          details: updates,
+        });
+      } catch (e) {
+        console.error('Error auditing program.registration.updated:', e);
+      }
+    } catch (error) {
+      console.error('❌ Error updating program registration:', error);
+      throw error;
+    }
+  },
+
+  async cancelProgramRegistration(id: string, reason?: string): Promise<void> {
+    try {
+      const rRef = ref(db, `programRegistrations/${id}`);
+      const snap = await get(rRef);
+      if (!snap.exists()) throw new Error('Registration not found');
+      const existing = snap.val();
+      const updated = {
+        ...existing,
+        status: 'cancelled',
+        cancelledAt: new Date().toISOString(),
+        cancelledReason: reason || null,
+        updatedAt: new Date().toISOString(),
+      };
+      await set(rRef, updated);
+      try {
+        await auditLogService.log({
+          action: 'program.registration.cancelled',
+          entityType: 'program',
+          entityId: id,
+          details: { reason },
+        });
+      } catch (e) {
+        console.error('Error auditing program.registration.cancelled:', e);
+      }
+    } catch (error) {
+      console.error('❌ Error cancelling program registration:', error);
       throw error;
     }
   },

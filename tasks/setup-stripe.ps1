@@ -1,3 +1,11 @@
+# Setup Stripe Secret Key in Firebase Functions Secrets
+# gcloud run services update createsetupintent --region=us-central1 --project={project} --remove-env-vars=STRIPE_SECRET_KEY
+# Assumes you have Firebase CLI installed and authenticated
+# Test adding a payment method again with a Stripe test card:
+# Card: 4242 4242 4242 4242
+# Expiry: any future date
+# CVC: any 3 digits
+# ZIP: any 5 digits
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $envFile = Join-Path $projectRoot "functions/.env"
 $secret = $null

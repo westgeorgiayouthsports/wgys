@@ -27,7 +27,9 @@ import {
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
 import { programsService } from '../services/firebasePrograms';
-import type { Program, ProgramFormData, SportType, SexRestriction, ProgramType } from '../types/program';
+import { seasonsService } from '../services/firebaseSeasons';
+import type { Program } from '../types/program';
+import type { Season } from '../types/season';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -37,6 +39,11 @@ const Programs = forwardRef(function Programs(props, ref) {
   const navigate = useNavigate();
   const { role, user } = useSelector((state: RootState) => state.auth);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string>('all');
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [bulkModalVisible, setBulkModalVisible] = useState(false);
+  const [bulkTargetSeason, setBulkTargetSeason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
@@ -54,6 +61,7 @@ const Programs = forwardRef(function Programs(props, ref) {
 
   useEffect(() => {
     loadPrograms();
+    loadSeasons();
   }, []);
 
   const loadPrograms = async () => {
@@ -66,6 +74,49 @@ const Programs = forwardRef(function Programs(props, ref) {
       message.error('Failed to load programs');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSeasons = async () => {
+    try {
+      const seasonsList = await seasonsService.getSeasons();
+      setSeasons(seasonsList);
+      const firstActive = seasonsList.find(s => s.status === 'active');
+      if (firstActive && selectedSeasonId === 'all') {
+        setSelectedSeasonId(firstActive.id);
+      }
+    } catch (error) {
+      console.error('Error loading seasons:', error);
+      // Don't show error message for initial load if no seasons exist
+      setSeasons([]);
+    }
+  };
+
+  const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
+    setSelectedRowKeys(newSelectedRowKeys);
+  };
+
+  const openBulkMove = () => {
+    setBulkTargetSeason(null);
+    setBulkModalVisible(true);
+  };
+
+  const performBulkMove = async () => {
+    if (!bulkTargetSeason || selectedRowKeys.length === 0) return;
+    try {
+      const season = seasons.find(s => s.id === bulkTargetSeason);
+      if (!season) throw new Error('Season not found');
+      // call service to bulk update
+      await programsService.bulkUpdatePrograms(selectedRowKeys as string[], { seasonId: season.id, year: season.year, season: season.seasonType as any });
+      // update local state
+      const updated = programs.map(p => selectedRowKeys.includes(p.id) ? { ...p, seasonId: season.id, season: season.seasonType, year: season.year, updatedAt: new Date().toISOString() } : p);
+      setPrograms(updated);
+      setSelectedRowKeys([]);
+      setBulkModalVisible(false);
+      message.success('Programs moved to selected season');
+    } catch (err) {
+      console.error('Bulk move failed', err);
+      message.error('Failed to move programs');
     }
   };
 
@@ -82,7 +133,11 @@ const Programs = forwardRef(function Programs(props, ref) {
   };
 
   const handleEditProgram = (program: Program) => {
-    navigate(`/programs/${program.id}`);
+    navigate(`/admin/programs/${program.id}`);
+  };
+
+  const handleManageTeams = (program: Program) => {
+    navigate(`/admin/programs/${program.id}/teams`);
   };
 
   const handleDuplicateProgram = (program: Program) => {
@@ -159,6 +214,10 @@ const Programs = forwardRef(function Programs(props, ref) {
     }
   };
 
+  const filteredPrograms = selectedSeasonId === 'all'
+    ? programs
+    : programs.filter(p => p.seasonId === selectedSeasonId);
+
   const columns = [
     {
       title: 'Status',
@@ -223,6 +282,14 @@ const Programs = forwardRef(function Programs(props, ref) {
       ),
     },
     {
+      title: 'Season',
+      key: 'season',
+      render: (record: Program) => {
+        const season = seasons.find(s => s.id === record.seasonId);
+        return season ? <Tag>{season.name}</Tag> : <Text type="secondary">—</Text>;
+      },
+    },
+    {
       title: 'Payments',
       dataIndex: 'totalPayments',
       key: 'totalPayments',
@@ -239,6 +306,12 @@ const Programs = forwardRef(function Programs(props, ref) {
             onClick={() => { handleEditProgram(record); }}
           >
             Edit
+          </Button>
+          <Button
+            size="small"
+            onClick={() => { handleManageTeams(record); }}
+          >
+            Teams
           </Button>
           <Button
             size="small"
@@ -280,8 +353,27 @@ const Programs = forwardRef(function Programs(props, ref) {
             <Text type="secondary">Manage sports programs and activities</Text>
           </div>
           <Space>
+            <Select
+              value={selectedSeasonId}
+              onChange={(val) => setSelectedSeasonId(val)}
+              style={{ width: 200 }}
+              placeholder="Filter by season"
+            >
+              <Select.Option value="all">All Seasons</Select.Option>
+              {seasons.map(s => (
+                <Select.Option key={s.id} value={s.id}>
+                  {s.name} {s.status === 'archived' ? '(Archived)' : ''}
+                </Select.Option>
+              ))}
+            </Select>
             <Button icon={<ReloadOutlined />} onClick={loadPrograms} loading={loading}>
                 Refresh
+            </Button>
+            <Button onClick={() => navigate('/admin/seasons')}>
+                Manage Seasons
+            </Button>
+            <Button onClick={openBulkMove} disabled={selectedRowKeys.length === 0}>
+              Move Selected
             </Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddProgram}>
                 Add Program
@@ -293,8 +385,9 @@ const Programs = forwardRef(function Programs(props, ref) {
       <Card title="Program Directory">
         <Spin spinning={loading}>
           <Table
+            rowSelection={{ selectedRowKeys, onChange: onSelectChange }}
             columns={columns}
-            dataSource={programs}
+            dataSource={filteredPrograms}
             rowKey="id"
             pagination={{
               pageSize: 10,
@@ -305,6 +398,26 @@ const Programs = forwardRef(function Programs(props, ref) {
           />
         </Spin>
       </Card>
+
+      <Modal
+        title="Move selected programs to season"
+        open={bulkModalVisible}
+        onCancel={() => setBulkModalVisible(false)}
+        onOk={performBulkMove}
+      >
+        <Form layout="vertical">
+          <Form.Item label="Target Season">
+            <Select value={bulkTargetSeason || undefined} onChange={(v) => setBulkTargetSeason(v)} placeholder="Select season">
+              {seasons.map(s => (
+                <Select.Option key={s.id} value={s.id}>{s.name} {s.status === 'archived' ? '(Archived)' : ''}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <div>
+            <small>{selectedRowKeys.length} program(s) will be moved.</small>
+          </div>
+        </Form>
+      </Modal>
 
       <Modal
         title={editingProgram ? 'Edit Program' : 'Add New Program'}
@@ -337,6 +450,16 @@ const Programs = forwardRef(function Programs(props, ref) {
               <Select placeholder="Select restriction" style={{ width: 120 }}>
                 <Select.Option value="any">Any</Select.Option>
                 <Select.Option value="female">Female</Select.Option>
+              </Select>
+            </Form.Item>
+
+            <Form.Item name="seasonId" label="Season">
+              <Select placeholder="Select season" style={{ width: 150 }}>
+                {seasons.filter(s => s.status === 'active').map(season => (
+                  <Select.Option key={season.id} value={season.id}>
+                    {season.name} ({season.year})
+                  </Select.Option>
+                ))}
               </Select>
             </Form.Item>
           </Space>

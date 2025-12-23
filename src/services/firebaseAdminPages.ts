@@ -28,8 +28,8 @@ export const adminPagesService = {
   // Get all admin pages
   async getAllPages(): Promise<Record<string, AdminPage>> {
     try {
-      const pagesRef = ref(db, 'adminPages');
-      const snapshot = await get(pagesRef);
+      const _pagesRef = ref(db, 'adminPages');
+      const snapshot = await get(_pagesRef);
 
       if (!snapshot.exists()) return {};
 
@@ -109,7 +109,7 @@ export const adminPagesService = {
         },
       };
 
-      const pagesRef = ref(db, 'adminPages');
+      
 
       for (const [pageName, pageContent] of Object.entries(defaultPages)) {
         const pageRef = ref(db, `adminPages/${pageName}`);

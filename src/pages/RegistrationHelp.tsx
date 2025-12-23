@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Card,
   Typography,
@@ -94,7 +94,7 @@ export default function RegistrationHelp() {
       title: 'Age Division',
       dataIndex: 'ageGroup',
       key: 'ageGroup',
-      render: (text: string, record: any) => (
+      render: (text: string, _record: any) => (
         <Tag color={eligibleGroup?.ageGroup === text ? 'green' : 'default'}>
           {text}
         </Tag>
@@ -108,10 +108,10 @@ export default function RegistrationHelp() {
     {
       title: 'Birth Date Range',
       key: 'dateRange',
-      render: (record: any) => (
+      render: (_record: any) => (
         <div>
-          <div><strong>From:</strong> {record.fromDateDisplay}</div>
-          <div><strong>To:</strong> {record.toDateDisplay}</div>
+          <div><strong>From:</strong> {_record.fromDateDisplay}</div>
+          <div><strong>To:</strong> {_record.toDateDisplay}</div>
         </div>
       ),
     },

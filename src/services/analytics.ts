@@ -5,6 +5,26 @@ type GtagEvent = {
 
 let analyticsInitialized = false;
 
+// Helper to access environment variables in a way that works in tests (Jest/CommonJS)
+function getEnv(name: string): string | undefined {
+  try {
+    // Prefer Node env (useful in tests and SSR)
+    if (typeof process !== 'undefined' && (process.env as any)[name]) {
+      return (process.env as any)[name];
+    }
+  } catch (e) {
+    // ignore
+  }
+  try {
+    // In browser builds Vite provides import.meta.env; some environments may expose a global shim
+    const g = (globalThis as any).__VITE_ENV__ || (globalThis as any).__vite_env__;
+    if (g && g[name]) return g[name];
+  } catch (e) {
+    // ignore
+  }
+  return undefined;
+}
+
 function loadGtag(measurementId: string) {
   if (analyticsInitialized) return;
   if (!measurementId) return;
@@ -72,7 +92,7 @@ export function trackPageView(page: { page_path: string; page_title?: string; pa
   window.gtag('event', 'page_view', page);
   // Measurement Protocol fallback - ensures GA receives events even when browser blocks gtag beacons
   // GA4 API secrets are safe for client-side use (unlike Stripe secret keys)
-  if (import.meta && (import.meta as any).env?.VITE_GA4_API_SECRET) {
+  if (getEnv('VITE_GA4_API_SECRET')) {
     trackPageViewMPFallback(page);
   }
 }
@@ -180,8 +200,8 @@ async function sendMeasurementProtocolEvent(
 }
 
 export async function trackPageViewMPFallback(page: { page_path: string; page_title?: string; page_location?: string }) {
-  const measurementId = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string | undefined;
-  const apiSecret = import.meta.env.VITE_GA4_API_SECRET as string | undefined;
+  const measurementId = getEnv('VITE_FIREBASE_MEASUREMENT_ID') as string | undefined;
+  const apiSecret = getEnv('VITE_GA4_API_SECRET') as string | undefined;
   if (!measurementId || !apiSecret) return;
   await sendMeasurementProtocolEvent(measurementId, apiSecret, 'page_view', page);
 }

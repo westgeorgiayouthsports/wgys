@@ -50,7 +50,7 @@ jest.mock('antd/lib/message', () => ({
 jest.mock('../../services/firebasePrograms', () => ({
   programsService: {
     getPrograms: jest.fn(async () => []), // no-op list load
-    createProgram: jest.fn(async (programData: any, createdBy: string) => 'new-program-id'),
+    createProgram: jest.fn(async (_programData: any, _createdBy: string) => 'new-program-id'),
     updateProgram: jest.fn(),
     deleteProgram: jest.fn(),
   },

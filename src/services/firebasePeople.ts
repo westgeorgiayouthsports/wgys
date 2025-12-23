@@ -1,5 +1,6 @@
-import { ref, push, get, update, remove, query, orderByChild } from 'firebase/database';
+import { ref, push, get, update, remove, query as _query, orderByChild as _orderByChild } from 'firebase/database';
 import { db } from './firebase';
+import { auditLogService } from './auditLog';
 import type { Person, PersonFormData, Family } from '../types/person';
 
 export const peopleService = {
@@ -29,6 +30,11 @@ export const peopleService = {
     };
     
     await update(newPersonRef, person);
+    try {
+      await auditLogService.log({ action: 'person.created', entityType: 'person', entityId: newPersonRef.key, details: person });
+    } catch (e) {
+      console.error('Error auditing person.created:', e);
+    }
     return newPersonRef.key;
   },
 
@@ -69,11 +75,28 @@ export const peopleService = {
       ...cleanData,
       updatedAt: new Date().toISOString(),
     });
+    try {
+      await auditLogService.log({ action: 'person.updated', entityType: 'person', entityId: id, details: cleanData });
+    } catch (e) {
+      console.error('Error auditing person.updated:', e);
+    }
   },
 
   async deletePerson(id: string): Promise<void> {
-    const personRef = ref(db, `people/${id}`);
-    await remove(personRef);
+    try {
+      const personRef = ref(db, `people/${id}`);
+      const snap = await get(personRef);
+      const before = snap.exists() ? snap.val() : null;
+      await remove(personRef);
+      try {
+        await auditLogService.logDelete('person', id, before);
+      } catch (e) {
+        console.error('Error auditing person.delete:', e);
+      }
+    } catch (error) {
+      console.error('Error deleting person:', error);
+      throw error;
+    }
   },
 
   async linkPersonToAccount(personId: string, userId: string): Promise<void> {
@@ -100,6 +123,11 @@ export const peopleService = {
     };
     
     await update(newFamilyRef, family);
+    try {
+      await auditLogService.log({ action: 'family.created', entityType: 'family', entityId: newFamilyRef.key, details: family });
+    } catch (e) {
+      console.error('Error auditing family.created:', e);
+    }
     
     // Update person with family ID
     const personRef = ref(db, `people/${primaryPersonId}`);
@@ -143,6 +171,11 @@ export const peopleService = {
         familyId,
         updatedAt: new Date().toISOString(),
       });
+      try {
+        await auditLogService.log({ action: 'family.member_added', entityType: 'family', entityId: familyId, details: { memberId: personId } });
+      } catch (e) {
+        console.error('Error auditing family.member_added:', e);
+      }
     }
   },
 

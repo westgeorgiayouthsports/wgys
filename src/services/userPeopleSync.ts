@@ -1,4 +1,4 @@
-import { ref, get, update } from 'firebase/database';
+import { ref, get, update as _update } from 'firebase/database';
 import { db } from './firebase';
 import { peopleService } from './firebasePeople';
 import type { PersonFormData } from '../types/person';

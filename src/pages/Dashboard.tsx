@@ -29,7 +29,7 @@ import {
   UsergroupAddOutlined,
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
-import { setTeams, setLoading } from '../store/slices/teamsSlice';
+import { setTeams, setLoading as _setLoading } from '../store/slices/teamsSlice';
 import { teamsService } from '../services/firebaseTeams';
 import { fetchWebsiteTrends } from '../services/analyticsClient';
 import { programsService } from '../services/firebasePrograms';
@@ -60,7 +60,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const teams = useSelector((state: RootState) => state.teams.teams);
   const user = useSelector((state: RootState) => state.auth.user);
-  const loading = useSelector((state: RootState) => state.teams.loading);
+  const _loading = useSelector((state: RootState) => state.teams.loading);
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
 
   const [metrics, setMetrics] = useState<DashboardMetrics>({

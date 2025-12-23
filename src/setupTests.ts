@@ -1,5 +1,21 @@
 import '@testing-library/jest-dom';
 
+// Silence noisy React act() warnings from third-party async flows we don't control
+// in tests by filtering that specific message. This keeps test output clean while
+// still allowing other console.error messages to surface.
+const _origConsoleError = console.error;
+console.error = (...args: any[]) => {
+  try {
+    const first = String(args[0] || '');
+    if (first.includes('An update to') && first.includes('inside a test was not wrapped in act')) {
+      return;
+    }
+  } catch (e) {
+    // swallow parsing errors and fall through to original
+  }
+  _origConsoleError.apply(console, args as any);
+};
+
 if (!window.matchMedia) {
   // Minimal mock for Ant Design responsive hooks
   window.matchMedia = function matchMedia(query: string): MediaQueryList {
@@ -40,9 +56,39 @@ if (typeof (globalThis as any).MessageChannel === 'undefined') {
 
 // Mock Firebase
 jest.mock('./services/firebase', () => ({
-  auth: {},
+  auth: {
+    // Minimal async signOut used by App geo flow tests
+    signOut: async () => {},
+  },
   db: {},
 }));
+
+// Mock firebase/database functions used by services so tests don't need a live RTDB
+jest.mock('firebase/database', () => {
+  const snapshotFalse = { exists: () => false, val: () => null };
+  return {
+    ref: (_db: any, _path: string) => ({ path: _path }),
+    get: async (_ref: any) => snapshotFalse,
+    set: async (_ref: any, _value: any) => ({}),
+    update: async (_ref: any, _value: any) => ({}),
+    remove: async (_ref: any) => ({}),
+    query: (_ref: any, ..._args: any[]) => _ref,
+    orderByChild: (k: string) => k,
+    equalTo: (v: any) => v,
+  };
+});
+
+// Provide a simple global fetch mock to prevent "fetch is not defined" in jsdom/node
+// Default global fetch returns a North American country so geo checks pass in tests.
+if (typeof (globalThis as any).fetch === 'undefined') {
+  (globalThis as any).fetch = jest.fn(async (input: any, init?: any) => {
+    // Simple shape matching the ipapi.co/json/ response used by App
+    return {
+      ok: true,
+      json: async () => ({ country_code: 'US' }),
+    };
+  });
+}
 
 // Mock environment variables
 process.env.VITE_FIREBASE_API_KEY = 'test-api-key';

@@ -30,6 +30,8 @@ import {
 import type { RootState } from '../store/store';
 import type { Program, ProgramQuestion } from '../types';
 import { programsService } from '../services/firebasePrograms';
+import { seasonsService } from '../services/firebaseSeasons';
+import type { Season } from '../types/season';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -42,6 +44,7 @@ export default function ProgramDetail() {
   const { message } = App.useApp();
   const [program, setProgram] = useState<Program | null>(null);
   const [loading, setLoading] = useState(true);
+  const [seasons, setSeasons] = useState<Season[]>([]);
   const [questionModalVisible, setQuestionModalVisible] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<ProgramQuestion | null>(null);
   const [questionForm] = Form.useForm();
@@ -60,7 +63,18 @@ export default function ProgramDetail() {
     if (programId) {
       loadProgram();
     }
+    loadSeasons();
   }, [programId]);
+
+  const loadSeasons = async () => {
+    try {
+      const list = await seasonsService.getSeasons();
+      setSeasons(list.filter(s => s.status === 'active'));
+    } catch (err) {
+      console.error('Failed to load seasons', err);
+      setSeasons([]);
+    }
+  };
 
   const loadProgram = async () => {
     setLoading(true);
@@ -70,14 +84,6 @@ export default function ProgramDetail() {
       if (foundProgram) {
         const programWithQuestions = { ...foundProgram, questions: foundProgram.questions || [] };
         setProgram(programWithQuestions);
-        programForm.setFieldsValue({
-          ...programWithQuestions,
-          femaleOnlyToggle: foundProgram.sexRestriction === 'female',
-          registrationStart: programWithQuestions.registrationStart ? dayjs(programWithQuestions.registrationStart) : null,
-          registrationEnd: programWithQuestions.registrationEnd ? dayjs(programWithQuestions.registrationEnd) : null,
-          birthDateStart: programWithQuestions.birthDateStart ? dayjs(programWithQuestions.birthDateStart) : null,
-          birthDateEnd: programWithQuestions.birthDateEnd ? dayjs(programWithQuestions.birthDateEnd) : null,
-        });
       } else {
         message.error('Program not found');
       }
@@ -88,6 +94,21 @@ export default function ProgramDetail() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (program) {
+      programForm.setFieldsValue({
+        ...program,
+        femaleOnlyToggle: program.sexRestriction === 'female',
+        registrationStart: program.registrationStart ? dayjs(program.registrationStart) : null,
+        registrationEnd: program.registrationEnd ? dayjs(program.registrationEnd) : null,
+        birthDateStart: program.birthDateStart ? dayjs(program.birthDateStart) : null,
+        birthDateEnd: program.birthDateEnd ? dayjs(program.birthDateEnd) : null,
+          seasonId: program.seasonId || undefined,
+        });
+    }
+  }, [program, programForm]);
+
 
   const handleAddQuestion = () => {
     setEditingQuestion(null);
@@ -180,11 +201,16 @@ export default function ProgramDetail() {
                 <Text type="secondary">Program Form Configuration</Text>
               </div>
             </Space>
-            <Button type="primary" icon={<SaveOutlined />} onClick={() => {
-              programForm.submit();
-            }}>
-              Save Program
-            </Button>
+            <Space>
+              <Button onClick={() => navigate(`/admin/programs/${program.id}/teams`)}>
+                Manage Teams
+              </Button>
+              <Button type="primary" icon={<SaveOutlined />} onClick={() => {
+                programForm.submit();
+              }}>
+                Save Program
+              </Button>
+            </Space>
           </Space>
         </div>
 
@@ -252,6 +278,16 @@ export default function ProgramDetail() {
               <Col span={6}>
                 <Form.Item name="femaleOnlyToggle" label="Female Only" valuePropName="checked">
                   <Switch checkedChildren="Yes" unCheckedChildren="No" />
+                </Form.Item>
+              </Col>
+              <Col span={6}>
+                <Form.Item name="seasonId" label="Season">
+                  <Select placeholder="Select season">
+                    <Select.Option value={undefined}>None</Select.Option>
+                    {seasons.map(s => (
+                      <Select.Option key={s.id} value={s.id}>{s.name} {s.status === 'archived' ? '(Archived)' : ''}</Select.Option>
+                    ))}
+                  </Select>
                 </Form.Item>
               </Col>
             </Row>

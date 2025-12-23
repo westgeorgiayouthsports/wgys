@@ -8,5 +8,5 @@ interface Props {
     userId?: string;
     userRole?: string;
 }
-export default function AnnouncementList({ announcements, loading, onEdit, onPublish, onDelete, userId, userRole, }: Props): import("react/jsx-runtime").JSX.Element;
+export default function AnnouncementList({ announcements, loading, onEdit, onPublish, onDelete, userId: _userId, userRole, }: Props): import("react/jsx-runtime").JSX.Element;
 export {};

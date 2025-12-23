@@ -8,20 +8,22 @@ import {
   ContactsOutlined,
   SettingOutlined,
   TrophyOutlined,
+  AuditOutlined,
   UsergroupAddOutlined,
   QuestionCircleOutlined,
   FormOutlined,
-  CrownOutlined,
   UserOutlined,
   CreditCardOutlined,
   FileTextOutlined,
+  FireOutlined,
 } from '@ant-design/icons';
 
 const navItems = [
   // Admin-only items (will be placed in Admin section via selector)
   { key: '/admin/dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
-  { key: '/admin/teams', label: 'Teams', icon: <TeamOutlined /> },
+  { key: '/admin/seasons', label: 'Seasons', icon: <FireOutlined /> },
   { key: '/admin/programs', label: 'Programs', icon: <TrophyOutlined /> },
+  { key: '/admin/teams', label: 'Teams', icon: <TeamOutlined /> },
   { key: '/admin/people', label: 'People', icon: <ContactsOutlined /> },
   { key: '/admin/settings', label: 'Settings', icon: <SettingOutlined /> },
 
@@ -34,6 +36,8 @@ const navItems = [
   { key: '/registration-help', label: 'Registration Help', icon: <QuestionCircleOutlined /> },
   { key: '/announcements', label: 'Announcements', icon: <SoundOutlined /> },
   { key: '/schedules', label: 'Schedules', icon: <CalendarOutlined /> },
+  // Place Audit Logs last in the sidebar
+  { key: '/admin/audit', label: 'Audit Logs', icon: <AuditOutlined /> },
 ];
 
 const selectRole = (state: RootState) => state.auth.role;
@@ -50,10 +54,12 @@ const USER_KEYS = new Set([
   '/schedules',
 ]);
 
-const ADMIN_KEYS = new Set([
+  const ADMIN_KEYS = new Set([
   '/admin/dashboard',
-  '/admin/teams',
+  '/admin/seasons',
+    '/admin/audit',
   '/admin/programs',
+  '/admin/teams',
   '/admin/people',
   '/admin/settings',
 ]);

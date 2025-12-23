@@ -15,7 +15,7 @@ import wgysLogoSmall from '../../assets/wgys-logo-small.png';
 import wgysLogo from '../../assets/wgys-logo.png';
 
 const { Sider } = Layout;
-const { Title } = Typography;
+const { Title: _Title } = Typography;
 
 interface SidebarProps {
   onCollapse?: (collapsed: boolean) => void;

@@ -126,3 +126,4 @@ tsconfig.tsbuildinfo
 tests/e2e/.auth/
 tests/e2e/.auth/adminStorageState.*
 tests/e2e/test-results/.auth/
+**/adminStorageState.

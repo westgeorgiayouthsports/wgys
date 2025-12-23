@@ -1,8 +1,12 @@
 import type { ProgramFormResponse } from '../types/programForm';
+import type { SeasonType } from '../types/season';
 export interface ProgramRegistrationRecord {
     id: string;
     programId: string;
     programName?: string;
+    season?: SeasonType;
+    year?: number;
+    ageGroup?: string;
     athleteId?: string;
     playerName?: string;
     familyId?: string;
@@ -22,5 +26,8 @@ export declare const programRegistrationsService: {
     getProgramRegistration(id: string): Promise<ProgramRegistrationRecord>;
     getProgramRegistrationsByFamily(familyId: string): Promise<ProgramRegistrationRecord[]>;
     getProgramRegistrationsByAthlete(athleteId: string): Promise<ProgramRegistrationRecord[]>;
+    getProgramRegistrationsByProgram(programId: string): Promise<ProgramRegistrationRecord[]>;
     getAllProgramRegistrations(): Promise<ProgramRegistrationRecord[]>;
+    updateProgramRegistration(id: string, updates: Partial<ProgramRegistrationRecord>): Promise<void>;
+    cancelProgramRegistration(id: string, reason?: string): Promise<void>;
 };

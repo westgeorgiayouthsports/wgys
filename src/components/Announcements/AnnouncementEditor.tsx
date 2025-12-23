@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { SaveOutlined, CloseOutlined } from '@ant-design/icons';
 
-const { Title, Text } = Typography;
+const { Title: _Title, Text } = Typography;
 
 interface Props {
   announcement?: Announcement;

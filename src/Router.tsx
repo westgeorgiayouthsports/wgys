@@ -24,8 +24,11 @@ const Family = lazy(() => import('./pages/Family'));
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 const PaymentMethods = lazy(() => import('./pages/PaymentMethods'));
 const Registrations = lazy(() => import('./pages/Registrations'));
+const Seasons = lazy(() => import('./pages/Seasons'));
 const Programs = lazy(() => import('./pages/Programs'));
 const ProgramDetail = lazy(() => import('./pages/ProgramDetail'));
+const ProgramTeams = lazy(() => import('./pages/ProgramTeams'));
+const AuditLogs = lazy(() => import('./pages/AuditLogs'));
 const RegistrationHelp = lazy(() => import('./pages/RegistrationHelp'));
 const RegistrationPage = lazy(() => import('./pages/Registration'));
 const RegistrationConfirmation = lazy(() => import('./pages/RegistrationConfirmation'));
@@ -113,6 +116,11 @@ function Router() {
               }
             />
             <Route path="/programs" element={<Navigate to="/admin/programs" replace />} />
+            <Route path="/admin/seasons" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                <Seasons />
+              </ProtectedRoute>
+            } />
             <Route path="/admin/programs" element={
               <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
                 <Programs />
@@ -121,6 +129,11 @@ function Router() {
             <Route path="/admin/programs/:programId" element={
               <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
                 <ProgramDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/programs/:programId/teams" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                <ProgramTeams />
               </ProtectedRoute>
             } />
             <Route path="/schedules" element={isAuthenticated ? <Schedules /> : <Navigate to="/signin" replace />} />
@@ -190,6 +203,11 @@ function Router() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/admin/audit" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                <AuditLogs />
+              </ProtectedRoute>
+            } />
           </Route>
 
           {/* 404 Route */}

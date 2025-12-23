@@ -1,15 +1,26 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
+import type { SeasonType } from '../../types/season';
 
 export interface Team {
   id: string;
   name: string;
   budget: number;
   spent: number;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'archived';
   userId: string;
   createdAt: string;
-  coachId?: string;
+  updatedAt?: string;
+  archivedAt?: string;
+  coachId?: string; // head coach
+  teamManagerId?: string;
+  assistantCoachIds?: string[];
+  rosterAthleteIds?: string[];
+  programId?: string;
+  seasonId?: string; // Reference to Season document
+  season?: SeasonType;
+  year?: number;
+  ageGroup?: string; // e.g., "10U", "12U"
 }
 
 export interface TeamsState {

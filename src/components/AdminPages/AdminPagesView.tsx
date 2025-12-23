@@ -14,7 +14,7 @@ interface AdminPagesViewProps {
 export const AdminPagesView: React.FC<AdminPagesViewProps> = ({ isAdmin = false }) => {
   const user = useSelector((state: RootState) => state.auth.user);
   const [currentPage, setCurrentPage] = useState<PageType>('about');
-  const [pageContent, setPageContent] = useState<AdminPage | null>(null);
+  const [_pageContent, setPageContent] = useState<AdminPage | null>(null);
   const [editedContent, setEditedContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');

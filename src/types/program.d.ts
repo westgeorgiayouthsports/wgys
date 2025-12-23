@@ -1,11 +1,16 @@
 export type SportType = 'baseball' | 'softball' | 'basketball' | 'soccer' | 'tennis' | 'other';
 export type SexRestriction = 'female' | 'any';
 export type ProgramType = 'sport' | 'lesson' | 'training' | 'tryout' | 'camp';
+import type { SeasonType } from './season';
 import type { ProgramQuestion } from './programForm';
 export interface Program {
     id: string;
     name: string;
     sport: SportType;
+    seasonId?: string;
+    season?: SeasonType;
+    year?: number;
+    ageGroup?: string;
     description: string;
     sexRestriction: SexRestriction;
     birthDateStart?: string;
@@ -31,6 +36,9 @@ export interface ProgramFormData {
     name: string;
     sport: SportType;
     type: ProgramType;
+    season?: SeasonType;
+    year?: number;
+    ageGroup?: string;
     description: string;
     sexRestriction: SexRestriction;
     maxAge?: number;

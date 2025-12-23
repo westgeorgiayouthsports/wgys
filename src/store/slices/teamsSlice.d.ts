@@ -1,12 +1,23 @@
+import type { SeasonType } from '../../types/season';
 export interface Team {
     id: string;
     name: string;
     budget: number;
     spent: number;
-    status: 'active' | 'inactive';
+    status: 'active' | 'inactive' | 'archived';
     userId: string;
     createdAt: string;
+    updatedAt?: string;
+    archivedAt?: string;
     coachId?: string;
+    teamManagerId?: string;
+    assistantCoachIds?: string[];
+    rosterAthleteIds?: string[];
+    programId?: string;
+    seasonId?: string;
+    season?: SeasonType;
+    year?: number;
+    ageGroup?: string;
 }
 export interface TeamsState {
     teams: Team[];

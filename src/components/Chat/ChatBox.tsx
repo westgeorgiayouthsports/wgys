@@ -23,7 +23,7 @@ export default function ChatBox({ teamId }: ChatBoxProps) {
   const messages = useSelector(selectMessagesForTeam);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [canPost] = useState<boolean | undefined>(undefined);
+  const [_canPost] = useState<boolean | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Subscribe to messages on mount

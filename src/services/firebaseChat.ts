@@ -2,7 +2,6 @@ import { ref, push, set, get, remove, query, orderByChild, limitToLast, onValue 
 import { db } from './firebase';
 import type { Message } from '../store/slices/chatSlice';
 
-/* eslint-disable-next-line no-unused-vars */
 type MessageCallback = (messages: Message[]) => void;
 
 export const chatService = {

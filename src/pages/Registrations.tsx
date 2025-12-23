@@ -19,6 +19,7 @@ import {
 import type { RootState } from '../store/store';
 import { peopleService } from '../services/firebasePeople';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
+import { teamsService } from '../services/firebaseTeams';
 import { programsService } from '../services/firebasePrograms';
 import dayjs from 'dayjs';
 
@@ -38,6 +39,7 @@ export default function Registrations() {
   const [pageSize] = useState<number>(6);
   const [loading, setLoading] = useState(true);
   const [, setCurrentUserFamilyId] = useState<string | null>(null);
+  const [assignedTeamsMap, setAssignedTeamsMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadData();
@@ -65,6 +67,20 @@ export default function Registrations() {
           if (p.id) map[p.id] = p.name || p.id;
         });
         setProgramsMap(map);
+
+        // Load teams for involved programs and build assignment map
+        const programIds = Array.from(new Set((regs || []).map((r: any) => r.programId).filter(Boolean)));
+        const teamLists = await Promise.all(programIds.map(id => teamsService.getTeamsByProgram(id)));
+        const assignment: Record<string, string> = {};
+        programIds.forEach((pid, idx) => {
+          const teams = teamLists[idx] || [];
+          teams.forEach((t: any) => {
+            (t.rosterAthleteIds || []).forEach((athleteId: string) => {
+              assignment[`${pid}:${athleteId}`] = t.name || t.id;
+            });
+          });
+        });
+        setAssignedTeamsMap(assignment);
       }
     } catch (error) {
       console.error('❌ Error loading registrations:', error);
@@ -193,6 +209,7 @@ export default function Registrations() {
                   : 'Unknown Athlete';
                 const programName = programsMap[reg.programId] || 'Unknown Program';
                 const status = reg.status || 'pending';
+                const assignedTeam = assignedTeamsMap[`${reg.programId}:${reg.athleteId}`];
 
                 return (
                   <Card
@@ -224,6 +241,9 @@ export default function Registrations() {
                           color={getStatusColor(status)}
                         >
                           {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </Tag>
+                        <Tag color={assignedTeam ? 'blue' : 'default'}>
+                          {assignedTeam ? `Assigned: ${assignedTeam}` : 'Unassigned'}
                         </Tag>
                         {reg.totalAmount !== undefined && (
                           <Text strong style={{ fontSize: 16 }}>

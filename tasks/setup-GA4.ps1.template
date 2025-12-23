@@ -1,4 +1,5 @@
 # Firebase GA4 Setup Script Template
+# gcloud run services update metricsviews --region=us-central1 --project={project} --remove-env-vars=GA4_PROPERTY_ID,GA4_KEY,ALLOWED_ORIGIN
 #
 # Go to https://console.cloud.google.com/iam-admin/serviceaccounts?project={$project-name}
 # Create or pick the service account you use for GA4 (e.g., “ga4-metrics”).

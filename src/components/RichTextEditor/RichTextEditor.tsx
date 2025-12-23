@@ -1,5 +1,5 @@
 import React from 'react';
-import { $getRoot, $getSelection, FORMAT_TEXT_COMMAND, FORMAT_ELEMENT_COMMAND , $getSelection as getSelection, $isRangeSelection, $createParagraphNode } from 'lexical';
+import { $getRoot, FORMAT_TEXT_COMMAND, FORMAT_ELEMENT_COMMAND as _FORMAT_ELEMENT_COMMAND, $getSelection as getSelection, $isRangeSelection, $createParagraphNode as _createParagraphNode } from 'lexical';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
@@ -46,9 +46,9 @@ function InitialContentPlugin({ content, lastEditorContentRef }: { content: stri
     }
 
     editor.update(() => {
-      const root = $getRoot();
-      root.setDirection('ltr');
-      root.clear();
+      const _root = $getRoot();
+      _root.setDirection('ltr');
+      _root.clear();
 
       if (content) {
         const parser = new DOMParser();
@@ -56,7 +56,7 @@ function InitialContentPlugin({ content, lastEditorContentRef }: { content: stri
         const nodes = $generateNodesFromDOM(editor, dom);
         nodes.forEach((node) => {
           if (node.__type !== 'text') {
-            root.append(node);
+            _root.append(node);
           }
         });
       }
@@ -106,7 +106,7 @@ function ToolbarPlugin() {
         if ($isRangeSelection(selection)) {
           const textContent = selection.getTextContent() || url;
           selection.insertText('');
-          const root = $getRoot();
+          const _root = $getRoot();
           const linkHTML = `<a href="${url}" target="_blank">${textContent}</a>`;
           const parser = new DOMParser();
           const dom = parser.parseFromString(linkHTML, 'text/html');
@@ -125,9 +125,9 @@ function ToolbarPlugin() {
         const parser = new DOMParser();
         const dom = parser.parseFromString(imageHTML, 'text/html');
         const nodes = $generateNodesFromDOM(editor, dom);
-        const root = $getRoot();
+        const _root = $getRoot();
         if (nodes.length > 0) {
-          root.append(nodes[0]);
+          _root.append(nodes[0]);
         }
       }
     });

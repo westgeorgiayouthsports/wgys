@@ -55,7 +55,7 @@ interface User {
   uid: string;
   displayName?: string;
   email?: string;
-  systemRole: 'user' | 'admin' | 'owner';
+  systemRole: 'user' | 'admin' | 'owner' | 'coach' | 'teamManager';
   createdAt?: string;
   updatedAt?: string;
 }
@@ -172,7 +172,7 @@ export default function People() {
     }
   };
 
-  const updateUserRole = async (uid: string, newRole: 'user' | 'admin' | 'owner') => {
+  const updateUserRole = async (uid: string, newRole: 'user' | 'admin' | 'owner' | 'coach' | 'teamManager') => {
     try {
       const userRef = ref(db, `users/${uid}`);
       await update(userRef, {
@@ -354,8 +354,6 @@ export default function People() {
       parent: 'blue',
       guardian: 'cyan',
       athlete: 'green',
-      coach: 'orange',
-      volunteer: 'purple',
       grandparent: 'magenta',
       relative: 'geekblue',
       other: 'default',
@@ -375,14 +373,16 @@ export default function People() {
         const linkedUser = users.find(u => u.uid === record.userId);
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Avatar 
+              <Avatar 
               size={40} 
               src={record.photoURL}
               icon={<UserOutlined />}
               style={{ 
                 backgroundColor: record.hasAccount ? 
                   (linkedUser?.systemRole === 'owner' ? '#722ed1' : 
-                    linkedUser?.systemRole === 'admin' ? '#f5222d' : '#52c41a') : '#d9d9d9' 
+                    linkedUser?.systemRole === 'admin' ? '#f5222d' :
+                    linkedUser?.systemRole === 'coach' ? '#fa8c16' :
+                    linkedUser?.systemRole === 'teamManager' ? '#1890ff' : '#52c41a') : '#d9d9d9' 
               }}
               onError={() => true}
             />
@@ -390,13 +390,17 @@ export default function People() {
               <div style={{ fontWeight: 500 }}>
                 {record.firstName} {record.lastName}
                 {record.hasAccount && (
-                  <Tag 
-                    color={linkedUser?.systemRole === 'owner' ? 'purple' : 
-                      linkedUser?.systemRole === 'admin' ? 'red' : 'green'}
+                  <Tag
+                    color={linkedUser?.systemRole === 'owner' ? 'purple' :
+                      linkedUser?.systemRole === 'admin' ? 'red' :
+                      linkedUser?.systemRole === 'coach' ? 'orange' :
+                      linkedUser?.systemRole === 'teamManager' ? 'blue' : 'green'}
                     style={{ marginLeft: 8 }}
                   >
                     {linkedUser?.systemRole === 'owner' ? 'Owner Account' :
-                      linkedUser?.systemRole === 'admin' ? 'Admin Account' : 'User Account'}
+                      linkedUser?.systemRole === 'admin' ? 'Admin Account' :
+                      linkedUser?.systemRole === 'coach' ? 'Coach Account' :
+                      linkedUser?.systemRole === 'teamManager' ? 'Team Manager Account' : 'User Account'}
                   </Tag>
                 )}
               </div>
@@ -494,17 +498,26 @@ export default function People() {
           >
             <Select.Option value="user">User</Select.Option>
             <Select.Option value="admin">Admin</Select.Option>
+            <Select.Option value="coach">Coach</Select.Option>
+            <Select.Option value="teamManager">Team Manager</Select.Option>
             <Select.Option value="owner">Owner</Select.Option>
           </Select>
         ) : (
           <Space>
-            <Tag 
-              icon={linkedUser.systemRole === 'owner' ? <CrownOutlined /> : 
-                linkedUser.systemRole === 'admin' ? <SafetyOutlined /> : <UserOutlined />}
-              color={linkedUser.systemRole === 'owner' ? 'purple' : 
-                linkedUser.systemRole === 'admin' ? 'red' : 'default'}
+            <Tag
+              icon={linkedUser.systemRole === 'owner' ? <CrownOutlined /> :
+                linkedUser.systemRole === 'admin' ? <SafetyOutlined /> :
+                linkedUser.systemRole === 'coach' ? <TeamOutlined /> :
+                linkedUser.systemRole === 'teamManager' ? <SettingOutlined /> : <UserOutlined />}
+              color={linkedUser.systemRole === 'owner' ? 'purple' :
+                linkedUser.systemRole === 'admin' ? 'red' :
+                linkedUser.systemRole === 'coach' ? 'orange' :
+                linkedUser.systemRole === 'teamManager' ? 'blue' : 'default'}
             >
-              {linkedUser.systemRole}
+              {linkedUser.systemRole === 'owner' ? 'Owner' :
+                linkedUser.systemRole === 'admin' ? 'Admin' :
+                linkedUser.systemRole === 'coach' ? 'Coach' :
+                linkedUser.systemRole === 'teamManager' ? 'Team Manager' : linkedUser.systemRole}
             </Tag>
             {role === 'owner' && (
               <Button 
@@ -622,17 +635,25 @@ export default function People() {
           >
             <Select.Option value="user">User</Select.Option>
             <Select.Option value="admin">Admin</Select.Option>
+            <Select.Option value="coach">Coach</Select.Option>
+            <Select.Option value="teamManager">Team Manager</Select.Option>
             {role === 'owner' && <Select.Option value="owner">Owner</Select.Option>}
           </Select>
         ) : (
-          <Tag 
-            icon={record.systemRole === 'owner' ? <CrownOutlined /> : 
-              record.systemRole === 'admin' ? <SafetyOutlined /> : <UserOutlined />}
-            color={record.systemRole === 'owner' ? 'purple' : 
-              record.systemRole === 'admin' ? 'red' : 'default'}
+          <Tag
+            icon={record.systemRole === 'owner' ? <CrownOutlined /> :
+              record.systemRole === 'admin' ? <SafetyOutlined /> :
+              record.systemRole === 'coach' ? <TeamOutlined /> :
+              record.systemRole === 'teamManager' ? <SettingOutlined /> : <UserOutlined />}
+            color={record.systemRole === 'owner' ? 'purple' :
+              record.systemRole === 'admin' ? 'red' :
+              record.systemRole === 'coach' ? 'orange' :
+              record.systemRole === 'teamManager' ? 'blue' : 'default'}
           >
-            {record.systemRole === 'owner' ? 'Owner' : 
-              record.systemRole === 'admin' ? 'Admin' : 'User'}
+            {record.systemRole === 'owner' ? 'Owner' :
+              record.systemRole === 'admin' ? 'Admin' :
+              record.systemRole === 'coach' ? 'Coach' :
+              record.systemRole === 'teamManager' ? 'Team Manager' : 'User'}
           </Tag>
         )
       ),
@@ -921,8 +942,6 @@ export default function People() {
                   <Select.Option value="guardian">Guardian</Select.Option>
                   <Select.Option value="athlete">Athlete</Select.Option>
                   <Select.Option value="grandparent">Grandparent</Select.Option>
-                  <Select.Option value="coach">Coach</Select.Option>
-                  <Select.Option value="volunteer">Volunteer</Select.Option>
                   <Select.Option value="relative">Relative</Select.Option>
                   <Select.Option value="other">Other</Select.Option>
                 </Select>
@@ -1185,6 +1204,7 @@ export default function People() {
             await Promise.all([loadPeople(), loadFamilies()]);
           } catch (error) {
             message.error({ content: 'Failed to link family members' });
+            console.log(`Failed to link family members, ${error}`);
           }
         }}
         width={600}
@@ -1240,6 +1260,7 @@ export default function People() {
             loadPeople();
           } catch (error) {
             message.error({ content: 'Failed to merge people' });
+            console.log(`Failed to merge people, ${error}`);
           }
         }}
         width={800}
@@ -1340,6 +1361,7 @@ export default function People() {
             await Promise.all([loadPeople(), loadFamilies()]);
           } catch (error) {
             message.error({ content: 'Failed to delete person' });
+            console.log(`Failed to delete person, ${error}`);
           }
         }}
         width={500}

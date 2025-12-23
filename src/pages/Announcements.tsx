@@ -5,7 +5,6 @@ import {
   setLoading,
   setAnnouncements,
   addAnnouncement,
-  updateAnnouncement,
   deleteAnnouncement as deleteAnnouncementAction,
   setError,
 } from '../store/slices/announcementsSlice';
@@ -45,7 +44,7 @@ export default function Announcements() {
   const [view, setView] = useState<View>('list');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
-  const [error, setLocalError] = useState<string>('');
+  const [_error, setLocalError] = useState<string>('');
 
   // Load announcements on mount
   useEffect(() => {

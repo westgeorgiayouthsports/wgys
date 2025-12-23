@@ -14,11 +14,11 @@ interface RegistrationsViewProps {
 
 export const RegistrationsView: React.FC<RegistrationsViewProps> = ({ teamId, isAdmin = false }) => {
   const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const _user = useSelector((state: RootState) => state.auth.user);
   const { registrations, loading, error } = useSelector((state: RootState) => state.registrations);
   
   const [showForm, setShowForm] = useState(false);
-  const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
+  const [_selectedReg, _setSelectedReg] = useState<Registration | null>(null);
   const [rosterPlayers, setRosterPlayers] = useState<Player[]>([]);
   const [loadingRoster, setLoadingRoster] = useState(false);
   
@@ -173,7 +173,7 @@ export const RegistrationsView: React.FC<RegistrationsViewProps> = ({ teamId, is
     }
   };
 
-  const handleLinkToRoster = async (registrationId: string, playerId: string) => {
+  const handleLinkToRoster = async (_registrationId: string, _playerId: string) => {
     try {
       // await registrationsService.linkToRoster(registrationId, playerId);
       if (teamId) {

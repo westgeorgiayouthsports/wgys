@@ -5,7 +5,7 @@ import {
   GoogleAuthProvider,
   updateProfile,
 } from 'firebase/auth';
-import { ref, set, get, push, update } from 'firebase/database';
+import { ref, set, get, push, update as _update } from 'firebase/database';
 import { auth, db } from './firebase';
 
 const googleProvider = new GoogleAuthProvider();

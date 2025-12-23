@@ -1,6 +1,7 @@
 import { ref, set, get, update, remove, push } from 'firebase/database';
 import { db } from './firebase';
 import type { Family } from '../types/person';
+import auditLogService from './auditLog';
 
 export const familiesService = {
   async getFamilies(): Promise<Family[]> {
@@ -53,7 +54,14 @@ export const familiesService = {
   async deleteFamily(familyId: string): Promise<void> {
     try {
       const familyRef = ref(db, `families/${familyId}`);
+      const snap = await get(familyRef);
+      const before = snap.exists() ? snap.val() : null;
       await remove(familyRef);
+      try {
+        await auditLogService.logDelete('family', familyId, before);
+      } catch (e) {
+        console.error('Error auditing family.delete:', e);
+      }
     } catch (error) {
       console.error('Error deleting family:', error);
       throw error;

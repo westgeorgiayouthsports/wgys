@@ -19,7 +19,7 @@ import {
   UserOutlined 
 } from '@ant-design/icons';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text, Paragraph: _Paragraph } = Typography;
 
 export default function AnnouncementsView() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);

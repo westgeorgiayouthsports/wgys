@@ -11,6 +11,7 @@ import {
   Tag,
   Typography,
   App,
+  Switch,
 } from 'antd';
 import { CreditCardOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons';
 import { loadStripe } from '@stripe/stripe-js';
@@ -173,20 +174,24 @@ function AddPaymentMethodForm({
 
 export default function PaymentMethodsPage() {
   const { message } = App.useApp();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, role } = useSelector((state: RootState) => state.auth);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showDeleted, setShowDeleted] = useState(false);
+
+  const isAdmin = role === 'admin' || role === 'owner';
 
   useEffect(() => {
     loadPaymentMethods();
   }, []);
 
-  const loadPaymentMethods = async () => {
+  const loadPaymentMethods = async (includeDeletedOverride?: boolean) => {
     if (!user?.uid) return;
     setLoading(true);
     try {
-      const methods = await paymentMethodsService.getPaymentMethodsByUser(user.uid);
+      const includeDeleted = includeDeletedOverride ?? Boolean(showDeleted && isAdmin);
+      const methods = await paymentMethodsService.getPaymentMethodsByUser(user.uid, includeDeleted);
       setPaymentMethods(methods);
     } catch (error) {
       console.error('❌ Error loading payment methods:', error);
@@ -228,6 +233,41 @@ export default function PaymentMethodsPage() {
     }
   };
 
+  const handleRestorePaymentMethod = async (methodId: string) => {
+    try {
+      const auditId = await paymentMethodsService.restorePaymentMethod(methodId);
+      message.success('Payment method restored');
+      // Show audit confirmation to admins with the created audit id (if any)
+      if (isAdmin) {
+        if (auditId) {
+          Modal.info({
+            title: 'Restore recorded in Audit Log',
+            content: (
+              <div>
+                <p>Restore action has been recorded.</p>
+                <p style={{ fontSize: 12, color: '#666' }}>Audit ID: {auditId}</p>
+                <p style={{ fontSize: 12, color: '#666' }}>
+                  You can review this entry in the Audit Logs page.
+                </p>
+              </div>
+            ),
+            okText: 'Close',
+          });
+        } else {
+          Modal.info({
+            title: 'Restore recorded',
+            content: 'Restore completed but no audit id was returned.',
+            okText: 'Close',
+          });
+        }
+      }
+      loadPaymentMethods();
+    } catch (error) {
+      console.error('❌ Error restoring payment method:', error);
+      message.error('Failed to restore payment method');
+    }
+  };
+
   return (
     <div style={{ padding: 24 }}>
       <Card
@@ -238,9 +278,18 @@ export default function PaymentMethodsPage() {
           </Space>
         }
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddPaymentMethod}>
-            Add Payment Method
-          </Button>
+            <Space>
+              {isAdmin && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 12 }}>
+                  <Switch checked={showDeleted} onChange={(v) => { setShowDeleted(v); void loadPaymentMethods(v && isAdmin); }} />
+                  <span style={{ fontSize: 12 }}>Show deleted</span>
+                </span>
+              )}
+
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleAddPaymentMethod}>
+                Add Payment Method
+              </Button>
+            </Space>
         }
         loading={loading}
       >
@@ -258,7 +307,6 @@ export default function PaymentMethodsPage() {
               <Col xs={24} sm={12} md={8} lg={6} key={method.id}>
                 <div
                   style={{
-                    background: 'rgba(0,0,0,0.06)',
                     border: '1px solid #d9d9d9',
                     borderRadius: 12,
                     padding: '10px 32px 10px 12px',
@@ -267,11 +315,17 @@ export default function PaymentMethodsPage() {
                     gap: 8,
                     position: 'relative',
                     minHeight: 60,
+                    // Visual distinction for deleted items
+                    opacity: method.deleted ? 0.9 : 1,
+                    background: method.deleted ? 'transparent' : 'rgba(0,0,0,0.06)',
+                    color: method.deleted ? '#8c8c8c' : 'inherit',
                   }}
                >
-                  {/* Top: Default/Set default */}
+                  {/* Top: Default/Set default (hide for deleted methods) */}
                   <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', minHeight: 20 }}>
-                    {method.isDefault ? (
+                    {method.deleted ? (
+                      <Tag color="red" style={{ height: 20, lineHeight: '20px', padding: '0 8px', margin: 0 }}>Deleted</Tag>
+                    ) : method.isDefault ? (
                       <Tag color="blue" style={{ height: 20, lineHeight: '20px', padding: '0 8px', margin: 0 }}>Default</Tag>
                     ) : (
                       <Button
@@ -315,21 +369,40 @@ export default function PaymentMethodsPage() {
                     </div>
                   </div>
 
-                  {/* Inline delete icon */}
-                  <Popconfirm
-                    title="Remove this payment method?"
-                    description="This action cannot be undone."
-                    onConfirm={() => handleDeletePaymentMethod(method.id)}
-                    okText="Yes"
-                    cancelText="No"
-                  >
-                    <Button
-                      type="text"
-                      aria-label="Remove payment method"
-                      icon={<CloseOutlined />}
-                      style={{ position: 'absolute', top: 6, right: 6 }}
-                    />
-                  </Popconfirm>
+                  {/* Inline actions: delete for active methods, restore for deleted (admin only) */}
+                  {method.deleted ? (
+                    isAdmin ? (
+                      <Popconfirm
+                        title="Restore this payment method?"
+                        description="This will make the payment method available again."
+                        onConfirm={() => handleRestorePaymentMethod(method.id)}
+                        okText="Restore"
+                        cancelText="Cancel"
+                      >
+                        <Button
+                          type="default"
+                          style={{ position: 'absolute', top: 6, right: 6 }}
+                        >
+                          Restore
+                        </Button>
+                      </Popconfirm>
+                    ) : null
+                  ) : (
+                    <Popconfirm
+                      title="Remove this payment method?"
+                      description="This action cannot be undone."
+                      onConfirm={() => handleDeletePaymentMethod(method.id)}
+                      okText="Yes"
+                      cancelText="No"
+                    >
+                      <Button
+                        type="text"
+                        aria-label="Remove payment method"
+                        icon={<CloseOutlined />}
+                        style={{ position: 'absolute', top: 6, right: 6 }}
+                      />
+                    </Popconfirm>
+                  )}
                 </div>
               </Col>
             ))}

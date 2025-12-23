@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Typography, Button, Avatar, Space, Tooltip, Dropdown, Menu } from 'antd';
+import { Card, Typography, Button, Avatar, Space as _Space, Tooltip as _Tooltip, Dropdown as _Dropdown, Menu as _Menu } from 'antd';
 import { UsergroupAddOutlined } from '@ant-design/icons';
 import ChatBox from '../components/Chat/ChatBox';
 import { teamsService } from '../services/firebaseTeams';
 import { db } from '../services/firebase';
 import { ref, get } from 'firebase/database';
 import type { Team } from '../store/slices/teamsSlice';
-import type { Message } from '../store/slices/chatSlice';
+import type { Message as _Message } from '../store/slices/chatSlice';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 
