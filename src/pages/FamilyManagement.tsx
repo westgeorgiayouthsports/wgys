@@ -23,6 +23,8 @@ import {
 import type { RootState } from '../store/store';
 import type { Family, FamilyMember, Sex } from '../types';
 import dayjs from 'dayjs';
+import calculateCurrentGrade from '../utils/grade';
+import calculateAgeAt from '../utils/age';
 
 const { Title, Text } = Typography;
 
@@ -54,7 +56,7 @@ export default function FamilyManagement() {
             lastName: 'Smith',
             dateOfBirth: '1985-05-15',
             sex: 'male',
-            relationship: 'parent',
+            role: 'parent',
             isPrimary: true,
             userId: user?.uid,
             email: user?.email || '',
@@ -104,6 +106,7 @@ export default function FamilyManagement() {
       id: editingMember?.id || `member_${Date.now()}`,
       ...values,
       dateOfBirth: values.dateOfBirth.format('YYYY-MM-DD'),
+      grade: values.grade,
       isPrimary: editingMember?.isPrimary || false,
       createdAt: editingMember?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -111,7 +114,7 @@ export default function FamilyManagement() {
 
     let updatedMembers;
     if (editingMember) {
-      updatedMembers = family.members.map(m => 
+      updatedMembers = family.members.map(m =>
         m.id === editingMember.id ? memberData : m
       );
     } else {
@@ -125,18 +128,10 @@ export default function FamilyManagement() {
   };
 
   const calculateAge = (dateOfBirth: string) => {
-    return dayjs().diff(dayjs(dateOfBirth), 'year');
+    return calculateAgeAt(dateOfBirth);
   };
 
-  const calculateCurrentGrade = (graduationYear?: number) => {
-    if (!graduationYear) return null;
-    const currentDate = dayjs();
-    const currentYear = currentDate.year();
-    const isAfterAugust = currentDate.month() >= 7; // August is month 7 (0-indexed)
-    const schoolYear = isAfterAugust ? currentYear : currentYear - 1;
-    const grade = 12 - (graduationYear - schoolYear - 1);
-    return grade >= 0 && grade <= 12 ? grade : null;
-  };
+  // use shared calculateCurrentGrade from utils/grade
 
   const columns = [
     {
@@ -148,14 +143,28 @@ export default function FamilyManagement() {
             {record.firstName} {record.lastName}
             {record.isPrimary && <Tag color="gold" style={{ marginLeft: 8 }}>Primary</Tag>}
           </div>
-          <Text type="secondary">{record.relationship}</Text>
+          <Text type="secondary">{record.role}</Text>
         </div>
       ),
     },
     {
       title: 'Age',
       key: 'age',
-      render: (record: FamilyMember) => calculateAge(record.dateOfBirth),
+      render: (record: FamilyMember) => {
+        const age = calculateAge(record.dateOfBirth);
+        const isAthlete = (record as any).roles?.includes?.('athlete');
+        const grade = record.grade !== undefined && record.grade !== null ? record.grade : calculateCurrentGrade(record.graduationYear);
+        return (
+          <div>
+            <div><Text type="secondary">{age}</Text></div>
+            {isAthlete && (
+              <div style={{ marginTop: 4 }}>
+                <Text type="secondary">Grade: {grade === null ? '—' : (grade === 0 ? 'K' : grade)}</Text>
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: 'Sex',
@@ -171,15 +180,23 @@ export default function FamilyManagement() {
       title: 'School Info',
       key: 'school',
       render: (record: FamilyMember) => {
-        const currentGrade = calculateCurrentGrade(record.graduationYear);
+        // Prefer explicit grade if provided, otherwise compute from graduationYear
+        const currentGrade = record.grade !== undefined && record.grade !== null ? record.grade : calculateCurrentGrade(record.graduationYear);
         return (
           <div>
             {record.schoolName && <div>{record.schoolName}</div>}
-            {record.graduationYear && <div><Text type="secondary">Class of {record.graduationYear}</Text></div>}
-            {currentGrade !== null && (
-              <div><Text type="secondary">
-                Grade {currentGrade === 0 ? 'K' : currentGrade}
-              </Text></div>
+            {record.graduationYear ? (
+              <div>
+                <Text type="secondary">Class of {record.graduationYear}
+                  {currentGrade !== null && (
+                    <span> — Grade {currentGrade === 0 ? 'K' : currentGrade}</span>
+                  )}
+                </Text>
+              </div>
+            ) : (
+              currentGrade !== null && (
+                <div><Text type="secondary">Grade {currentGrade === 0 ? 'K' : currentGrade}</Text></div>
+              )
             )}
           </div>
         );
@@ -298,6 +315,14 @@ export default function FamilyManagement() {
             </Form.Item>
             <Form.Item name="graduationYear" label="Graduation Year">
               <Input placeholder="e.g., 2030" />
+            </Form.Item>
+            <Form.Item name="grade" label="Grade">
+              <Select placeholder="Select grade" style={{ width: 140 }}>
+                <Select.Option value={0}>K</Select.Option>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <Select.Option key={i+1} value={i+1}>{i+1}</Select.Option>
+                ))}
+              </Select>
             </Form.Item>
           </Space>
 

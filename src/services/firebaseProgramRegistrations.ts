@@ -42,7 +42,7 @@ export const programRegistrationsService = {
     try {
       const regsRef = ref(db, 'programRegistrations');
       const newRef = push(regsRef);
-      const record: Omit<ProgramRegistrationRecord, 'id'> = {
+      const record: any = {
         programId,
         programName: extras?.programName,
         athleteId: athleteId || undefined,
@@ -58,6 +58,11 @@ export const programRegistrationsService = {
         registrationDate: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       };
+
+      // Firebase Realtime Database does not allow undefined values. Remove any undefined keys.
+      Object.keys(record).forEach((k) => {
+        if (record[k] === undefined) delete record[k];
+      });
 
       await set(newRef, record);
 

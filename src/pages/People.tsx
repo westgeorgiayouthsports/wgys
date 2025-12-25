@@ -43,11 +43,16 @@ import {
   MergeCellsOutlined,
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
+import validateRoles from '../utils/personRoles';
 import { peopleService } from '../services/firebasePeople';
 import { userPeopleSync } from '../services/userPeopleSync';
 import { familiesService } from '../services/firebaseFamilies';
 import type { Person, PersonFormData, PersonRole, Family } from '../types/person';
 import dayjs from 'dayjs';
+import calculateCurrentGrade from '../utils/grade';
+import calculateAgeAt from '../utils/age';
+import { storageService } from '../services/storageService';
+import { firebaseFilesService } from '../services/firebaseFiles';
 
 const { Title, Text } = Typography;
 
@@ -85,6 +90,8 @@ export default function People() {
   const [newPrimaryId, setNewPrimaryId] = useState<string>('');
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [form] = Form.useForm();
+  const [familyFiles, setFamilyFiles] = useState<any[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
 
   useEffect(() => {
     loadPeople();
@@ -242,6 +249,30 @@ export default function People() {
     setModalVisible(true);
   };
 
+  useEffect(() => {
+    (async () => {
+      if (editingPerson && (role === 'admin' || role === 'owner') && editingPerson.familyId) {
+        setFilesLoading(true);
+        try {
+          const files = await firebaseFilesService.getFilesByFamily(editingPerson.familyId);
+          setFamilyFiles(files || []);
+        } catch (e) {
+          console.error('Failed to load family files for admin view', e);
+          const err = e as any;
+          if (err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.toLowerCase().includes('permission')))) {
+            message.error('You do not have permission to access family files');
+          } else {
+            message.error('Failed to load family files');
+          }
+        } finally {
+          setFilesLoading(false);
+        }
+      } else {
+        setFamilyFiles([]);
+      }
+    })();
+  }, [editingPerson, role]);
+
   const handleDeletePerson = async (personId: string) => {
     try {
       await peopleService.deletePerson(personId);
@@ -326,7 +357,6 @@ export default function People() {
           ...formData,
           familyId,
           hasAccount: false,
-          relationships: [],
           contactPreferences: [],
           programs: [],
           teams: [],
@@ -362,8 +392,10 @@ export default function People() {
   };
 
   const calculateAge = (dateOfBirth: string) => {
-    return dayjs().diff(dayjs(dateOfBirth), 'year');
+    return calculateAgeAt(dateOfBirth);
   };
+
+  // use shared calculateCurrentGrade from utils/grade
 
   const peopleColumns = [
     {
@@ -440,7 +472,17 @@ export default function People() {
         <div>
           {record.phone && <div>{record.phone}</div>}
           {record.dateOfBirth && (
-            <Text type="secondary">Age: {calculateAge(record.dateOfBirth)}</Text>
+            <div>
+              <div><Text type="secondary">Age: {calculateAge(record.dateOfBirth)}</Text></div>
+              {record.roles?.includes('athlete') && (
+                <div style={{ marginTop: 4 }}>
+                  <Text type="secondary">Grade: {(() => {
+                    const g = calculateCurrentGrade(record.graduationYear);
+                    return g === null ? '—' : (g === 0 ? 'K' : g);
+                  })()}</Text>
+                </div>
+              )}
+            </div>
           )}
         </div>
       ),
@@ -934,13 +976,13 @@ export default function People() {
             <Col span={8}>
               <Form.Item
                 name="roles"
-                label="Family Roles"
-                rules={[{ required: true, message: 'Please select at least one role' }]}
+                label="Relationship"
+                rules={[{ required: true, message: 'Please select at least one role' }, { validator: validateRoles }]}
               >
-                <Select mode="multiple" placeholder="Select family roles">
+                <Select mode="multiple" placeholder="Please select relationship">
                   <Select.Option value="parent">Parent</Select.Option>
                   <Select.Option value="guardian">Guardian</Select.Option>
-                  <Select.Option value="athlete">Athlete</Select.Option>
+                  <Select.Option value="athlete">Athlete/Child</Select.Option>
                   <Select.Option value="grandparent">Grandparent</Select.Option>
                   <Select.Option value="relative">Relative</Select.Option>
                   <Select.Option value="other">Other</Select.Option>
@@ -971,18 +1013,34 @@ export default function People() {
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="schoolName" label="School Name">
-                <Input placeholder="Enter school name" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="graduationYear" label="Graduation Year">
-                <Input type="number" placeholder="Enter graduation year" />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item noStyle shouldUpdate={() => true}>
+            {({ getFieldValue }) => (
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="schoolName" label="School Name">
+                    <Input placeholder="Enter school name" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  {(() => {
+                    const gy = getFieldValue('graduationYear');
+                    const year = gy ? Number(gy) : undefined;
+                    const g = year ? calculateCurrentGrade(year) : null;
+                    const display = g === null ? null : (g === 0 ? 'K' : g);
+                    const labelNode = year ? (
+                      <span>Graduation Year (<Text type="secondary">Grade: {display}</Text>)</span>
+                    ) : 'Graduation Year';
+
+                    return (
+                      <Form.Item name="graduationYear" label={labelNode}>
+                        <Input type="number" placeholder="Enter graduation year" />
+                      </Form.Item>
+                    );
+                  })()}
+                </Col>
+              </Row>
+            )}
+          </Form.Item>
 
           {/* Family Members */}
           <Form.Item label="Family">
@@ -1064,6 +1122,46 @@ export default function People() {
           </Form.Item>
 
           {/* User ID - Only show if person has account */}
+          {/* Admin: Family Files */}
+          {(role === 'admin' || role === 'owner') && editingPerson?.familyId && (
+            <Form.Item label="Family Files">
+              <div style={{ maxHeight: 240, overflow: 'auto', border: '1px solid var(--ant-color-border)', padding: 8, borderRadius: 4 }}>
+                {filesLoading ? <div>Loading files...</div> : (
+                  <div>
+                    {familyFiles.length === 0 && <div>No files</div>}
+                    {familyFiles.map(f => (
+                      <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px dashed #f0f0f0' }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{f.fileName}</div>
+                          <div style={{ fontSize: 12, color: '#8c8c8c' }}>{f.athleteId ? `Athlete: ${(() => {
+                            const athlete = people.find(p => p.id === f.athleteId);
+                            return athlete ? `${athlete.firstName} ${athlete.lastName}` : f.athleteId;
+                          })()}` : 'Family file'} • {f.size ? `${Math.round(f.size/1024)} KB` : '—'} • {f.uploadedAt ? new Date(f.uploadedAt).toLocaleString() : '—'}</div>
+                        </div>
+                        <div>
+                          <a href="#" onClick={async (e) => { e.preventDefault(); try { const url = await storageService.getFileUrl(f.storagePath); window.open(url, '_blank'); } catch { message.error('Failed to get file URL'); } }}>Download</a>
+                          {(role === 'admin' || role === 'owner' || (editingPerson && user?.uid === f.uploaderId)) && (
+                            <Button danger size="small" style={{ marginLeft: 8 }} onClick={async () => {
+                              try {
+                                await storageService.deleteFile(f.storagePath);
+                                await firebaseFilesService.deleteFamilyFile(editingPerson!.familyId!, f.id);
+                                message.success('File deleted');
+                                const files = await firebaseFilesService.getFilesByFamily(editingPerson!.familyId!);
+                                setFamilyFiles(files || []);
+                              } catch {
+                                message.error('Failed to delete file');
+                              }
+                            }}>Delete</Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Form.Item>
+          )}
+
           {editingPerson?.userId && (
             <Form.Item label="User ID">
               <Input

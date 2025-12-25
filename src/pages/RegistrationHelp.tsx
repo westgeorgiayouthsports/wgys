@@ -18,12 +18,12 @@ const { Title, Text, Paragraph } = Typography;
 
 export default function RegistrationHelp() {
   const [searchParams] = useSearchParams();
-  
+
   const [selectedSport, setSelectedSport] = useState<string>(() => {
     const sex = searchParams.get('sex');
     return sex === 'female' ? 'softball' : 'baseball';
   });
-  
+
   const [seasonDate, setSeasonDate] = useState(() => {
     const now = dayjs();
     const isAfterAugust = now.month() >= 7;
@@ -50,7 +50,7 @@ export default function RegistrationHelp() {
 
   const calculateSeasonAge = (birthDate: dayjs.Dayjs): number => {
     let age = seasonDate.year() - birthDate.year();
-    if (seasonDate.month() < birthDate.month() || 
+    if (seasonDate.month() < birthDate.month() ||
         (seasonDate.month() === birthDate.month() && seasonDate.date() <= birthDate.date())) {
       age--;
     }
@@ -62,7 +62,7 @@ export default function RegistrationHelp() {
     for (let age = 3; age <= 18; age++) {
       const fromDate = seasonDate.clone().subtract(age + 1, 'year');
       const toDate = seasonDate.clone().subtract(age, 'year').subtract(1, 'day');
-      
+
       groups.push({
         ageGroup: `${age}U`,
         age,
@@ -76,12 +76,12 @@ export default function RegistrationHelp() {
   };
 
   const ageGroups = generateAgeGroups();
-  
+
   const getEligibleAgeGroup = () => {
     if (!selectedBirthDate) return null;
-    
+
     const birthDateStr = selectedBirthDate.format('YYYY-MM-DD');
-    return ageGroups.find(group => 
+    return ageGroups.find(group =>
       birthDateStr >= group.fromDate && birthDateStr <= group.toDate
     );
   };
@@ -121,7 +121,7 @@ export default function RegistrationHelp() {
     <div className="page-container">
       <Title level={2}>Registration Help</Title>
       <Paragraph>
-          Use this tool to understand which age group your athlete belongs to based on their birth date, 
+          Use this tool to understand which age group your athlete belongs to based on their birth date,
           sex, and grade level. Age divisions are determined by the athlete's age on the season control date.
       </Paragraph>
 
@@ -143,7 +143,7 @@ export default function RegistrationHelp() {
                 <Select.Option value="softball">Softball</Select.Option>
               </Select>
             </div>
-              
+
             <div>
               <Text strong>Season Control Date:</Text>
               <br />
@@ -153,7 +153,7 @@ export default function RegistrationHelp() {
                 format="MMMM D, YYYY"
               />
             </div>
-              
+
             <div>
               <Text strong>Athlete's Birth Date:</Text>
               <br />
@@ -201,7 +201,7 @@ export default function RegistrationHelp() {
               Age is calculated as of the season control date ({seasonDate.format('MMMM D, YYYY')}).
           </Text>
         </Paragraph>
-          
+
         <Table
           columns={columns}
           dataSource={ageGroups}

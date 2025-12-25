@@ -1,14 +1,8 @@
-import type { ContactMethod, PersonRole, PersonSource, RelationshipType, Sex } from './enums/person';
+import type { ContactMethod, PersonRole, PersonSource, Sex } from './enums/person';
 import type { ProgramRegistration } from './registration';
 import type { TeamRole } from './enums/team';
 import type { ThemeType } from './enums/theme';
-export type { PersonRole, RelationshipType, ContactMethod, ProgramRegistration, TeamRole, ThemeType as Theme };
-
-export interface Relationship {
-  personId: string;
-  type: RelationshipType;
-  isPrimary?: boolean;
-}
+export type { PersonRole, ContactMethod, ProgramRegistration, TeamRole, ThemeType as Theme };
 
 export interface ContactPreference {
   method: ContactMethod;
@@ -49,9 +43,8 @@ export interface Person {
   roles: PersonRole[];
   // System access level is stored separately in users table
 
-  // Family and Relationships
+  // Family
   familyId?: string;
-  relationships: Relationship[];
 
   // Contact Information
   address?: string;

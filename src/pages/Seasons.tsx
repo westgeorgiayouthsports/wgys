@@ -75,7 +75,7 @@ export default function Seasons() {
   const handleAddSeason = () => {
     setEditingSeason(null);
     form.resetFields();
-    form.setFieldsValue({ year: new Date().getFullYear() });
+    form.setFieldsValue({ year: new Date().getFullYear(), paymentPlans: [] });
     setModalVisible(true);
   };
 
@@ -86,6 +86,7 @@ export default function Seasons() {
       seasonType: season.seasonType,
       year: season.year,
       description: season.description,
+      paymentPlans: season.paymentPlans || [],
     });
     setModalVisible(true);
   };
@@ -119,6 +120,7 @@ export default function Seasons() {
         seasonType: values.seasonType,
         year: values.year,
         description: values.description,
+        paymentPlans: values.paymentPlans || [],
       };
 
       if (editingSeason) {
@@ -130,7 +132,7 @@ export default function Seasons() {
         await seasonsService.createSeason(formData, user?.uid || '');
         message.success('Season created successfully');
       }
-      
+
       await loadSeasons();
       setModalVisible(false);
       form.resetFields();
@@ -293,6 +295,50 @@ export default function Seasons() {
           <Form.Item name="description" label="Description (Optional)">
             <Input.TextArea rows={3} placeholder="Season details, important dates, etc." />
           </Form.Item>
+
+          <Form.List name="paymentPlans">
+            {(fields, { add, remove }) => (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Title level={5} style={{ margin: 0 }}>Payment Plans</Title>
+                  <Button type="dashed" onClick={() => add({ id: `plan_${Date.now()}`, name: '', active: true, initialAmount: 0, installments: 0, paymentDay: 1 })} icon={<PlusOutlined />}>Add Plan</Button>
+                </div>
+                {fields.length === 0 && <Text type="secondary">No payment plans defined; Pay in Full only.</Text>}
+                {fields.map(field => (
+                  <Card size="small" key={field.key} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <Form.Item name={[field.name, 'id']} initialValue={`plan_${Date.now()}`} hidden>
+                        <Input />
+                      </Form.Item>
+                      <Form.Item name={[field.name, 'name']} label="Plan name" rules={[{ required: true }]} style={{ flex: 2 }}>
+                        <Input placeholder="e.g., 50/50 plan" />
+                      </Form.Item>
+                      <Form.Item name={[field.name, 'active']} label="Active" valuePropName="checked" style={{ width: 100 }}>
+                        <Select>
+                          <Select.Option value={true}>Active</Select.Option>
+                          <Select.Option value={false}>Inactive</Select.Option>
+                        </Select>
+                      </Form.Item>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                      <Form.Item name={[field.name, 'initialAmount']} label="Initial Amount" style={{ width: 160 }}>
+                        <InputNumber min={0} step={0.01} />
+                      </Form.Item>
+                      <Form.Item name={[field.name, 'installments']} label="Installments" style={{ width: 160 }}>
+                        <InputNumber min={0} />
+                      </Form.Item>
+                      <Form.Item name={[field.name, 'paymentDay']} label="Payment Day" style={{ width: 160 }}>
+                        <InputNumber min={1} max={28} />
+                      </Form.Item>
+                      <div style={{ marginLeft: 'auto' }}>
+                        <Button danger onClick={() => remove(field.name)} icon={<DeleteOutlined />}>Remove</Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </Form.List>
         </Form>
       </Modal>
     </div>

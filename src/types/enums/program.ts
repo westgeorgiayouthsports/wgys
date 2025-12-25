@@ -36,6 +36,8 @@ export const QuestionTypeValues = {
   dropdown: 'dropdown',
   checkboxes: 'checkboxes',
   file_upload: 'file_upload',
+  numeric: 'numeric',
+  jersey_number: 'jersey_number',
   waiver: 'waiver',
 } as const;
 

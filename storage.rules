@@ -4,37 +4,37 @@ rules_version = '2';
 // User roles: user, admin, owner
 service firebase.storage {
   match /b/{bucket}/o {
-    
+
     // Helper function to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     // Helper function to get user role from custom claims or database
     function getUserRole() {
       return request.auth.token.role;
     }
-    
+
     // Helper function to check if user is admin or owner
     function isAdmin() {
       return isAuthenticated() && (getUserRole() == 'admin' || getUserRole() == 'owner');
     }
-    
+
     // Helper function to check if user is owner
     function isOwner() {
       return isAuthenticated() && getUserRole() == 'owner';
     }
-    
-    // Helper function to validate file size (max 10MB)
+
+    // Helper function to validate file size (max 20MB)
     function isValidSize() {
-      return request.resource.size <= 10 * 1024 * 1024;
+      return request.resource.size <= 20 * 1024 * 1024;
     }
-    
+
     // Helper function to validate image file types
     function isImage() {
       return request.resource.contentType.matches('image/.*');
     }
-    
+
     // Helper function to validate document file types
     function isDocument() {
       return request.resource.contentType.matches('application/pdf') ||
@@ -44,162 +44,168 @@ service firebase.storage {
              request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') ||
              request.resource.contentType.matches('text/plain');
     }
-    
+
     // Program uploads - users upload files for program registrations
     // Path: program_uploads/{programId}/{userId}/{filename}
     match /program_uploads/{programId}/{userId}/{filename} {
       // Users can upload their own files
-      allow write: if isAuthenticated() && 
-                      request.auth.uid == userId && 
+      allow write: if isAuthenticated() &&
+                      request.auth.uid == userId &&
                       isValidSize() &&
                       (isImage() || isDocument());
-      
+
       // Users can read their own files, admins can read all
-      allow read: if isAuthenticated() && 
+      allow read: if isAuthenticated() &&
                      (request.auth.uid == userId || isAdmin());
-      
+
       // Admins can delete files
       allow delete: if isAdmin();
     }
-    
+
     // User profile photos
     // Path: user_photos/{userId}/{filename}
     match /user_photos/{userId}/{filename} {
       // Users can upload/update their own profile photos
-      allow write: if isAuthenticated() && 
-                      request.auth.uid == userId && 
+      allow write: if isAuthenticated() &&
+                      request.auth.uid == userId &&
                       isValidSize() &&
                       isImage();
-      
+
       // Anyone authenticated can view profile photos
       allow read: if isAuthenticated();
-      
+
       // Users can delete their own photos, admins can delete any
-      allow delete: if isAuthenticated() && 
+      allow delete: if isAuthenticated() &&
                        (request.auth.uid == userId || isAdmin());
     }
-    
+
     // Team/program materials - admin uploaded content
     // Path: team_materials/{teamId}/{filename}
     match /team_materials/{teamId}/{filename} {
       // Only admins can upload team materials
-      allow write: if isAdmin() && 
+      allow write: if isAdmin() &&
                       isValidSize();
-      
+
       // All authenticated users can read team materials
       allow read: if isAuthenticated();
-      
+
       // Only admins can delete
       allow delete: if isAdmin();
     }
-    
+
     // Announcement attachments
     // Path: announcements/{announcementId}/{filename}
     match /announcements/{announcementId}/{filename} {
       // Only admins can upload announcement attachments
-      allow write: if isAdmin() && 
+      allow write: if isAdmin() &&
                       isValidSize();
-      
+
       // All authenticated users can read announcements
       allow read: if isAuthenticated();
-      
+
       // Only admins can delete
       allow delete: if isAdmin();
     }
-    
+
     // Event/schedule attachments
     // Path: events/{eventId}/{filename}
     match /events/{eventId}/{filename} {
       // Only admins can upload event attachments
-      allow write: if isAdmin() && 
+      allow write: if isAdmin() &&
                       isValidSize();
-      
+
       // All authenticated users can read events
       allow read: if isAuthenticated();
-      
+
       // Only admins can delete
       allow delete: if isAdmin();
     }
-    
+
     // Family documents - waivers, medical forms, etc.
     // Path: family_documents/{familyId}/{userId}/{filename}
     match /family_documents/{familyId}/{userId}/{filename} {
-      // Users can upload documents for their family
-      allow write: if isAuthenticated() && 
-                      request.auth.uid == userId && 
+      // Users can upload documents for their family (uploader must match)
+      allow write: if isAuthenticated() &&
+                      request.auth.uid == userId &&
                       isValidSize() &&
                       (isImage() || isDocument());
-      
-      // Users can read their own family documents, admins can read all
-      allow read: if isAuthenticated() && 
-                     (request.auth.uid == userId || isAdmin());
-      
-      // Users can delete their own documents, admins can delete any
-      allow delete: if isAuthenticated() && 
-                       (request.auth.uid == userId || isAdmin());
+
+      // Read: uploader OR admin/owner OR family member (requires auth custom claim `familyId`)
+      allow read: if isAuthenticated() && (
+                     request.auth.uid == userId ||
+                     isAdmin() ||
+                     (request.auth.token.familyId != null && request.auth.token.familyId == familyId)
+                   );
+
+      // Delete: uploader OR admin/owner OR family member (requires auth custom claim `familyId`)
+      allow delete: if isAuthenticated() && (
+                       request.auth.uid == userId ||
+                       isAdmin() ||
+                       (request.auth.token.familyId != null && request.auth.token.familyId == familyId)
+                     );
     }
-    
+
     // Registration documents - waivers, medical forms specific to registrations
     // Path: registration_documents/{registrationId}/{userId}/{filename}
     match /registration_documents/{registrationId}/{userId}/{filename} {
       // Users can upload documents for their registrations
-      allow write: if isAuthenticated() && 
-                      request.auth.uid == userId && 
+      allow write: if isAuthenticated() &&
+                      request.auth.uid == userId &&
                       isValidSize() &&
                       (isImage() || isDocument());
-      
+
       // Users can read their own registration documents, admins can read all
-      allow read: if isAuthenticated() && 
+      allow read: if isAuthenticated() &&
                      (request.auth.uid == userId || isAdmin());
-      
+
       // Admins can delete
       allow delete: if isAdmin();
     }
-    
+
     // Payment receipts/invoices
     // Path: payment_documents/{userId}/{filename}
     match /payment_documents/{userId}/{filename} {
       // Only admins can upload payment documents
-      allow write: if isAdmin() && 
+      allow write: if isAdmin() &&
                       isValidSize() &&
                       (isImage() || isDocument());
-      
+
       // Users can read their own payment documents, admins can read all
-      allow read: if isAuthenticated() && 
+      allow read: if isAuthenticated() &&
                      (request.auth.uid == userId || isAdmin());
-      
+
       // Only admins can delete
       allow delete: if isAdmin();
     }
-    
+
     // Organization/system files (logos, templates, etc.)
     // Path: system/{filename}
     match /system/{filename} {
       // Only owners can upload system files
-      allow write: if isOwner() && 
+      allow write: if isOwner() &&
                       isValidSize();
-      
+
       // All authenticated users can read system files
       allow read: if isAuthenticated();
-      
+
       // Only owners can delete
       allow delete: if isOwner();
     }
-    
+
     // Backup/export files
     // Path: exports/{filename}
     match /exports/{filename} {
       // Only admins can create exports
-      allow write: if isAdmin() && 
+      allow write: if isAdmin() &&
                       isValidSize();
-      
+
       // Only admins can read exports
       allow read: if isAdmin();
-      
+
       // Only admins can delete exports
       allow delete: if isAdmin();
     }
-    
+
     // Default: Deny all access to any other paths
     match /{allPaths=**} {
       allow read, write: if false;

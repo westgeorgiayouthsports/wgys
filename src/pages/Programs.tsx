@@ -124,7 +124,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
     setEditingProgram(null);
     form.resetFields();
     const today = dayjs();
-    form.setFieldsValue({ 
+    form.setFieldsValue({
       status: true,
       registrationStart: today,
       registrationEnd: today.add(3, 'month')
@@ -150,9 +150,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
       birthDateEnd: program.birthDateEnd ? dayjs(program.birthDateEnd) : null,
       registrationStart: dayjs(program.registrationStart),
       registrationEnd: dayjs(program.registrationEnd),
-      paymentPlanEnabled: program.paymentPlanEnabled || false,
-      paymentPlanFrequency: program.paymentPlanFrequency,
-      paymentPlanInstallments: program.paymentPlanInstallments,
+        // payment plan fields removed — plans are now configured at season level
     });
     setModalVisible(true);
   };
@@ -173,7 +171,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
       const today = dayjs();
       const regStart = values.registrationStart || today;
       const regEnd = values.registrationEnd || regStart.add(3, 'month');
-      
+
       const formData: any = {
         ...values,
         active: values.active || false,
@@ -185,8 +183,8 @@ const Programs = forwardRef(function Programs(_props, ref) {
 
       if (editingProgram) {
         await programsService.updateProgram(editingProgram.id, formData);
-        setPrograms(programs.map(p => 
-          p.id === editingProgram.id 
+        setPrograms(programs.map(p =>
+          p.id === editingProgram.id
             ? { ...p, ...formData, updatedAt: new Date().toISOString() }
             : p
         ));
@@ -321,8 +319,8 @@ const Programs = forwardRef(function Programs(_props, ref) {
           </Button>
           <Popconfirm
             title="Delete Program"
-            description={record.currentRegistrants > 0 ? 
-              'Cannot delete program with existing registrants' : 
+            description={record.currentRegistrants > 0 ?
+              'Cannot delete program with existing registrants' :
               'Are you sure you want to delete this program?'
             }
             onConfirm={() => handleDeleteProgram(record.id)}
@@ -345,7 +343,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
   ];
 
   return (
-    <div className="page-container">
+    <div className="page-container full-width">
       <div style={{ marginBottom: '24px' }}>
         <Space style={{ width: '100%', justifyContent: 'space-between' }}>
           <div>
@@ -480,7 +478,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
           <Space style={{ width: '100%' }} size="large">
             <Form.Item
               noStyle
-              shouldUpdate={(prevValues, currentValues) => 
+              shouldUpdate={(prevValues, currentValues) =>
                 prevValues.birthDateStart !== currentValues.birthDateStart ||
                   prevValues.allowGradeExemption !== currentValues.allowGradeExemption
               }
@@ -488,7 +486,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
               {({ getFieldValue }) => {
                 const allowGradeExemption = getFieldValue('allowGradeExemption');
                 const birthDateStart = getFieldValue('birthDateStart');
-                  
+
                 // Auto-compute max grade when birth date start changes and grade exemptions are enabled
                 if (allowGradeExemption && birthDateStart) {
                   const now = dayjs();
@@ -503,7 +501,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
                     }, 0);
                   }
                 }
-                  
+
                 return (
                   <Form.Item name="maxGrade" label="Max Grade">
                     <Select placeholder="Max grade" style={{ width: 120 }}>
@@ -542,35 +540,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
             </Form.Item>
           </Space>
 
-          <Space style={{ width: '100%' }} size="large">
-            <Form.Item name="paymentPlanEnabled" label="Enable Payment Plan" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-            <Form.Item 
-              noStyle
-              shouldUpdate={(prevValues, currentValues) => 
-                prevValues.paymentPlanEnabled !== currentValues.paymentPlanEnabled
-              }
-            >
-              {({ getFieldValue }) => {
-                const paymentPlanEnabled = getFieldValue('paymentPlanEnabled');
-                return paymentPlanEnabled ? (
-                  <>
-                    <Form.Item name="paymentPlanFrequency" label="Payment Frequency" rules={[{ required: true }]}>
-                      <Select placeholder="Select frequency" style={{ width: 150 }}>
-                        <Select.Option value="weekly">Weekly</Select.Option>
-                        <Select.Option value="biweekly">Bi-weekly</Select.Option>
-                        <Select.Option value="monthly">Monthly</Select.Option>
-                      </Select>
-                    </Form.Item>
-                    <Form.Item name="paymentPlanInstallments" label="Number of Installments" rules={[{ required: true }]}>
-                      <InputNumber min={2} max={12} placeholder="e.g., 4" />
-                    </Form.Item>
-                  </>
-                ) : null;
-              }}
-            </Form.Item>
-          </Space>
+          {/* payment plans moved to Season-level configuration */}
 
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>

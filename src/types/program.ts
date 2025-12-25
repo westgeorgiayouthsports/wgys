@@ -39,9 +39,6 @@ export interface Program {
   registrationStart: string;
   registrationEnd: string;
   basePrice: number;
-  paymentPlanEnabled?: boolean;
-  paymentPlanFrequency?: PaymentPlanFrequency;
-  paymentPlanInstallments?: number;
   maxParticipants?: number;
   currentRegistrants: number;
   totalPayments: number;

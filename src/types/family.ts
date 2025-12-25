@@ -1,7 +1,7 @@
-import type { RelationshipType, Sex } from './enums/person';
+import type { PersonRole, Sex } from './enums/person';
 import type { PaymentStatus } from './enums/payments';
 import type { ProgramRegistration } from './registration';
-export type { RelationshipType, PaymentStatus, ProgramRegistration };
+export type { PersonRole, PaymentStatus, ProgramRegistration };
 
 export interface FamilyMember {
   id: string;
@@ -14,7 +14,7 @@ export interface FamilyMember {
   graduationYear?: number;
   email?: string;
   phone?: string;
-  relationship: RelationshipType;
+  role: PersonRole;
   isPrimary: boolean; // Primary account holder
   userId?: string; // Link to user account if they have one
   contactId?: string; // Link to contact record

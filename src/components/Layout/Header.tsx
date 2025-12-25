@@ -1,7 +1,8 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Dropdown, Button } from 'antd';
-import { UserOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined } from '@ant-design/icons';
+import { Dropdown, Button, Badge } from 'antd';
+import { UserOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
 import type { RootState } from '../../store/store';
 import { logout } from '../../store/slices/authSlice';
 import { toggleTheme } from '../../store/slices/themeSlice';
@@ -14,6 +15,9 @@ export default function Header() {
   const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.user);
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
+  const cartCount = useSelector((s: RootState) => s.cart?.items?.length || 0);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [CartDrawerComp, setCartDrawerComp] = useState<any | null>(null);
 
   const handleSignOut = async () => {
     try {
@@ -55,6 +59,19 @@ export default function Header() {
     },
   ];
 
+  // lazy-load cart drawer when requested to avoid require() in browser
+  useEffect(() => {
+    let mounted = true;
+    if (cartOpen && !CartDrawerComp) {
+      import('../Cart/CartDrawer').then((m) => {
+        if (mounted) setCartDrawerComp(() => m.default);
+      }).catch((e) => {
+        console.error('Failed to load CartDrawer', e);
+      });
+    }
+    return () => { mounted = false; };
+  }, [cartOpen, CartDrawerComp]);
+
   return (
     <header className="header">
       <div className="header-content">
@@ -69,7 +86,13 @@ export default function Header() {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/'); }}
           />
         </div>
-        <Dropdown
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Button type="text" onClick={() => setCartOpen(true)} style={{ fontSize: 14 }}>
+            <Badge count={cartCount} offset={[0, 0]}>
+              <ShoppingCartOutlined style={{ fontSize: 18 }} />
+            </Badge>
+          </Button>
+          <Dropdown
           menu={{ items: menuItems as any }}
           trigger={['click']}
           placement="bottomRight"
@@ -91,6 +114,16 @@ export default function Header() {
             <DownOutlined style={{ fontSize: '10px' }} />
           </Button>
         </Dropdown>
+        </div>
+        {/* lazy-load cart drawer to avoid circular deps */}
+        {cartOpen && (
+          // dynamic import so we don't add heavy bundle overhead in header
+          (CartDrawerComp ? (
+            <CartDrawerComp open={cartOpen} onClose={() => setCartOpen(false)} />
+          ) : (
+            <div style={{ padding: 16 }}>Loading cart...</div>
+          ))
+        )}
       </div>
     </header>
   );

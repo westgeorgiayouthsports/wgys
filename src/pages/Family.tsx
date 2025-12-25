@@ -19,7 +19,6 @@ import {
   Avatar,
   Checkbox,
   App,
-  
 } from 'antd';
 import {
   UserOutlined,
@@ -30,25 +29,35 @@ import {
   FormOutlined,
   QuestionCircleOutlined,
   CrownOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import type { RootState } from '../store/store';
 import { peopleService } from '../services/firebasePeople';
+import { storageService } from '../services/storageService';
+import { firebaseFilesService } from '../services/firebaseFiles';
 import type { Person, PersonFormData, PersonRole } from '../types/person';
 import dayjs from 'dayjs';
+import calculateCurrentGrade from '../utils/grade';
+import calculateAgeAt from '../utils/age';
 import { useNavigate } from 'react-router-dom';
+import validateRoles from '../utils/personRoles';
 
 const { Title, Text } = Typography;
 
 export default function Family() {
-  const { message } = App.useApp();
   const { user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
+  const { message } = App.useApp();
   const [familyMembers, setFamilyMembers] = useState<Person[]>([]);
   const [currentUser, setCurrentUser] = useState<Person | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  const [filesModalVisible, setFilesModalVisible] = useState(false);
+  const [filesForFamily, setFilesForFamily] = useState<any[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [, setUploadProgress] = useState<Record<string, number>>({});
   const [sameAddress, setSameAddress] = useState(false);
   const [familyModalVisible, setFamilyModalVisible] = useState(false);
   const [currentFamily, setCurrentFamily] = useState<any>(null);
@@ -60,20 +69,41 @@ export default function Family() {
     loadFamilyData();
   }, []);
 
+  // Ensure form fields are populated when the modal becomes visible
+  useEffect(() => {
+    if (modalVisible && editingPerson) {
+      form.setFieldsValue({
+        firstName: editingPerson.firstName,
+        lastName: editingPerson.lastName,
+        email: editingPerson.email,
+        phone: editingPerson.phone,
+        dateOfBirth: editingPerson.dateOfBirth ? dayjs(editingPerson.dateOfBirth) : null,
+        sex: editingPerson.sex,
+        roles: editingPerson.roles,
+        address: editingPerson.address,
+        city: editingPerson.city,
+        state: editingPerson.state,
+        zipCode: editingPerson.zipCode,
+        schoolName: editingPerson.schoolName,
+        graduationYear: editingPerson.graduationYear,
+      });
+    }
+  }, [modalVisible, editingPerson, form]);
+
   const loadFamilyData = async () => {
     setLoading(true);
     try {
       const allPeople = await peopleService.getPeople();
-      
+
       // Find current user's person record
       const userPerson = allPeople.find(p => p.userId === user?.uid);
       setCurrentUser(userPerson || null);
-      
+
       if (userPerson?.familyId) {
         // Load family members
         const family = await peopleService.getPeopleByFamily(userPerson.familyId);
         setFamilyMembers(family);
-        
+
         // Load family details
         const { familiesService } = await import('../services/firebaseFamilies');
         const familyDetails = await familiesService.getFamily(userPerson.familyId);
@@ -89,16 +119,15 @@ export default function Family() {
           email: user?.email || '',
           roles: ['parent'],
         };
-        
+
         const newPersonId = await peopleService.createPerson(newPersonData, user?.uid || '');
         await peopleService.linkPersonToAccount(newPersonId, user?.uid || '');
-        
+
         const newPerson: Person = {
           id: newPersonId,
           ...newPersonData,
           hasAccount: true,
           userId: user?.uid,
-          relationships: [],
           contactPreferences: [],
           programs: [],
           teams: [],
@@ -109,7 +138,7 @@ export default function Family() {
           createdBy: user?.uid || '',
           isActive: true,
         };
-        
+
         setCurrentUser(newPerson);
         setFamilyMembers([newPerson]);
       }
@@ -139,15 +168,15 @@ export default function Family() {
 
   const handleEditPerson = (person: Person) => {
     // Only allow editing if it's the current user, their family member, or someone they created
-    if (person.userId !== user?.uid && 
-        person.familyId !== currentUser?.familyId && 
+    if (person.userId !== user?.uid &&
+        person.familyId !== currentUser?.familyId &&
         person.createdBy !== user?.uid) {
       message.error('You can only edit your own family members');
       return;
     }
-    
+
     setEditingPerson(person);
-    const hasSameAddress = currentUser && 
+    const hasSameAddress = currentUser &&
       person.address === currentUser.address &&
       person.city === currentUser.city &&
       person.state === currentUser.state &&
@@ -171,21 +200,101 @@ export default function Family() {
     setModalVisible(true);
   };
 
+  const openFilesForPerson = async (person: Person) => {
+    // open modal and load family files
+    setEditingPerson(person);
+    setFilesModalVisible(true);
+    await loadFamilyFiles();
+  };
+
+  const loadFamilyFiles = async () => {
+    if (!currentUser?.familyId) return;
+    setFilesLoading(true);
+    try {
+      const files = await firebaseFilesService.getFilesByFamily(currentUser.familyId);
+      setFilesForFamily(files || []);
+    } catch (e) {
+      console.error('Failed to load family files', e);
+      const err = e as any;
+      if (err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.toLowerCase().includes('permission')))) {
+        message.error('You do not have permission to access family files');
+      } else {
+        message.error('Failed to load family files');
+      }
+    } finally {
+      setFilesLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (file: File, athleteId?: string | null) => {
+    if (!currentUser?.familyId || !user?.uid) return;
+    const MAX_BYTES = 20 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      message.error('File too large (max 20 MB)');
+      return;
+    }
+    const forbidden = ['desktop.ini', '.ds_store'];
+    if (forbidden.includes(file.name.toLowerCase()) || file.name.startsWith('.')) {
+      message.error('Unsupported file');
+      return;
+    }
+
+    const path = `family_documents/${currentUser.familyId}/${user.uid}/${Date.now()}_${file.name}`;
+    const qKey = `${Date.now()}_${file.name}`;
+    setUploadProgress(prev => ({ ...prev, [qKey]: 0 }));
+    try {
+      const { path: storedPath } = await storageService.uploadFileWithProgress(path, file, (pct) => {
+        setUploadProgress(prev => ({ ...prev, [qKey]: pct }));
+      });
+      await firebaseFilesService.addFamilyFile(currentUser.familyId, {
+        fileName: file.name,
+        storagePath: storedPath,
+        uploaderId: user.uid,
+        size: file.size,
+        athleteId: athleteId || null,
+      });
+      message.success(`${file.name} uploaded`);
+      await loadFamilyFiles();
+    } catch (e) {
+      console.error('Upload failed', e);
+      message.error('Upload failed');
+    } finally {
+      setUploadProgress(prev => {
+        const copy = { ...prev };
+        delete copy[qKey];
+        return copy;
+      });
+    }
+  };
+
+  const handleDeleteFile = async (fileRecord: any) => {
+    if (!currentUser?.familyId) return;
+    try {
+      await storageService.deleteFile(fileRecord.storagePath);
+      await firebaseFilesService.deleteFamilyFile(currentUser.familyId, fileRecord.id);
+      message.success('File deleted');
+      await loadFamilyFiles();
+    } catch (e) {
+      console.error('Failed to delete file', e);
+      message.error('Failed to delete file');
+    }
+  };
+
   const handleDeletePerson = async (personId: string) => {
     const person = familyMembers.find(p => p.id === personId);
-    
+
     // Don't allow deleting the current user
     if (person?.userId === user?.uid) {
       message.error('You cannot delete your own account');
       return;
     }
-    
+
     // Only allow deleting family members
     if (person?.familyId !== currentUser?.familyId) {
       message.error('You can only delete your own family members');
       return;
     }
-    
+
     try {
       await peopleService.deletePerson(personId);
       setFamilyMembers(familyMembers.filter(p => p.id !== personId));
@@ -204,7 +313,9 @@ export default function Family() {
       };
 
       // Auto-assign primary account address for athletes
-      if (formData.roles?.includes('athlete') && currentUser) {
+      const _roles = (formData.roles || []) as unknown as string[];
+      const isAthleteOrChild = _roles.includes('athlete') || _roles.includes('child');
+      if (isAthleteOrChild && currentUser) {
         formData.address = currentUser.address;
         formData.city = currentUser.city;
         formData.state = currentUser.state;
@@ -212,15 +323,21 @@ export default function Family() {
       }
 
       // Clear school fields for non-athletes
-      if (!formData.roles?.includes('athlete')) {
+      if (!isAthleteOrChild) {
         formData.schoolName = undefined;
         formData.graduationYear = undefined;
       }
 
+      // Normalize graduationYear to number when present
+      if (formData.graduationYear) {
+        const gy = Number((formData.graduationYear as unknown) as string);
+        formData.graduationYear = Number.isNaN(gy) ? undefined : gy;
+      }
+
       if (editingPerson) {
         await peopleService.updatePerson(editingPerson.id, formData);
-        setFamilyMembers(familyMembers.map(p => 
-          p.id === editingPerson.id 
+        setFamilyMembers(familyMembers.map(p =>
+          p.id === editingPerson.id
             ? { ...p, ...formData, updatedAt: new Date().toISOString() }
             : p
         ));
@@ -228,7 +345,7 @@ export default function Family() {
       } else {
         // Create new family member
         const newPersonId = await peopleService.createPerson(formData, user?.uid || '');
-        
+
         // Add to family if user has one, otherwise create family
         let familyId = currentUser?.familyId;
         if (currentUser?.familyId) {
@@ -238,17 +355,16 @@ export default function Family() {
           const familyName = `${currentUser.lastName} Family`;
           familyId = await peopleService.createFamily(familyName, currentUser.id, user?.uid || '');
           await peopleService.addPersonToFamily(familyId, newPersonId);
-          
+
           // Update current user with family ID
           setCurrentUser({ ...currentUser, familyId });
         }
-        
+
         const newPerson: Person = {
           id: newPersonId,
           ...formData,
           hasAccount: false,
           familyId,
-          relationships: [],
           contactPreferences: [],
           programs: [],
           teams: [],
@@ -259,7 +375,7 @@ export default function Family() {
           createdBy: user?.uid || '',
           isActive: true,
         };
-        
+
         setFamilyMembers([...familyMembers, newPerson]);
         message.success('Family member added successfully');
       }
@@ -284,8 +400,10 @@ export default function Family() {
   };
 
   const calculateAge = (dateOfBirth: string) => {
-    return dayjs().diff(dayjs(dateOfBirth), 'year');
+    return calculateAgeAt(dateOfBirth);
   };
+
+  // use shared calculateCurrentGrade from utils/grade
 
   const handleRegisterAthlete = (person: Person) => {
     const params = new URLSearchParams();
@@ -312,8 +430,8 @@ export default function Family() {
       key: 'name',
       render: (record: Person) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Avatar 
-            size={40} 
+          <Avatar
+            size={40}
             src={record.photoURL}
             icon={<UserOutlined />}
             style={{ backgroundColor: record.hasAccount ? '#52c41a' : '#1890ff' }}
@@ -350,8 +468,18 @@ export default function Family() {
       render: (record: Person) => (
         <div>
           {record.phone && <div>{record.phone}</div>}
-          {record.dateOfBirth && (
-            <Text type="secondary">Age: {calculateAge(record.dateOfBirth)}</Text>
+              {record.dateOfBirth && (
+            <div>
+              <div><Text type="secondary">Age: {calculateAge(record.dateOfBirth)}</Text></div>
+              {(((record.roles || []) as unknown as string[]).includes('athlete') || ((record.roles || []) as unknown as string[]).includes('child')) && (
+                <div style={{ marginTop: 4 }}>
+                  <Text type="secondary">Grade: {(() => {
+                    const g = calculateCurrentGrade(record.graduationYear);
+                    return g === null ? '—' : (g === 0 ? 'K' : g);
+                  })()}</Text>
+                </div>
+              )}
+            </div>
           )}
         </div>
       ),
@@ -373,7 +501,7 @@ export default function Family() {
       key: 'actions',
       render: (record: Person) => (
         <Space>
-          {record.roles.includes('athlete') && (
+          {(((record.roles || []) as unknown as string[]).includes('athlete') || ((record.roles || []) as unknown as string[]).includes('child')) && (
             <>
               <Button
                 size="small"
@@ -393,6 +521,7 @@ export default function Family() {
               </Button>
             </>
           )}
+
           {currentFamily && (record.roles?.includes('parent') || record.roles?.includes('guardian')) && record.id !== currentFamily.primaryPersonId && (
             <Button
               size="small"
@@ -412,6 +541,9 @@ export default function Family() {
               Set Primary
             </Button>
           )}
+
+          <Button size="small" icon={<FileTextOutlined />} onClick={() => openFilesForPerson(record)}>Files</Button>
+
           <Button
             size="small"
             icon={<EditOutlined />}
@@ -419,6 +551,7 @@ export default function Family() {
           >
             Edit
           </Button>
+
           {record.userId !== user?.uid && currentFamily?.primaryPersonId !== record.id && (
             <Popconfirm
               title="Remove Family Member"
@@ -479,7 +612,7 @@ export default function Family() {
         </Row>
       </div>
 
-      <Card 
+      <Card
         title={
           <Space>
             <HomeOutlined />
@@ -499,6 +632,55 @@ export default function Family() {
           />
         </Spin>
       </Card>
+
+      {/* Files Modal for family/athlete files */}
+      <Modal
+        title={editingPerson ? `${editingPerson.firstName} ${editingPerson.lastName} — Files` : 'Family Files'}
+        open={filesModalVisible}
+        onCancel={() => setFilesModalVisible(false)}
+        footer={null}
+        width={700}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 8 }}>
+            <strong>Upload file for:</strong>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input type="file" id="familyFileInput" onChange={(e) => {
+              const f = e.target.files ? e.target.files[0] : null;
+              if (f) handleFileUpload(f, editingPerson?.id || null);
+              // clear selection
+              (e.target as HTMLInputElement).value = '';
+            }} />
+            <div style={{ color: '#8c8c8c', fontSize: 12 }}>Max 20 MB. Hidden/system files rejected.</div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ marginBottom: 8 }}>
+            <strong>Files</strong>
+          </div>
+          {filesLoading ? (
+            <div>Loading files...</div>
+          ) : (
+            <div>
+              {filesForFamily.length === 0 && <div>No files uploaded</div>}
+              {filesForFamily.map(f => (
+                <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{f.fileName}</div>
+                    <div style={{ fontSize: 12, color: '#8c8c8c' }}>{f.athleteId ? `Athlete: ${f.athleteId}` : 'Family file'} • {f.size ? `${Math.round(f.size/1024)} KB` : '—'} • {f.uploadedAt ? new Date(f.uploadedAt).toLocaleString() : '—'}</div>
+                  </div>
+                  <div>
+                    <a href="#" onClick={async (e) => { e.preventDefault(); try { const url = await storageService.getFileUrl(f.storagePath); window.open(url, '_blank'); } catch (err) { console.error(err); message.error('Failed to get file URL'); } }}>Download</a>
+                    <Button style={{ marginLeft: 8 }} size="small" danger onClick={() => handleDeleteFile(f)}>Delete</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* Add/Edit Family Member Modal */}
       <Modal
@@ -564,7 +746,7 @@ export default function Family() {
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="dateOfBirth" label="Date of Birth">
-                <DatePicker 
+                <DatePicker
                   style={{ width: '100%' }}
                   format="YYYY-MM-DD"
                   placeholder="YYYY-MM-DD"
@@ -584,34 +766,10 @@ export default function Family() {
               <Form.Item
                 name="roles"
                 label="Relationship"
-                rules={[
-                  { required: true, message: 'Please select relationship' },
-                  {
-                    validator: (_, value) => {
-                      if (!value || value.length === 0) return Promise.resolve();
-                      
-                      // Child/athlete cannot have other roles
-                      if (value.includes('athlete') && value.length > 1) {
-                        return Promise.reject('Child/Athlete cannot have other relationships');
-                      }
-                      
-                      // Relative/other cannot be core family roles
-                      const coreRoles = ['parent', 'guardian', 'athlete', 'grandparent'];
-                      const peripheralRoles = ['relative', 'other'];
-                      const hasCoreRole = value.some((role: string) => coreRoles.includes(role));
-                      const hasPeripheralRole = value.some((role: string) => peripheralRoles.includes(role));
-                      
-                      if (hasCoreRole && hasPeripheralRole) {
-                        return Promise.reject('Relative/Other cannot be combined with family roles');
-                      }
-                      
-                      return Promise.resolve();
-                    }
-                  }
-                ]}
+                rules={[{ required: true, message: 'Please select relationship' }, { validator: validateRoles }]}
               >
                 <Select mode="multiple" placeholder="Select relationship">
-                  <Select.Option value="athlete">Child/Athlete</Select.Option>
+                  <Select.Option value="athlete">Athlete/Child</Select.Option>
                   <Select.Option value="grandparent">Grandparent</Select.Option>
                   <Select.Option value="guardian">Guardian</Select.Option>
                   <Select.Option value="other">Other</Select.Option>
@@ -622,19 +780,19 @@ export default function Family() {
             </Col>
           </Row>
 
-          <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.roles !== currentValues.roles}>
+          <Form.Item noStyle shouldUpdate={() => true}>
             {({ getFieldValue }) => {
-              const roles = getFieldValue('roles') || [];
-              const isAthlete = roles.includes('athlete');
-              
+              const roles = getFieldValue('roles') ?? (editingPerson?.roles || []);
+              const isAthlete = (roles || []).includes('athlete') || (roles || []).includes('child');
+
               if (isAthlete) {
-                return null; // Hide address fields for athletes
+                return null; // Hide address fields for athletes/children
               }
-              
+
               return (
                 <>
                   <Form.Item>
-                    <Checkbox 
+                    <Checkbox
                       checked={sameAddress}
                       disabled={editingPerson?.userId === user?.uid}
                       onChange={(e) => {
@@ -661,8 +819,8 @@ export default function Family() {
                   </Form.Item>
 
                   <Form.Item name="address" label="Address">
-                    <Input 
-                      placeholder="Enter street address" 
+                    <Input
+                      placeholder="Enter street address"
                       disabled={sameAddress}
                     />
                   </Form.Item>
@@ -670,16 +828,16 @@ export default function Family() {
                   <Row gutter={16}>
                     <Col span={8}>
                       <Form.Item name="city" label="City">
-                        <Input 
-                          placeholder="Enter city" 
+                        <Input
+                          placeholder="Enter city"
                           disabled={sameAddress}
                         />
                       </Form.Item>
                     </Col>
                     <Col span={8}>
                       <Form.Item name="state" label="State">
-                        <Select 
-                          placeholder="Select state" 
+                        <Select
+                          placeholder="Select state"
                           disabled={sameAddress}
                           showSearch
                           optionFilterProp="children"
@@ -740,8 +898,8 @@ export default function Family() {
                     </Col>
                     <Col span={8}>
                       <Form.Item name="zipCode" label="Zip Code">
-                        <Input 
-                          placeholder="Enter zip code" 
+                        <Input
+                          placeholder="Enter zip code"
                           disabled={sameAddress}
                         />
                       </Form.Item>
@@ -752,15 +910,15 @@ export default function Family() {
             }}
           </Form.Item>
 
-          <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.roles !== currentValues.roles}>
+          <Form.Item noStyle shouldUpdate={() => true}>
             {({ getFieldValue }) => {
-              const roles = getFieldValue('roles') || [];
-              const isAthlete = roles.includes('athlete');
-              
+              const roles = getFieldValue('roles') ?? (editingPerson?.roles || []);
+              const isAthlete = (roles || []).includes('athlete') || (roles || []).includes('child');
+
               if (!isAthlete) {
                 return null; // Hide school fields for non-athletes
               }
-              
+
               return (
                 <Row gutter={16}>
                   <Col span={12}>
@@ -769,9 +927,21 @@ export default function Family() {
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name="graduationYear" label="Graduation Year">
-                      <Input type="number" placeholder="Enter graduation year" />
-                    </Form.Item>
+                    {(() => {
+                      const gy = getFieldValue('graduationYear');
+                      const year = gy ? Number(gy) : undefined;
+                      const g = year ? calculateCurrentGrade(year) : null;
+                      const display = g === null ? null : (g === 0 ? 'K' : g);
+                      const labelNode = year ? (
+                        <span>Graduation Year (<Text type="secondary">Grade: {display}</Text>)</span>
+                      ) : 'Graduation Year';
+
+                      return (
+                        <Form.Item name="graduationYear" label={labelNode}>
+                          <Input type="number" placeholder="Enter graduation year" />
+                        </Form.Item>
+                      );
+                    })()}
                   </Col>
                 </Row>
               );
@@ -805,13 +975,13 @@ export default function Family() {
               message.error({ content: 'Please select a primary family member' });
               return;
             }
-            
+
             const { familiesService } = await import('../services/firebaseFamilies');
             await familiesService.updateFamily(currentFamily.id, {
               name: familyName,
               primaryPersonId: selectedPrimaryId
             });
-            
+
             message.success({ content: 'Family updated successfully' });
             setFamilyModalVisible(false);
             await loadFamilyData();

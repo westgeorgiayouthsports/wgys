@@ -8,28 +8,22 @@ import {
   Typography,
   Button,
   Space,
-  Modal,
-  Form,
-  Input,
-  Select,
+  
   message,
-  Radio,
-  Upload,
   Tag,
   theme,
-  App,
 } from 'antd';
-import { InboxOutlined, DollarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import calculateCurrentGrade from '../utils/grade';
+import calculateAgeAt from '../utils/age';
 import type { RootState } from '../store/store';
 import { programsService } from '../services/firebasePrograms';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
-import { storageService } from '../services/storageService';
+// storageService not required in this page anymore
 import { peopleService } from '../services/firebasePeople';
-import { mailQueue } from '../services/firebaseMailQueue';
 import { paymentMethodsService, type PaymentMethod } from '../services/firebasePaymentMethods';
 import type { Program } from '../types/program';
-import type { PaymentPlan } from '../types';
+import Register from '../components/Registrations/Register';
 
 const { Title, Text } = Typography;
 
@@ -38,16 +32,13 @@ export default function RegistrationPage() {
   const { programId } = useParams();
   const { user } = useSelector((state: RootState) => state.auth);
   const { token } = theme.useToken();
-  const { modal } = App.useApp();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [modalProgram, setModalProgram] = useState<Program | null>(null);
-  const [form] = Form.useForm();
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [parentInfo, setParentInfo] = useState<{ name: string; email: string; phone: string } | null>(null);
-  const { Dragger } = Upload;
+  // Dragger upload removed; upload handled in Register component
   const [registrationsMap, setRegistrationsMap] = useState<Record<string, any[]>>({});
-  const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>('full');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [savedCards, setSavedCards] = useState<PaymentMethod[]>([]);
 
@@ -113,7 +104,18 @@ export default function RegistrationPage() {
     try {
       const list = await programsService.getPrograms();
       const active = list.filter((p) => p.active);
-      setPrograms(active);
+      // enrich with current registrant counts to honor maxParticipants limits
+      const enriched = await Promise.all(active.map(async (p) => {
+        try {
+          const regs = await programRegistrationsService.getProgramRegistrationsByProgram(p.id);
+          const activeStatuses = ['pending', 'confirmed'];
+          const count = regs.filter(r => activeStatuses.includes(r.status)).length;
+          return { ...p, currentRegistrants: count };
+        } catch {
+          return { ...p, currentRegistrants: p.currentRegistrants || 0 };
+        }
+      }));
+      setPrograms(enriched);
     } catch (err) {
       console.error('Failed to load programs', err);
       message.error('Failed to load programs');
@@ -130,65 +132,45 @@ export default function RegistrationPage() {
     }
   };
 
+  // Use shared calculateCurrentGrade; prefer explicitGrade when provided
+  const calculateCurrentGradeLocal = (graduationYear?: number, explicitGrade?: number | null) => {
+    if (explicitGrade !== undefined && explicitGrade !== null) return explicitGrade;
+    return calculateCurrentGrade(graduationYear);
+  };
+
   const openRegister = (program: Program, athleteId?: string) => {
     setModalProgram(program);
-    form.resetFields();
-    setPaymentPlan('full');
-
+    // reset local selection/state managed here; Register component manages its own Form instance
     // Set default payment method to default card or first saved card if available
     const defaultCard = savedCards.find(c => c.isDefault) || savedCards[0];
     if (defaultCard) {
       setSelectedPaymentMethod(defaultCard.id);
-      form.setFieldsValue({ paymentMethod: defaultCard.id });
     } else {
       setSelectedPaymentMethod('new');
-      form.setFieldsValue({ paymentMethod: 'new' });
     }
 
-    // Pre-fill parent information from logged-in user
-    if (parentInfo) {
-      form.setFieldsValue({
-        parentName: parentInfo.name,
-        parentEmail: parentInfo.email,
-        phone: parentInfo.phone,
-      });
-    }
-
-    // prefill athlete from query param or provided athleteId
+    // prefill athlete from query param or provided athleteId (Register will pick up athleteId prop)
     const params = new URLSearchParams(window.location.search);
     const queryAthleteId = params.get('athleteId');
     const useAthleteId = athleteId || queryAthleteId;
     if (useAthleteId) {
       setSelectedAthleteId(useAthleteId);
-      (async () => {
-        try {
-          const person = await peopleService.getPersonById(useAthleteId as string);
-          if (person) {
-            form.setFieldsValue({
-              firstName: person.firstName || (person.firstName ? person.firstName : ''),
-              lastName: person.lastName || (person.lastName ? person.lastName : ''),
-              dob: person.dateOfBirth ? dayjs(person.dateOfBirth) : undefined,
-              sex: person.sex,
-              athleteSelect: person.id,
-            });
-          }
-        } catch (err) {
-          console.error('Error prefilling athlete', err);
-        }
-      })();
     }
   };
 
   const validateEligibility = (program: Program, dob: any, sex: string) => {
     if (!dob) return { ok: false, reason: 'Please enter child date of birth' };
     const birth = dayjs(dob);
+    // Use YYYY-MM-DD string comparison to avoid timezone/time-of-day issues and
+    // to ensure equality with the program end date is treated as eligible.
+    const birthStr = birth.format('YYYY-MM-DD');
     if (program.birthDateStart) {
-      const start = dayjs(program.birthDateStart);
-      if (birth.isBefore(start, 'day')) return { ok: false, reason: 'Child is too old for this program' };
+      const startStr = dayjs(program.birthDateStart).format('YYYY-MM-DD');
+      if (birthStr < startStr) return { ok: false, reason: 'Child is too old for this program' };
     }
     if (program.birthDateEnd) {
-      const end = dayjs(program.birthDateEnd);
-      if (birth.isAfter(end, 'day')) return { ok: false, reason: 'Child is too young for this program' };
+      const endStr = dayjs(program.birthDateEnd).format('YYYY-MM-DD');
+      if (birthStr > endStr) return { ok: false, reason: 'Child is too young for this program' };
     }
     if (program.sexRestriction === 'female') {
       if (sex !== 'female') return { ok: false, reason: 'Program is for females only' };
@@ -196,99 +178,7 @@ export default function RegistrationPage() {
     return { ok: true };
   };
 
-  const handleSubmit = async (values: any) => {
-    if (!modalProgram || !selectedAthleteId || !parentInfo) return;
-
-    try {
-      const selectedAthlete = familyMembers.find(m => m.id === selectedAthleteId);
-      const playerName = selectedAthlete ? `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim() : '';
-      const fee = modalProgram.basePrice || 0;
-
-      // Determine payment method to store - use Stripe PM ID if saved card selected
-      let paymentMethodToStore = values.paymentMethod || 'other';
-      const selectedCard = savedCards.find(c => c.id === selectedPaymentMethod);
-      if (selectedCard && selectedCard.stripePaymentMethodId) {
-        paymentMethodToStore = selectedCard.stripePaymentMethodId;
-      }
-
-      // Collect all custom registration questions and answers
-      const responses: any[] = [];
-      for (const key of Object.keys(values)) {
-        if (key.startsWith('q_')) {
-          const qId = key.replace('q_', '');
-          const qVal = values[key];
-          responses.push({ questionId: qId, answer: qVal });
-        }
-      }
-
-      // Get family ID from selected athlete
-      const selectedAthleteData = await peopleService.getPersonById(selectedAthleteId);
-      const familyId = selectedAthleteData?.familyId;
-
-      // Create registration with all data
-      const created = await programRegistrationsService.createProgramRegistration(
-        modalProgram.id,
-        user?.uid || 'anonymous',
-        responses,
-        fee,
-        paymentMethodToStore,
-        selectedAthleteId,
-        familyId,
-        paymentPlan, // Add payment plan to registration
-        {
-          programName: modalProgram.name,
-          playerName,
-          paymentDisplay: (() => {
-            // compute a friendly display mirroring confirmation page logic
-            if (selectedCard) {
-              const brand = (selectedCard.brand || '').toUpperCase();
-              const last4 = selectedCard.last4 || '';
-              return `${brand} **** ${last4}`.trim();
-            }
-            if (paymentMethodToStore === 'stripe') return 'Stripe';
-            if (paymentMethodToStore === 'other') return 'Other';
-            return paymentMethodToStore;
-          })()
-        }
-      );
-
-      // Send confirmation email to parent using logged-in user's email
-      const mailHtml = `<p>Thank you for registering ${playerName} for ${modalProgram.name}.</p><p>Fee: $${fee.toFixed(2)}</p><p>Payment Plan: ${paymentPlan === 'full' ? 'Pay in Full' : 'Payment Plan'}</p><p>Payment Method: ${paymentMethodToStore}</p>`;
-      if (parentInfo.email) {
-        mailQueue.enqueueMail(parentInfo.email, `Registration Confirmation: ${modalProgram.name}`, mailHtml);
-      }
-
-      // Handle payment method specific flows
-      if (paymentMethodToStore === 'venmo' || paymentMethodToStore === 'cashapp') {
-        modal.info({
-          title: 'Complete Payment',
-          content: (
-            <div>
-              <p>Please send payment of <b>${fee.toFixed(2)}</b> via {paymentMethodToStore.toUpperCase()} to the account configured by the program organizer.</p>
-              <p>After sending, return here and contact the program admin to confirm payment.</p>
-            </div>
-          ),
-        });
-      } else if (paymentMethodToStore === 'stripe') {
-        modal.info({
-          title: 'Payment Processing',
-          content: <div>Stripe payment processing would occur here. Registration created as pending.</div>
-        });
-      } else {
-        modal.success({
-          title: 'Registration Submitted',
-          content: `Registration for ${playerName} has been submitted. Please follow payment instructions from the program organizer.`
-        });
-      }
-
-      setModalProgram(null);
-      form.resetFields();
-      navigate(`/register/confirmation/${created.id}`);
-    } catch (err) {
-      console.error('Failed to create registration', err);
-      message.error('Failed to create registration');
-    }
-  };
+  // registration creation moved to Cart checkout; no local submit handler
 
   return (
     <div className="page-container">
@@ -312,23 +202,41 @@ export default function RegistrationPage() {
                 if (!elig.ok) return false;
                 // exclude already registered for same program
                 const already = regs.some(r => r.programId === p.id);
-                return !already;
+                  // enforce maxParticipants if set
+                  if (p.maxParticipants !== undefined && (p.currentRegistrants || 0) >= p.maxParticipants) return false;
+                  return !already;
               });
 
               const isSelected = selectedAthleteId === athlete.id;
+
+              // Compute season age when a program context is available (modalProgram or route param),
+              // otherwise compute current age as of today.
+              const programForDisplay = modalProgram || (programId ? programs.find(p => p.id === programId) : undefined);
+              let ageVal = null as number | null;
+              if (programForDisplay && programForDisplay.birthDateEnd) {
+                ageVal = calculateAgeAt(athlete.dateOfBirth, dayjs(programForDisplay.birthDateEnd));
+              } else {
+                ageVal = calculateAgeAt(athlete.dateOfBirth);
+              }
+              const age = ageVal === null ? '—' : ageVal;
+              const gradeVal = athlete.grade !== undefined && athlete.grade !== null ? athlete.grade : calculateCurrentGradeLocal(athlete.graduationYear, athlete.grade);
+              const gradeDisplay = gradeVal === null ? '—' : (gradeVal === 0 ? 'K' : gradeVal);
 
               return (
                 <Col xs={24} sm={12} md={8} key={athlete.id}>
                   <Card
                     size="small"
-                    title={`${athlete.firstName} ${athlete.lastName}`}
+                    title={
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ fontWeight: 600 }}>{athlete.firstName} {athlete.lastName}</div>
+                        <div style={{ textAlign: 'center', minWidth: 80 }}><Text type="secondary">Age: {age}</Text></div>
+                        <div style={{ textAlign: 'right', minWidth: 80 }}><Text type="secondary">Grade: {gradeDisplay}</Text></div>
+                      </div>
+                    }
                     style={isSelected ? { borderColor: '#1890ff' } : undefined}
                     onClick={() => setSelectedAthleteId(athlete.id)}
                     hoverable
                   >
-                    <div style={{ marginBottom: 8 }}>
-                      <Text type="secondary">Age: {athlete.dateOfBirth ? dayjs().diff(dayjs(athlete.dateOfBirth), 'year') : '—'}</Text>
-                    </div>
                     <div style={{ marginBottom: 8 }}>
                       <Text strong>Registered</Text>
                       <div>
@@ -441,7 +349,7 @@ export default function RegistrationPage() {
                       type="primary"
                       size="small"
                       onClick={() => openRegister(p, selectedAthleteId || undefined)}
-                      disabled={!selected || !selectedEligible}
+                      disabled={!selected || !selectedEligible || (p.maxParticipants !== undefined && (p.currentRegistrants || 0) >= p.maxParticipants)}
                     >
                       Register
                     </Button>
@@ -454,250 +362,26 @@ export default function RegistrationPage() {
         ))}
       </Row>
 
-      <Modal
-        title={modalProgram && selectedAthleteId ? `Register for: ${modalProgram.name}` : 'Select Program'}
-        open={!!modalProgram}
-        onCancel={() => setModalProgram(null)}
-        footer={null}
-        width={500}
-      >
-        {modalProgram && selectedAthleteId && (
-          <Form form={form} layout="vertical" onFinish={handleSubmit}>
-            {/* Athlete Summary */}
-            <div style={{ marginBottom: 24, padding: '12px', backgroundColor: token.colorBgElevated, borderRadius: token.borderRadius }}>
-              {familyMembers.length > 0 && (
-                <div>
-                  <Text strong>Athlete:</Text> <Text>{familyMembers.find(m => m.id === selectedAthleteId)?.firstName} {familyMembers.find(m => m.id === selectedAthleteId)?.lastName}</Text>
+
+          {/* Render Register full-page when modalProgram is set */}
+          {modalProgram && selectedAthleteId && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 1400, background: 'rgba(0,0,0,0.45)', overflow: 'auto' }}>
+              <div style={{ paddingTop: 40 }}>
+                <div style={{ maxWidth: 1000, margin: '0 auto', background: token.colorBgElevated }}>
+                  <Register
+                    program={modalProgram}
+                    athleteId={selectedAthleteId}
+                    onClose={() => { setModalProgram(null); }}
+                    isPreview={false}
+                    familyMembers={familyMembers}
+                    parentInfo={parentInfo}
+                    defaultPaymentMethodId={selectedPaymentMethod}
+
+                  />
                 </div>
-              )}
-            </div>
-
-            {/* Program questions */}
-            {modalProgram.questions && modalProgram.questions.length > 0 && (
-              <div style={{ marginBottom: 24 }}>
-                <Title level={5}>Additional Information</Title>
-                {modalProgram.questions.sort((a,b)=>a.order-b.order).map(q => {
-                  if (q.type === 'short_answer' || q.type === 'paragraph') {
-                    return (
-                      <Form.Item key={q.id} name={`q_${q.id}`} label={q.title} rules={[{ required: q.required }]}>
-                        <Input.TextArea rows={q.type === 'paragraph' ? 3 : 1} />
-                      </Form.Item>
-                    );
-                  }
-                  if (q.type === 'dropdown') {
-                    return (
-                      <Form.Item key={q.id} name={`q_${q.id}`} label={q.title} rules={[{ required: q.required }]}>
-                        <Select options={(q.options || []).map(o=>({label:o,value:o}))} />
-                      </Form.Item>
-                    );
-                  }
-                  if (q.type === 'checkboxes') {
-                    return (
-                      <Form.Item key={q.id} name={`q_${q.id}`} label={q.title} rules={[{ required: q.required }]}>
-                        <Select mode="multiple" options={(q.options || []).map(o=>({label:o,value:o}))} />
-                      </Form.Item>
-                    );
-                  }
-                  if (q.type === 'waiver') {
-                    return (
-                      <Form.Item key={q.id} name={`q_${q.id}`} valuePropName="checked" rules={[{ required: q.required }]}>
-                        <Radio>{q.title}</Radio>
-                      </Form.Item>
-                    );
-                  }
-                  if (q.type === 'file_upload') {
-                    return (
-                      <Form.Item key={q.id} name={`q_${q.id}`} label={q.title} rules={[{ required: q.required }]}>
-                        <Dragger
-                          name="file"
-                          multiple={false}
-                          showUploadList={false}
-                          beforeUpload={async (file: any) => {
-                            try {
-                              const path = `program_uploads/${modalProgram?.id}/${user?.uid}/${Date.now()}-${file.name}`;
-                              const url = await storageService.uploadFile(path, file as File);
-                              form.setFieldsValue({ [`q_${q.id}`]: url });
-                              message.success(`${file.name} uploaded`);
-                            } catch (err) {
-                              console.error('Upload error', err);
-                              message.error('Upload failed');
-                            }
-                            return false; // prevent default upload
-                          }}
-                        >
-                          <p className="ant-upload-drag-icon">
-                            <InboxOutlined />
-                          </p>
-                          <p className="ant-upload-text">Click or drag file to this area to upload</p>
-                        </Dragger>
-                        <Form.Item shouldUpdate>
-                          {() => {
-                            const val = form.getFieldValue(`q_${q.id}`);
-                            return val ? (
-                              <div style={{ marginTop: 8 }}>
-                                <a href={val} target="_blank" rel="noreferrer">View uploaded file</a>
-                              </div>
-                            ) : null;
-                          }}
-                        </Form.Item>
-                      </Form.Item>
-                    );
-                  }
-                  // fallback for unknown types
-                  return (
-                    <Form.Item key={q.id} label={q.title}>
-                      <Input disabled placeholder="Question type not supported" />
-                    </Form.Item>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Enhanced Payment Bubble */}
-            <div style={{
-              marginBottom: 24,
-              padding: '20px',
-              backgroundColor: token.colorBgElevated,
-              borderRadius: token.borderRadius,
-              border: `1px solid ${token.colorBorder}`
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-                <div style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  backgroundColor: token.colorPrimary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 12
-                }}>
-                  <DollarOutlined style={{ color: '#fff', fontSize: 16 }} />
-                </div>
-                <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>Payment</Title>
-              </div>
-
-              {/* Payment Plan Selection */}
-              <div style={{ marginBottom: 20 }}>
-                <Text style={{ display: 'block', marginBottom: 12, color: token.colorPrimary }}>Select one:</Text>
-                <div style={{
-                  backgroundColor: token.colorBgContainer,
-                  borderRadius: token.borderRadius,
-                  border: `1px solid ${token.colorBorder}`,
-                  overflow: 'hidden'
-                }}>
-                  <div
-                    onClick={() => setPaymentPlan('full')}
-                    style={{
-                      padding: '16px 20px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      backgroundColor: paymentPlan === 'full' ? token.colorPrimaryBg : 'transparent',
-                      borderBottom: modalProgram.paymentPlanEnabled ? `1px solid ${token.colorBorder}` : 'none',
-                      transition: 'background-color 0.2s'
-                    }}
-                  >
-                    <Text strong style={{ color: paymentPlan === 'full' ? token.colorPrimary : token.colorText }}>
-                      Pay in Full
-                    </Text>
-                    <Text strong style={{ fontSize: 18, color: paymentPlan === 'full' ? token.colorPrimary : token.colorText }}>
-                      ${(modalProgram.basePrice || 0).toFixed(2)}
-                    </Text>
-                  </div>
-                  {modalProgram.paymentPlanEnabled && (
-                    <div
-                      onClick={() => setPaymentPlan('plan')}
-                      style={{
-                        padding: '16px 20px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        backgroundColor: paymentPlan === 'plan' ? token.colorPrimaryBg : 'transparent',
-                        transition: 'background-color 0.2s'
-                      }}
-                    >
-                      <div>
-                        <Text strong style={{ color: paymentPlan === 'plan' ? token.colorPrimary : token.colorText, display: 'block' }}>
-                          Payment Plan
-                        </Text>
-                        {modalProgram.paymentPlanInstallments && modalProgram.paymentPlanFrequency && (
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            {modalProgram.paymentPlanInstallments} {modalProgram.paymentPlanFrequency} payments of ${((modalProgram.basePrice || 0) / modalProgram.paymentPlanInstallments).toFixed(2)}
-                          </Text>
-                        )}
-                      </div>
-                      <Text strong style={{ fontSize: 18, color: paymentPlan === 'plan' ? token.colorPrimary : token.colorText }}>
-                        ${(modalProgram.basePrice || 0).toFixed(2)}
-                      </Text>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Payment Method Selection */}
-              <div>
-                <Text strong style={{ display: 'block', marginBottom: 12 }}>Payment Method</Text>
-                <Form.Item
-                  name="paymentMethod"
-                  rules={[{ required: true, message: 'Please select a payment method' }]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <div>
-                    {savedCards.length > 0 && savedCards.map(card => (
-                      <div
-                        key={card.id}
-                        onClick={() => {
-                          setSelectedPaymentMethod(card.id);
-                          form.setFieldsValue({ paymentMethod: card.id });
-                        }}
-                        style={{
-                          padding: '12px 16px',
-                          backgroundColor: selectedPaymentMethod === card.id ? token.colorPrimaryBg : token.colorBgContainer,
-                          border: `1px solid ${selectedPaymentMethod === card.id ? token.colorPrimary : token.colorBorder}`,
-                          borderRadius: token.borderRadius,
-                          marginBottom: 8,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <Text strong>{card.brand}</Text>
-                          <Text>•••• {card.last4}</Text>
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            Expires {card.expMonth}/{card.expYear}
-                          </Text>
-                          {card.isDefault && <Tag color="blue">Default</Tag>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Form.Item>
-                <Button
-                  type="dashed"
-                  block
-                  onClick={() => navigate('/payment-methods')}
-                  style={{ marginTop: 8 }}
-                >
-                  + Add New Payment Method
-                </Button>
               </div>
             </div>
-
-            <Form.Item style={{ textAlign: 'right' }}>
-              <Space>
-                <Button onClick={() => setModalProgram(null)}>Cancel</Button>
-                <Button type="primary" htmlType="submit">Complete Registration</Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        )}
-      </Modal>
+          )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { ref, push, get, update, remove, query as _query, orderByChild as _orderByChild } from 'firebase/database';
+import { ref, push, get, update, remove, set, query as _query, orderByChild as _orderByChild } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
 import type { Person, PersonFormData, Family } from '../types/person';
@@ -110,6 +110,12 @@ export const peopleService = {
       userId,
       updatedAt: new Date().toISOString(),
     });
+    try {
+      const mappingRef = ref(db, `users_to_person/${userId}`);
+      await set(mappingRef, personId);
+    } catch (e) {
+      console.error('Failed to write users_to_person mapping:', e);
+    }
   },
 
   // Family operations

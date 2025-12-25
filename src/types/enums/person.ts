@@ -8,16 +8,16 @@ export const PersonRoleValues = {
 } as const;
 export type PersonRole = typeof PersonRoleValues[keyof typeof PersonRoleValues];
 
-export const RelationshipTypeValues = {
-  parent: 'parent',
-  child: 'child',
-  sibling: 'sibling',
-  guardian: 'guardian',
-  spouse: 'spouse',
-  grandparent: 'grandparent',
-  other: 'other',
-} as const;
-export type RelationshipType = typeof RelationshipTypeValues[keyof typeof RelationshipTypeValues];
+// export const RelationshipTypeValues = {
+//   parent: 'parent',
+//   child: 'child',
+//   sibling: 'sibling',
+//   guardian: 'guardian',
+//   spouse: 'spouse',
+//   grandparent: 'grandparent',
+//   other: 'other',
+// } as const;
+// export type RelationshipType = typeof RelationshipTypeValues[keyof typeof RelationshipTypeValues];
 
 export const ContactMethodValues = {
   email: 'email',

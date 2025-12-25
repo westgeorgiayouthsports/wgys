@@ -1,4 +1,4 @@
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadBytes, getDownloadURL, uploadBytesResumable, deleteObject } from 'firebase/storage';
 import { storage } from './firebase';
 
 export const storageService = {
@@ -13,4 +13,54 @@ export const storageService = {
       throw error;
     }
   },
+
+  // Upload with progress callback. onProgress receives percent (0-100).
+  async uploadFileWithProgress(path: string, file: File, onProgress?: (percent: number) => void): Promise<{ url: string; path: string }> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const ref = storageRef(storage, path);
+        const task = uploadBytesResumable(ref, file as Blob);
+        task.on('state_changed', (snapshot) => {
+          if (onProgress && snapshot.totalBytes) {
+            const percent = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+            onProgress(percent);
+          }
+        }, (err) => {
+          console.error('Upload failed', err);
+          reject(err);
+        }, async () => {
+          try {
+            const url = await getDownloadURL(task.snapshot.ref);
+            resolve({ url, path });
+          } catch (e) {
+            reject(e);
+          }
+        });
+      } catch (e) {
+        console.error('uploadFileWithProgress error', e);
+        reject(e);
+      }
+    });
+  },
+
+  async deleteFile(path: string): Promise<void> {
+    try {
+      const ref = storageRef(storage, path);
+      await deleteObject(ref);
+    } catch (error) {
+      console.error('❌ Error deleting file from storage:', error);
+      // don't throw to avoid breaking flows when file is already missing
+    }
+  },
+
+  async getFileUrl(path: string): Promise<string> {
+    try {
+      const ref = storageRef(storage, path);
+      const url = await getDownloadURL(ref);
+      return url;
+    } catch (error) {
+      console.error('❌ Error getting download URL:', error);
+      throw error;
+    }
+  }
 };

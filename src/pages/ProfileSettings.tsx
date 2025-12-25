@@ -22,7 +22,7 @@ export default function ProfileSettingsPage() {
     try {
       const allPeople = await peopleService.getPeople();
       const userPerson = allPeople.find(p => p.userId === user?.uid);
-      
+
       if (userPerson) {
         setCurrentUser(userPerson);
       } else {
@@ -33,16 +33,16 @@ export default function ProfileSettingsPage() {
           email: user?.email || '',
           roles: ['parent'] as any[],
         };
-        
+
         const newPersonId = await peopleService.createPerson(newPersonData, user?.uid || '');
         await peopleService.linkPersonToAccount(newPersonId, user?.uid || '');
-        
+
         const newPerson: Person = {
           id: newPersonId,
           ...newPersonData,
           hasAccount: true,
           userId: user?.uid,
-          relationships: [],
+          roles: [],
           contactPreferences: [],
           programs: [],
           teams: [],
@@ -53,7 +53,7 @@ export default function ProfileSettingsPage() {
           createdBy: user?.uid || '',
           isActive: true,
         };
-        
+
         setCurrentUser(newPerson);
       }
     } catch (error) {

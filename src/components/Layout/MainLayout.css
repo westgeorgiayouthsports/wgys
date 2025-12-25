@@ -37,6 +37,17 @@
   box-sizing: border-box;
 }
 
+/* Make pages that request full-bleed layout expand their inner card/table to use full width */
+.page-container.full-width > .ant-card {
+  margin: 0;
+  width: 100%;
+  box-shadow: none;
+}
+
+.page-container.full-width {
+  padding: var(--spacing-lg, 24px);
+}
+
 @media (max-width: 768px) {
   .main-content {
     margin-left: 0;

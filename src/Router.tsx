@@ -116,6 +116,7 @@ function Router() {
               }
             />
             <Route path="/programs" element={<Navigate to="/admin/programs" replace />} />
+            <Route path="/programs/:programId" element={isAuthenticated ? <ProgramDetail /> : <Navigate to="/signin" replace />} />
             <Route path="/admin/seasons" element={
               <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
                 <Seasons />
