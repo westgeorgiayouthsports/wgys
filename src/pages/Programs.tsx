@@ -35,7 +35,7 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-const Programs = forwardRef(function Programs(props, ref) {
+const Programs = forwardRef(function Programs(_props, ref) {
   const navigate = useNavigate();
   const { role, user } = useSelector((state: RootState) => state.auth);
   const [programs, setPrograms] = useState<Program[]>([]);

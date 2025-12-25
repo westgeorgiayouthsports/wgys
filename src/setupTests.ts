@@ -10,7 +10,7 @@ console.error = (...args: any[]) => {
     if (first.includes('An update to') && first.includes('inside a test was not wrapped in act')) {
       return;
     }
-  } catch (e) {
+  } catch {
     // swallow parsing errors and fall through to original
   }
   _origConsoleError.apply(console, args as any);
@@ -81,7 +81,7 @@ jest.mock('firebase/database', () => {
 // Provide a simple global fetch mock to prevent "fetch is not defined" in jsdom/node
 // Default global fetch returns a North American country so geo checks pass in tests.
 if (typeof (globalThis as any).fetch === 'undefined') {
-  (globalThis as any).fetch = jest.fn(async (input: any, init?: any) => {
+  (globalThis as any).fetch = jest.fn(async (_input: any, _init?: any) => {
     // Simple shape matching the ipapi.co/json/ response used by App
     return {
       ok: true,

@@ -1,3 +1,5 @@
+import type { PersonSource } from './enums/person';
+
 export interface Contact {
   id: string;
   firstName: string;
@@ -12,7 +14,7 @@ export interface Contact {
   createdAt: string;
   updatedAt: string;
   createdBy: string; // uid of user who created this contact
-  source: 'signup' | 'manual'; // how the contact was created
+  source: PersonSource; // how the contact was created
 }
 
 export interface ContactFormData {

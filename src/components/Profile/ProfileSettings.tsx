@@ -69,7 +69,7 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
       await peopleService.updatePersonProfile(person.id, profileData);
       
       // Update Firebase Auth if this is the current user
-      if (person.userId === user?.uid && auth.currentUser) {
+      if (person.userId === user?.uid && auth.currentUser && user) {
         await updateProfile(auth.currentUser, {
           displayName,
           photoURL: photoURL || null,

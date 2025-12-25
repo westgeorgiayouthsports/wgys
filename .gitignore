@@ -4,8 +4,12 @@ node_modules/
 .pnp.js
 
 # Production builds
-/dist
-/build
+dist
+build
+lib
+
+# Codegen output
+generated
 
 # Environment variables
 .env
@@ -24,6 +28,7 @@ node_modules/
 *service-account*.json
 *adminsdk*.json
 functions/.env
+functions/.env.local
 
 # Logs
 npm-debug.log*
@@ -126,3 +131,4 @@ tests/e2e/.auth/
 tests/e2e/.auth/adminStorageState.*
 tests/e2e/test-results/.auth/
 **/adminStorageState.
+**/*.d.ts

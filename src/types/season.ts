@@ -1,4 +1,5 @@
-export type SeasonType = 'spring' | 'summer' | 'fall' | 'winter';
+import type { SeasonType } from './enums/season';
+export type { SeasonType };
 export type SeasonStatus = 'active' | 'archived';
 
 export interface Season {

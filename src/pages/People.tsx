@@ -149,7 +149,7 @@ export default function People() {
     try {
       const usersRef = ref(db, 'users');
       const snapshot = await get(usersRef);
-      
+
       if (!snapshot.exists()) {
         setUsers([]);
         return;
@@ -179,8 +179,8 @@ export default function People() {
         role: newRole,
         updatedAt: new Date().toISOString()
       });
-      
-      setUsers(users.map(user => 
+
+      setUsers(users.map(user =>
         user.uid === uid ? { ...user, systemRole: newRole } : user
       ));
       setEditingUser(null);
@@ -198,14 +198,14 @@ export default function People() {
           displayName,
           photoURL: photoURL || undefined
         });
-        
+
         const userRef = ref(db, `users/${user?.uid}`);
         await update(userRef, {
           displayName,
           photoURL: photoURL || null,
           updatedAt: new Date().toISOString()
         });
-        
+
         message.success({ content: 'Profile updated successfully' });
         setProfileModalVisible(false);
       }
@@ -257,20 +257,20 @@ export default function People() {
     setSyncing(true);
     try {
       const results = await userPeopleSync.syncUsersWithPeople();
-      
+
       if (results.errors.length > 0) {
-        message.warning({ 
+        message.warning({
           content: `Sync completed with ${results.errors.length} errors. Created: ${results.created}, Linked: ${results.linked}`,
           duration: 5
         });
         console.error('Sync errors:', results.errors);
       } else {
-        message.success({ 
+        message.success({
           content: `Sync completed successfully! Created: ${results.created} people, Linked: ${results.linked} accounts`,
           duration: 3
         });
       }
-      
+
       // Refresh data
       await Promise.all([loadPeople(), loadUsers()]);
     } catch (error) {
@@ -287,7 +287,7 @@ export default function People() {
         ...values,
         dateOfBirth: values.dateOfBirth ? dayjs(values.dateOfBirth).format('YYYY-MM-DD') : undefined,
       };
-      
+
       // Remove undefined values
       Object.keys(formData).forEach(key => {
         if (formData[key as keyof PersonFormData] === undefined) {
@@ -297,15 +297,15 @@ export default function People() {
 
       if (editingPerson) {
         await peopleService.updatePerson(editingPerson.id, formData);
-        setPeople(people.map(p => 
-          p.id === editingPerson.id 
+        setPeople(people.map(p =>
+          p.id === editingPerson.id
             ? { ...p, ...formData, updatedAt: new Date().toISOString() }
             : p
         ));
         message.success({ content: 'Person updated successfully' });
       } else {
         const newPersonId = await peopleService.createPerson(formData, user?.uid || '');
-        
+
         // Create or assign family if not already set
         let familyId = formData.familyId;
         if (!familyId && (formData.roles?.includes('parent') || formData.roles?.includes('guardian'))) {
@@ -320,7 +320,7 @@ export default function People() {
           });
           await peopleService.updatePerson(newPersonId, { familyId });
         }
-        
+
         const newPerson: Person = {
           id: newPersonId,
           ...formData,
@@ -373,16 +373,16 @@ export default function People() {
         const linkedUser = users.find(u => u.uid === record.userId);
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Avatar 
-              size={40} 
+              <Avatar
+              size={40}
               src={record.photoURL}
               icon={<UserOutlined />}
-              style={{ 
-                backgroundColor: record.hasAccount ? 
-                  (linkedUser?.systemRole === 'owner' ? '#722ed1' : 
+              style={{
+                backgroundColor: record.hasAccount ?
+                  (linkedUser?.systemRole === 'owner' ? '#722ed1' :
                     linkedUser?.systemRole === 'admin' ? '#f5222d' :
                     linkedUser?.systemRole === 'coach' ? '#fa8c16' :
-                    linkedUser?.systemRole === 'teamManager' ? '#1890ff' : '#52c41a') : '#d9d9d9' 
+                    linkedUser?.systemRole === 'teamManager' ? '#1890ff' : '#52c41a') : '#d9d9d9'
               }}
               onError={() => true}
             />
@@ -425,7 +425,7 @@ export default function People() {
       key: 'roles',
       render: (record: Person) => (
         <div>
-          {record.roles.map(role => (
+          {(record.roles || []).map(role => (
             <Tag key={role} color={getRoleColor(role)} style={{ marginBottom: '4px' }}>
               {role}
             </Tag>
@@ -487,7 +487,7 @@ export default function People() {
       render: (record: Person) => {
         const linkedUser = users.find(u => u.uid === record.userId);
         if (!linkedUser) return <Text type="secondary">—</Text>;
-        
+
         return role === 'owner' && editingUser === linkedUser.uid ? (
           <Select
             value={linkedUser.systemRole}
@@ -520,8 +520,8 @@ export default function People() {
                 linkedUser.systemRole === 'teamManager' ? 'Team Manager' : linkedUser.systemRole}
             </Tag>
             {role === 'owner' && (
-              <Button 
-                size="small" 
+              <Button
+                size="small"
                 type="link"
                 onClick={() => { setEditingUser(linkedUser.uid); }}
               >
@@ -589,11 +589,11 @@ export default function People() {
         const linkedPerson = people.find(p => p.userId === record.uid);
         return (
           <Space>
-            <Avatar 
-              icon={<UserOutlined />} 
-              style={{ 
-                backgroundColor: record.systemRole === 'owner' ? '#722ed1' : 
-                  record.systemRole === 'admin' ? '#f5222d' : '#8c8c8c' 
+            <Avatar
+              icon={<UserOutlined />}
+              style={{
+                backgroundColor: record.systemRole === 'owner' ? '#722ed1' :
+                  record.systemRole === 'admin' ? '#f5222d' : '#8c8c8c'
               }}
             >
               {(record.displayName || record.email || 'U').charAt(0).toUpperCase()}
@@ -668,8 +668,8 @@ export default function People() {
               Cancel
             </Button>
           ) : (
-            <Button 
-              size="small" 
+            <Button
+              size="small"
               icon={<EditOutlined />}
               onClick={() => { setEditingUser(record.uid); }}
             >
@@ -688,9 +688,9 @@ export default function People() {
     case 'families':
       return people.filter(p => p.familyId);
     case 'athletes':
-      return people.filter(p => p.roles.includes('athlete'));
+      return people.filter(p => (p.roles || []).includes('athlete'));
     case 'parents':
-      return people.filter(p => p.roles.includes('parent') || p.roles.includes('guardian'));
+      return people.filter(p => ((p.roles || []).includes('parent') || (p.roles || []).includes('guardian')));
     default:
       return people;
     }
@@ -699,7 +699,7 @@ export default function People() {
   const filteredPeople = getFilteredPeople();
   const accountHolders = people.filter(p => p.hasAccount);
   const familyMembers = people.filter(p => p.familyId);
-  const athletes = people.filter(p => p.roles.includes('athlete'));
+  const athletes = people.filter(p => (p.roles || []).includes('athlete'));
 
   return (
     <div className="page-container">
@@ -802,8 +802,8 @@ export default function People() {
 
       {/* People Table with Tabs */}
       <Card>
-        <Tabs 
-          activeKey={activeTab} 
+        <Tabs
+          activeKey={activeTab}
           onChange={setActiveTab}
           items={[
             {
@@ -824,11 +824,11 @@ export default function People() {
             },
             {
               key: 'parents',
-              label: `Parents (${people.filter(p => p.roles.includes('parent') || p.roles.includes('guardian')).length})`
+              label: `Parents (${people.filter(p => ((p.roles || []).includes('parent') || (p.roles || []).includes('guardian'))).length})`
             }
           ]}
         />
-        
+
         <Spin spinning={loading}>
           <Table
             columns={activeTab === 'accounts' ? userColumns : peopleColumns}
@@ -915,7 +915,7 @@ export default function People() {
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="dateOfBirth" label="Date of Birth">
-                <DatePicker 
+                <DatePicker
                   style={{ width: '100%' }}
                   format="YYYY-MM-DD"
                   placeholder="YYYY-MM-DD"
@@ -1030,7 +1030,7 @@ export default function People() {
                         .filter(p => p.familyId === editingPerson.familyId)
                         .map(m => (
                           <div key={m.id} style={{ marginBottom: 4 }}>
-                            <Tag 
+                            <Tag
                               color={m.id === family?.primaryPersonId ? 'blue' : 'default'}
                               closable={m.id !== family?.primaryPersonId}
                               onClose={async () => {
@@ -1044,8 +1044,8 @@ export default function People() {
                           </div>
                         ))}
                     </div>
-                    <Button 
-                      size="small" 
+                    <Button
+                      size="small"
                       danger
                       onClick={async () => {
                         if (editingPerson?.id) {
@@ -1102,8 +1102,8 @@ export default function People() {
         <Space orientation="vertical" size="large" style={{ width: '100%' }}>
           {/* Profile Picture */}
           <div style={{ textAlign: 'center' }}>
-            <Avatar 
-              size={80} 
+            <Avatar
+              size={80}
               src={photoURL || user?.photoURL}
               icon={<UserOutlined />}
               style={{ backgroundColor: '#00d4ff', marginBottom: 16, cursor: 'pointer' }}
@@ -1145,9 +1145,9 @@ export default function People() {
           )}
 
           {/* Theme Toggle */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
             padding: '12px 0',
             borderTop: '1px solid #f0f0f0'
@@ -1179,12 +1179,12 @@ export default function People() {
           try {
             const primaryPerson = people.find(p => p.id === selectedPeople[0]);
             if (!primaryPerson) return;
-            
-            if (primaryPerson.roles.includes('athlete')) {
+
+            if ((primaryPerson.roles || []).includes('athlete')) {
               message.error({ content: 'First person must be parent/guardian, not athlete' });
               return;
             }
-            
+
             const familyId = await familiesService.createFamily({
               name: `${primaryPerson.lastName} Family`,
               primaryPersonId: selectedPeople[0],
@@ -1193,11 +1193,11 @@ export default function People() {
               updatedAt: new Date().toISOString(),
               createdBy: user?.uid || ''
             });
-            
+
             for (const personId of selectedPeople) {
               await peopleService.updatePerson(personId, { familyId });
             }
-            
+
             message.success({ content: `Created family with ${selectedPeople.length} members` });
             setLinkModalVisible(false);
             setSelectedPeople([]);
@@ -1222,7 +1222,7 @@ export default function People() {
             (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
           }
           options={people.filter(p => !p.familyId).map(p => ({
-            label: `${p.firstName} ${p.lastName} (${p.roles.join(', ')}) - ${p.email || 'No email'}`,
+            label: `${p.firstName} ${p.lastName} (${(p.roles || []).join(', ')}) - ${p.email || 'No email'}`,
             value: p.id
           }))}
         />
@@ -1239,21 +1239,21 @@ export default function People() {
             const person1 = people.find(p => p.id === selectedPeople[0]);
             const person2 = people.find(p => p.id === selectedPeople[1]);
             if (!person1 || !person2) return;
-            
+
             const merged: any = { id: selectedPeople[0] };
             const fields = ['firstName', 'lastName', 'email', 'phone', 'dateOfBirth', 'sex', 'address', 'city', 'state', 'zipCode', 'schoolName', 'graduationYear'];
-            
+
             fields.forEach(field => {
               const val1 = person1[field as keyof Person];
               const val2 = person2[field as keyof Person];
               merged[field] = document.querySelector(`input[name="merge-${field}"]:checked`)?.getAttribute('value') === '1' ? val1 : val2;
             });
-            
-            merged.roles = [...new Set([...person1.roles, ...person2.roles])];
-            
+
+            merged.roles = [...new Set([...(person1.roles || []), ...(person2.roles || [])])];
+
             await peopleService.updatePerson(selectedPeople[0], merged);
             await peopleService.deletePerson(selectedPeople[1]);
-            
+
             message.success({ content: 'People merged successfully' });
             setMergeModalVisible(false);
             setSelectedPeople([]);
@@ -1269,7 +1269,7 @@ export default function People() {
           const person1 = people.find(p => p.id === selectedPeople[0]);
           const person2 = people.find(p => p.id === selectedPeople[1]);
           if (!person1 || !person2) return null;
-          
+
           const fields = [
             { key: 'firstName', label: 'First Name' },
             { key: 'lastName', label: 'Last Name' },
@@ -1284,7 +1284,7 @@ export default function People() {
             { key: 'schoolName', label: 'School' },
             { key: 'graduationYear', label: 'Graduation Year' },
           ];
-          
+
           return (
             <div>
               <div style={{ marginBottom: 16, padding: 12, background: '#e6f7ff', borderRadius: 4 }}>
@@ -1326,18 +1326,18 @@ export default function People() {
           if (!personToDelete) return;
           const family = families.find(f => f.id === personToDelete.familyId);
           if (!family) return;
-          
-          const otherAdults = people.filter(p => 
-            p.familyId === family.id && 
-            p.id !== personToDelete.id && 
+
+          const otherAdults = people.filter(p =>
+            p.familyId === family.id &&
+            p.id !== personToDelete.id &&
             (p.roles?.includes('parent') || p.roles?.includes('guardian'))
           );
-          
+
           if (otherAdults.length > 0 && !newPrimaryId) {
             message.error({ content: 'Please select a new primary member' });
             return;
           }
-          
+
           try {
             if (otherAdults.length > 0) {
               await familiesService.updateFamily(family.id, { primaryPersonId: newPrimaryId });
@@ -1369,13 +1369,13 @@ export default function People() {
         {personToDelete && (() => {
           const family = families.find(f => f.id === personToDelete.familyId);
           if (!family) return null;
-          
-          const otherAdults = people.filter(p => 
-            p.familyId === family.id && 
-            p.id !== personToDelete.id && 
+
+          const otherAdults = people.filter(p =>
+            p.familyId === family.id &&
+            p.id !== personToDelete.id &&
             (p.roles?.includes('parent') || p.roles?.includes('guardian'))
           );
-          
+
           return (
             <div>
               {otherAdults.length > 0 ? (

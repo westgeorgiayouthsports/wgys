@@ -1,11 +1,12 @@
 import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
+import type { PaymentMethodType } from '../types';
 
 export interface PaymentMethod {
   id: string;
   userId: string;
-  type: 'card' | 'bank_account';
+  type: PaymentMethodType;
   brand?: string; // VISA, Mastercard, AMEX, etc.
   last4: string;
   expMonth?: number;
@@ -15,7 +16,7 @@ export interface PaymentMethod {
   createdAt: string;
   updatedAt?: string;
   deleted?: boolean;
-  deletedAt?: string;
+  deletedAt?: string | null;
 }
 
 export const paymentMethodsService = {
@@ -24,7 +25,7 @@ export const paymentMethodsService = {
       const methodsRef = ref(db, 'paymentMethods');
       const q = query(methodsRef, orderByChild('userId'), equalTo(userId));
       const snapshot = await get(q);
-      
+
       if (!snapshot.exists()) {
         return [];
       }
@@ -37,7 +38,7 @@ export const paymentMethodsService = {
         methods.push({
           id: child.key as string,
           ...val,
-        });
+        } as PaymentMethod);
       });
 
       return methods;
@@ -49,7 +50,7 @@ export const paymentMethodsService = {
 
   async createPaymentMethod(
     userId: string,
-    type: 'card' | 'bank_account',
+    type: PaymentMethodType,
     last4: string,
     brand?: string,
     expMonth?: number,
@@ -59,11 +60,11 @@ export const paymentMethodsService = {
     try {
       const methodsRef = ref(db, 'paymentMethods');
       const newRef = push(methodsRef);
-      
+
       // Check if this is the first payment method for user (make it default)
       const existingMethods = await this.getPaymentMethodsByUser(userId);
       const isDefault = existingMethods.length === 0;
-      
+
       const method: Omit<PaymentMethod, 'id'> = {
         userId,
         type,
@@ -94,7 +95,7 @@ export const paymentMethodsService = {
       return {
         id: newRef.key as string,
         ...method,
-      };
+      } as PaymentMethod;
     } catch (error) {
       console.error('Error creating payment method:', error);
       throw error;
@@ -163,7 +164,7 @@ export const paymentMethodsService = {
     try {
       // First, unset all defaults for this user
       const methods = await this.getPaymentMethodsByUser(userId);
-      
+
       for (const method of methods) {
         const methodRef = ref(db, `paymentMethods/${method.id}`);
         await set(methodRef, {

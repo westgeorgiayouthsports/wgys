@@ -1,8 +1,9 @@
 import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
-import type { ProgramFormResponse } from '../types/programForm';
+import type { ProgramFormResponse } from '../types/program';
 import type { SeasonType } from '../types/season';
+import type { ProgramRegistrationStatus, PaymentPlan } from '../types';
 
 export interface ProgramRegistrationRecord {
   id: string;
@@ -16,10 +17,10 @@ export interface ProgramRegistrationRecord {
   familyId?: string;
   registeredBy: string;
   responses: ProgramFormResponse[];
-  status: 'cart' | 'pending' | 'confirmed' | 'cancelled';
+  status: ProgramRegistrationStatus;
   paymentMethod: string;
   paymentDisplay?: string;
-  paymentPlan?: 'full' | 'plan';
+  paymentPlan?: PaymentPlan;
   totalAmount: number;
   registrationDate: string;
   createdAt: string;
@@ -35,7 +36,7 @@ export const programRegistrationsService = {
     paymentMethod: string,
     athleteId?: string,
     familyId?: string,
-    paymentPlan?: 'full' | 'plan',
+    paymentPlan?: PaymentPlan,
     extras?: Partial<Pick<ProgramRegistrationRecord, 'programName' | 'playerName' | 'paymentDisplay'>>
   ): Promise<ProgramRegistrationRecord> {
     try {

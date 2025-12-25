@@ -14,7 +14,7 @@ interface RegistrationsViewProps {
 
 export const RegistrationsView: React.FC<RegistrationsViewProps> = ({ teamId, isAdmin = false }) => {
   const dispatch = useDispatch();
-  const _user = useSelector((state: RootState) => state.auth.user);
+  // const _user = useSelector((state: RootState) => state.auth.user);
   const { registrations, loading, error } = useSelector((state: RootState) => state.registrations);
   
   const [showForm, setShowForm] = useState(false);

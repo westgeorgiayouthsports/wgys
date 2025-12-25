@@ -106,7 +106,7 @@ function ToolbarPlugin() {
         if ($isRangeSelection(selection)) {
           const textContent = selection.getTextContent() || url;
           selection.insertText('');
-          const _root = $getRoot();
+          // const _root = $getRoot();
           const linkHTML = `<a href="${url}" target="_blank">${textContent}</a>`;
           const parser = new DOMParser();
           const dom = parser.parseFromString(linkHTML, 'text/html');

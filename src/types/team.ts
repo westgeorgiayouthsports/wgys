@@ -1,3 +1,5 @@
+import { SportType } from "./program";
+
 export interface Tournament {
   id?: string;
   name: string;
@@ -34,7 +36,7 @@ export interface Team {
   id: string;
   userId: string;
   name: string;
-  sport: 'Baseball' | 'Softball';
+  sport: SportType;
   season: number;
   rosterSize: number;
   tournaments: Tournament[];

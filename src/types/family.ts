@@ -1,5 +1,7 @@
-export type RelationshipType = 'parent' | 'guardian' | 'child' | 'sibling' | 'grandparent' | 'other';
-export type Sex = 'male' | 'female' | 'other';
+import type { RelationshipType, Sex } from './enums/person';
+import type { PaymentStatus } from './enums/payments';
+import type { ProgramRegistration } from './registration';
+export type { RelationshipType, PaymentStatus, ProgramRegistration };
 
 export interface FamilyMember {
   id: string;
@@ -39,17 +41,4 @@ export interface Family {
   createdBy: string;
 }
 
-export interface Registration {
-  id: string;
-  programId: string;
-  familyId: string;
-  participantId: string; // FamilyMember ID
-  registeredBy: string; // User ID who registered
-  registrationDate: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'waitlist';
-  paymentStatus: 'pending' | 'paid' | 'refunded';
-  paymentAmount: number;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type Registration = ProgramRegistration & { id: string; familyId?: string };

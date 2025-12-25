@@ -12,14 +12,14 @@ function getEnv(name: string): string | undefined {
     if (typeof process !== 'undefined' && (process.env as any)[name]) {
       return (process.env as any)[name];
     }
-  } catch (e) {
+  } catch {
     // ignore
   }
   try {
     // In browser builds Vite provides import.meta.env; some environments may expose a global shim
     const g = (globalThis as any).__VITE_ENV__ || (globalThis as any).__vite_env__;
     if (g && g[name]) return g[name];
-  } catch (e) {
+  } catch {
     // ignore
   }
   return undefined;

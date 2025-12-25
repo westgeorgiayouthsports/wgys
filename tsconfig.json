@@ -8,9 +8,16 @@
       "DOM.Iterable"
     ],
     "module": "ESNext",
+    "types": [ "vite/client", "node" ],
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -25,16 +32,12 @@
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": [
-    "src",
-    "tests/__mocks__/fileMock.js"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig.app.json"
-    },
-    {
-      "path": "./tsconfig.node.json"
-    }
+  "include": [ "src" ],
+  "exclude": [
+    "dist",
+    "dist-ssr",
+    "build",
+    "lib",
+    "node_modules"
   ]
 }

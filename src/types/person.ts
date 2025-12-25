@@ -1,6 +1,8 @@
-export type PersonRole = 'parent' | 'guardian' | 'athlete' | 'coach' | 'volunteer' | 'staff' | 'grandparent' | 'relative' | 'other';
-export type RelationshipType = 'parent' | 'child' | 'sibling' | 'guardian' | 'spouse' | 'grandparent' | 'other';
-export type ContactMethod = 'email' | 'sms' | 'phone' | 'app';
+import type { ContactMethod, PersonRole, PersonSource, RelationshipType, Sex } from './enums/person';
+import type { ProgramRegistration } from './registration';
+import type { TeamRole } from './enums/team';
+import type { ThemeType } from './enums/theme';
+export type { PersonRole, RelationshipType, ContactMethod, ProgramRegistration, TeamRole, ThemeType as Theme };
 
 export interface Relationship {
   personId: string;
@@ -15,70 +17,62 @@ export interface ContactPreference {
   isActive: boolean;
 }
 
-export interface ProgramRegistration {
-  programId: string;
-  programName: string;
-  season: string;
-  status: 'registered' | 'waitlist' | 'completed' | 'cancelled';
-  registeredAt: string;
-}
-
 export interface TeamMembership {
   teamId: string;
   teamName: string;
-  role: 'player' | 'coach' | 'assistant' | 'manager';
+  role: TeamRole;
   season: string;
   isActive: boolean;
 }
 
 export interface Person {
   id: string;
-  
+
   // Basic Information
   firstName: string;
   lastName: string;
   email?: string;
   phone?: string;
   dateOfBirth?: string;
-  sex?: 'male' | 'female';
-  
+  sex?: Sex;
+
   // Account Status
   hasAccount: boolean;
   userId?: string; // Firebase Auth UID
-  
+
   // Profile Settings (for account holders)
   photoURL?: string;
   displayName?: string;
-  themePreference?: 'light' | 'dark';
-  
+  themePreference?: ThemeType;
+
   // Family Roles (relationships)
   roles: PersonRole[];
   // System access level is stored separately in users table
-  
+
   // Family and Relationships
   familyId?: string;
   relationships: Relationship[];
-  
+
   // Contact Information
   address?: string;
   city?: string;
   state?: string;
   zipCode?: string;
   contactPreferences: ContactPreference[];
-  
+
   // Communication Groups
   groups: string[];
-  
+
   // Sports-specific
   programs: ProgramRegistration[];
   teams: TeamMembership[];
-  
+
   // School Information (for athletes)
   schoolName?: string;
   graduationYear?: number;
-  
+
   // Metadata
-  source: 'signup' | 'manual' | 'import';
+  source: PersonSource;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -116,7 +110,7 @@ export interface PersonFormData {
   groups?: string[];
   photoURL?: string;
   displayName?: string;
-  themePreference?: 'light' | 'dark';
+  themePreference?: ThemeType;
   familyId?: string;
   userId?: string;
   hasAccount?: boolean;

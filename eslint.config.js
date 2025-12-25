@@ -9,9 +9,13 @@ export default [
   {
     ignores: [
       'dist/**/*',
+      'dist/**',
+      'docs/**',
+      'node_modules/**',
+      'generated/**',
+      'src/generated/**',
       '**/*.d.ts',
-      'tests/**/*',
-      'vite.config.d.ts'
+      'tests/**/*'
     ]
   },
   eslint.configs.recommended,

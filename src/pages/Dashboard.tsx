@@ -60,7 +60,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const teams = useSelector((state: RootState) => state.teams.teams);
   const user = useSelector((state: RootState) => state.auth.user);
-  const _loading = useSelector((state: RootState) => state.teams.loading);
+  // const _loading = useSelector((state: RootState) => state.teams.loading);
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
 
   const [metrics, setMetrics] = useState<DashboardMetrics>({

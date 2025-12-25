@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Table, Card, Input, Select, Button, Space, Typography, Popconfirm, message } from 'antd';
 import { auditLogService } from '../services/auditLog';
 import type { AuditRecord } from '../services/auditLog';

@@ -1,6 +1,7 @@
 import { ref, push, set, get, remove } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
+import type { RegistrationPaymentMethod } from '../types';
 
 export interface TeamAssignment {
   id: string;
@@ -12,7 +13,7 @@ export interface TeamAssignment {
   parentEmail: string;
   phoneNumber: string;
   fee: number;
-  paymentMethod: 'stripe' | 'paypal' | 'square' | 'check' | 'cash' | 'venmo' | 'cashapp' | 'other';
+  paymentMethod: RegistrationPaymentMethod;
   status: 'pending' | 'approved' | 'paid';
   rosterPlayerId?: string;
   createdAt: string;
@@ -83,7 +84,7 @@ export const registrationsService = {
     parentEmail: string,
     phoneNumber: string,
     fee: number,
-    paymentMethod: 'stripe' | 'paypal' | 'square' | 'check' | 'cash' | 'venmo' | 'cashapp' | 'other'
+    paymentMethod: RegistrationPaymentMethod
   ): Promise<TeamAssignment> {
     try {
       const assignmentsRef = ref(db, 'teamAssignments');

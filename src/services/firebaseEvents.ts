@@ -1,11 +1,13 @@
 import { ref, push, set, get, remove } from 'firebase/database';
 import { db } from './firebase';
 
+import type { EventType } from '../types';
+
 export interface Event {
   id: string;
   teamId: string;
   title: string;
-  type: 'practice' | 'game' | 'tournament';
+  type: EventType;
   date: string;
   location: string;
   description: string;
@@ -66,7 +68,7 @@ export const eventsService = {
   async createEvent(
     teamId: string,
     title: string,
-    type: 'practice' | 'game' | 'tournament',
+    type: EventType,
     date: string,
     location: string,
     description: string

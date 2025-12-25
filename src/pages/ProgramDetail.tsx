@@ -414,7 +414,7 @@ export default function ProgramDetail() {
                 title: 'Actions',
                 key: 'actions',
                 width: 200,
-                render: (question: any, record: any, index: number) => (
+                render: (question: any, _record: any, index: number) => (
                   <Space>
                     <Button 
                       size="small" 

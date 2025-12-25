@@ -18,16 +18,19 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm install
-      
+
+    - name: Type check
+      run: npm ci && npm run typecheck
+
     - name: Create public environment file
       # Firebase credentials are SAFE to embed - they're public by design
       # Security comes from Firebase Console: Auth domains, DB rules, API restrictions
@@ -48,7 +51,7 @@ jobs:
 
     - name: Build
       run: npm run build
-      
+
     - name: Verify built assets exist
       run: node scripts/verify-assets.cjs
       shell: bash

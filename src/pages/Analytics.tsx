@@ -4,7 +4,8 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
-import { fetchWebsiteMetrics, fetchWebsiteTrends, ViewsSource } from '../services/analyticsClient';
+import { fetchWebsiteMetrics, fetchWebsiteTrends } from '../services/analyticsClient';
+import type { ViewsSource } from '../types';
 
 const { Title, Text } = Typography;
 

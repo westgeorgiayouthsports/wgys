@@ -1,6 +1,6 @@
 import type { User as FirebaseUser } from 'firebase/auth';
-
-export type UserRole = 'user' | 'admin' | 'coach' | 'owner';
+import type { UserRole } from './enums/auth';
+export type { UserRole };
 
 export interface User extends FirebaseUser {
   uid: string;

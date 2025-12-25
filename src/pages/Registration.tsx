@@ -29,6 +29,7 @@ import { peopleService } from '../services/firebasePeople';
 import { mailQueue } from '../services/firebaseMailQueue';
 import { paymentMethodsService, type PaymentMethod } from '../services/firebasePaymentMethods';
 import type { Program } from '../types/program';
+import type { PaymentPlan } from '../types';
 
 const { Title, Text } = Typography;
 
@@ -46,7 +47,7 @@ export default function RegistrationPage() {
   const [parentInfo, setParentInfo] = useState<{ name: string; email: string; phone: string } | null>(null);
   const { Dragger } = Upload;
   const [registrationsMap, setRegistrationsMap] = useState<Record<string, any[]>>({});
-  const [paymentPlan, setPaymentPlan] = useState<'full' | 'plan'>('full');
+  const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>('full');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [savedCards, setSavedCards] = useState<PaymentMethod[]>([]);
 
@@ -79,14 +80,14 @@ export default function RegistrationPage() {
         if (person && person.familyId) {
           const members = await peopleService.getPeopleByFamily(person.familyId);
           setFamilyMembers(members || []);
-          
+
           // Set parent info from logged-in user
           setParentInfo({
             name: `${person.firstName || ''} ${person.lastName || ''}`.trim(),
             email: user.email || '',
             phone: person.phone || '',
           });
-          
+
           // load registrations for family
           try {
             const regs = await programRegistrationsService.getProgramRegistrationsByFamily(person.familyId);
@@ -133,7 +134,7 @@ export default function RegistrationPage() {
     setModalProgram(program);
     form.resetFields();
     setPaymentPlan('full');
-    
+
     // Set default payment method to default card or first saved card if available
     const defaultCard = savedCards.find(c => c.isDefault) || savedCards[0];
     if (defaultCard) {
@@ -143,7 +144,7 @@ export default function RegistrationPage() {
       setSelectedPaymentMethod('new');
       form.setFieldsValue({ paymentMethod: 'new' });
     }
-    
+
     // Pre-fill parent information from logged-in user
     if (parentInfo) {
       form.setFieldsValue({
@@ -202,7 +203,7 @@ export default function RegistrationPage() {
       const selectedAthlete = familyMembers.find(m => m.id === selectedAthleteId);
       const playerName = selectedAthlete ? `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim() : '';
       const fee = modalProgram.basePrice || 0;
-      
+
       // Determine payment method to store - use Stripe PM ID if saved card selected
       let paymentMethodToStore = values.paymentMethod || 'other';
       const selectedCard = savedCards.find(c => c.id === selectedPaymentMethod);
@@ -269,14 +270,14 @@ export default function RegistrationPage() {
           ),
         });
       } else if (paymentMethodToStore === 'stripe') {
-        modal.info({ 
-          title: 'Payment Processing', 
-          content: <div>Stripe payment processing would occur here. Registration created as pending.</div> 
+        modal.info({
+          title: 'Payment Processing',
+          content: <div>Stripe payment processing would occur here. Registration created as pending.</div>
         });
       } else {
-        modal.success({ 
-          title: 'Registration Submitted', 
-          content: `Registration for ${playerName} has been submitted. Please follow payment instructions from the program organizer.` 
+        modal.success({
+          title: 'Registration Submitted',
+          content: `Registration for ${playerName} has been submitted. Please follow payment instructions from the program organizer.`
         });
       }
 
@@ -553,21 +554,21 @@ export default function RegistrationPage() {
             )}
 
             {/* Enhanced Payment Bubble */}
-            <div style={{ 
-              marginBottom: 24, 
-              padding: '20px', 
-              backgroundColor: token.colorBgElevated, 
+            <div style={{
+              marginBottom: 24,
+              padding: '20px',
+              backgroundColor: token.colorBgElevated,
               borderRadius: token.borderRadius,
               border: `1px solid ${token.colorBorder}`
             }}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-                <div style={{ 
-                  width: 32, 
-                  height: 32, 
-                  borderRadius: '50%', 
-                  backgroundColor: token.colorPrimary, 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <div style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  backgroundColor: token.colorPrimary,
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: 12
                 }}>
@@ -579,17 +580,17 @@ export default function RegistrationPage() {
               {/* Payment Plan Selection */}
               <div style={{ marginBottom: 20 }}>
                 <Text style={{ display: 'block', marginBottom: 12, color: token.colorPrimary }}>Select one:</Text>
-                <div style={{ 
-                  backgroundColor: token.colorBgContainer, 
+                <div style={{
+                  backgroundColor: token.colorBgContainer,
                   borderRadius: token.borderRadius,
                   border: `1px solid ${token.colorBorder}`,
                   overflow: 'hidden'
                 }}>
-                  <div 
+                  <div
                     onClick={() => setPaymentPlan('full')}
-                    style={{ 
+                    style={{
                       padding: '16px 20px',
-                      display: 'flex', 
+                      display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       cursor: 'pointer',
@@ -606,11 +607,11 @@ export default function RegistrationPage() {
                     </Text>
                   </div>
                   {modalProgram.paymentPlanEnabled && (
-                    <div 
+                    <div
                       onClick={() => setPaymentPlan('plan')}
-                      style={{ 
+                      style={{
                         padding: '16px 20px',
-                        display: 'flex', 
+                        display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         cursor: 'pointer',
@@ -639,14 +640,14 @@ export default function RegistrationPage() {
               {/* Payment Method Selection */}
               <div>
                 <Text strong style={{ display: 'block', marginBottom: 12 }}>Payment Method</Text>
-                <Form.Item 
-                  name="paymentMethod" 
+                <Form.Item
+                  name="paymentMethod"
                   rules={[{ required: true, message: 'Please select a payment method' }]}
                   style={{ marginBottom: 0 }}
                 >
                   <div>
                     {savedCards.length > 0 && savedCards.map(card => (
-                      <div 
+                      <div
                         key={card.id}
                         onClick={() => {
                           setSelectedPaymentMethod(card.id);
@@ -677,9 +678,9 @@ export default function RegistrationPage() {
                     ))}
                   </div>
                 </Form.Item>
-                <Button 
-                  type="dashed" 
-                  block 
+                <Button
+                  type="dashed"
+                  block
                   onClick={() => navigate('/payment-methods')}
                   style={{ marginTop: 8 }}
                 >

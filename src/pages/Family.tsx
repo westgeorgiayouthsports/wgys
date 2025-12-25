@@ -152,7 +152,7 @@ export default function Family() {
       person.city === currentUser.city &&
       person.state === currentUser.state &&
       person.zipCode === currentUser.zipCode;
-    setSameAddress(person.userId === user?.uid ? false : hasSameAddress);
+    setSameAddress(person.userId === user?.uid ? false : (hasSameAddress || false));
     form.setFieldsValue({
       firstName: person.firstName,
       lastName: person.lastName,
@@ -598,8 +598,8 @@ export default function Family() {
                       // Relative/other cannot be core family roles
                       const coreRoles = ['parent', 'guardian', 'athlete', 'grandparent'];
                       const peripheralRoles = ['relative', 'other'];
-                      const hasCoreRole = value.some(role => coreRoles.includes(role));
-                      const hasPeripheralRole = value.some(role => peripheralRoles.includes(role));
+                      const hasCoreRole = value.some((role: string) => coreRoles.includes(role));
+                      const hasPeripheralRole = value.some((role: string) => peripheralRoles.includes(role));
                       
                       if (hasCoreRole && hasPeripheralRole) {
                         return Promise.reject('Relative/Other cannot be combined with family roles');

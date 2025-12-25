@@ -12,7 +12,7 @@ interface EventsViewProps {
 
 export const EventsView: React.FC<EventsViewProps> = ({ teamId, isAdmin = false }) => {
   const dispatch = useDispatch();
-  const _user = useSelector((state: RootState) => state.auth.user);
+  // const _user = useSelector((state: RootState) => state.auth.user);
   const { events, loading, error } = useSelector((state: RootState) => state.events);
   
   const [showForm, setShowForm] = useState(false);

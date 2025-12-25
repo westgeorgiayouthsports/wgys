@@ -643,7 +643,7 @@ export default function Teams() {
                 value={totalBudget - totalSpent}
                 precision={2}
                 prefix="$"
-                valueStyle={{ color: totalBudget - totalSpent >= 0 ? '#3f8600' : '#cf1322' }}
+                styles={{ content: { color: totalBudget - totalSpent >= 0 ? '#3f8600' : '#cf1322' } }}
               />
             </Card>
           </Col>

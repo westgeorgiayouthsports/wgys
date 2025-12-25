@@ -1,14 +1,30 @@
-export type SportType = 'baseball' | 'softball' | 'basketball' | 'soccer' | 'tennis' | 'other';
+import type { QuestionType, SportType, ProgramRegistrationStatus, PaymentPlan, PaymentPlanFrequency } from './enums/program';
+import type { SeasonType } from './season';
+export type { QuestionType, SportType, ProgramRegistrationStatus, PaymentPlan, PaymentPlanFrequency };
 export type SexRestriction = 'female' | 'any';
 export type ProgramType = 'sport' | 'lesson' | 'training' | 'tryout' | 'camp';
 
-import type { SeasonType } from './season';
-import type { ProgramQuestion } from './programForm';
+export interface ProgramQuestion {
+  id: string;
+  type: QuestionType;
+  title: string;
+  description?: string;
+  required: boolean;
+  options?: string[]; // For dropdown and checkboxes
+  waiverText?: string; // For waiver type
+  order: number;
+}
+
+export interface ProgramFormResponse {
+  questionId: string;
+  answer: string | string[] | boolean; // string for text, string[] for checkboxes, boolean for waiver
+  fileUrl?: string; // For file uploads
+}
 
 export interface Program {
   id: string;
   name: string;
-  sport: SportType;
+  sport?: SportType;
   seasonId?: string; // Reference to Season document
   season?: SeasonType;
   year?: number;
@@ -24,7 +40,7 @@ export interface Program {
   registrationEnd: string;
   basePrice: number;
   paymentPlanEnabled?: boolean;
-  paymentPlanFrequency?: 'weekly' | 'biweekly' | 'monthly';
+  paymentPlanFrequency?: PaymentPlanFrequency;
   paymentPlanInstallments?: number;
   maxParticipants?: number;
   currentRegistrants: number;
@@ -34,6 +50,7 @@ export interface Program {
   updatedAt: string;
   createdBy: string;
 }
+// Note: canonical `Program` interface is defined above; no duplicate here.
 
 export interface ProgramFormData {
   name: string;

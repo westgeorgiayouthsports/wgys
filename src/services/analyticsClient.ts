@@ -1,4 +1,5 @@
-export type ViewsSource = 'standard' | 'eventCount' | 'realtime';
+import type { ViewsSource } from '../types';
+
 export type WebsiteViewsResponse = {
   views: number;
   realtimeViews?: number;
