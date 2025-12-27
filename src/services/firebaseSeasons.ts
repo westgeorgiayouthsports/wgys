@@ -128,6 +128,28 @@ export const seasonsService = {
 
   async createSeason(formData: SeasonFormData, userId: string): Promise<string> {
     try {
+      // Prevent duplicate season names or duplicate seasonType+year
+      const existing = await this.getSeasons();
+      const nameNorm = (formData.name || '').trim().toLowerCase();
+      if (nameNorm) {
+        const dupByName = existing.find(s => (s.name || '').trim().toLowerCase() === nameNorm);
+        if (dupByName) throw new Error('A season with that name already exists');
+      }
+      // derive candidate type/year from startDate or provided fields
+      let candidateType: SeasonType | undefined = undefined;
+      let candidateYear: number | undefined = undefined;
+      if ((formData as any).startDate) {
+        const meta = (this as any).deriveSeasonMeta((formData as any).startDate as string);
+        candidateType = meta.type;
+        candidateYear = meta.year;
+      } else if ((formData as any).seasonType && (formData as any).year) {
+        candidateType = (formData as any).seasonType as SeasonType;
+        candidateYear = (formData as any).year as number;
+      }
+      if (candidateType && candidateYear) {
+        const dupByTypeYear = existing.find(s => s.seasonType === candidateType && s.year === candidateYear);
+        if (dupByTypeYear) throw new Error('A season with that type and year already exists');
+      }
       const now = new Date().toISOString();
       const newSeasonRef = ref(db, `seasons/${Date.now()}`);
       const seasonId = newSeasonRef.key!;
@@ -173,6 +195,35 @@ export const seasonsService = {
 
   async updateSeason(seasonId: string, updates: Partial<Season>, actorId?: string): Promise<void> {
     try {
+      // Prevent duplicate name or duplicate seasonType+year when updating
+      const existing = await this.getSeasons();
+      if ((updates as any).name) {
+        const nameNorm = ((updates as any).name || '').trim().toLowerCase();
+        const dup = existing.find(s => s.id !== seasonId && (s.name || '').trim().toLowerCase() === nameNorm);
+        if (dup) throw new Error('A season with that name already exists');
+      }
+      // Determine candidate type/year after applying updates
+      let candidateType: SeasonType | undefined = undefined;
+      let candidateYear: number | undefined = undefined;
+      if ((updates as any).startDate) {
+        const meta = (this as any).deriveSeasonMeta((updates as any).startDate as string);
+        candidateType = meta.type;
+        candidateYear = meta.year;
+      } else if ((updates as any).seasonType && (updates as any).year) {
+        candidateType = (updates as any).seasonType as SeasonType;
+        candidateYear = (updates as any).year as number;
+      } else {
+        // fall back to existing season values
+        const current = await this.getSeasonById(seasonId);
+        if (current) {
+          candidateType = (updates as any).seasonType ?? current.seasonType;
+          candidateYear = (updates as any).year ?? current.year;
+        }
+      }
+      if (candidateType && candidateYear) {
+        const dupByTypeYear = existing.find(s => s.id !== seasonId && s.seasonType === candidateType && s.year === candidateYear);
+        if (dupByTypeYear) throw new Error('A season with that type and year already exists');
+      }
       const seasonRef = ref(db, `seasons/${seasonId}`);
       const cleaned = Object.fromEntries(
         Object.entries(updates).filter(([_, v]) => v !== undefined && v !== '')

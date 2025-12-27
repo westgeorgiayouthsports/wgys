@@ -64,10 +64,10 @@ admin.initializeApp({
 const db = admin.database();
 
 const sports = [
-  { name: 'baseball', ageControlDate: '05-01' },
-  { name: 'softball', ageControlDate: '01-01' },
-  { name: 'soccer', ageControlDate: '01-01' },
-  { name: 'football', ageControlDate: '09-01' },
+  { name: 'Baseball', ageControlDate: '05-01' },
+  { name: 'Softball', ageControlDate: '01-01' },
+  { name: 'Soccer', ageControlDate: '01-01' },
+  { name: 'Football', ageControlDate: '09-01' },
 ];
 
 async function seed() {

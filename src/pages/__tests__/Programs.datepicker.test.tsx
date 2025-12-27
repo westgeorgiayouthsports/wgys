@@ -79,7 +79,7 @@ describe('Programs datepicker persistence', () => {
 
     // Set all fields programmatically
     act(() => {
-      ref.current.form.setFieldsValue({
+        ref.current.form.setFieldsValue({
         name: 'Test Program',
         sport: 'baseball',
         sexRestriction: 'coed',

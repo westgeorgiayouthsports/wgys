@@ -8,6 +8,8 @@ export interface Season {
   year: number; // e.g., 2026
   startDate?: string; // ISO date string YYYY-MM-DD
   endDate?: string; // ISO date string YYYY-MM-DD
+  registrationStart?: string; // ISO date string YYYY-MM-DD
+  registrationEnd?: string; // ISO date string YYYY-MM-DD
   fiscalYearStart?: string; // ISO date string
   fiscalYearEnd?: string; // ISO date string
   status: SeasonStatus; // 'draft' | 'active' | 'closed' | 'archived'
@@ -35,6 +37,8 @@ export interface SeasonFormData {
   year?: number;
   startDate?: string;
   endDate?: string;
+  registrationStart?: string;
+  registrationEnd?: string;
   fiscalYearStart?: string;
   fiscalYearEnd?: string;
   description?: string;

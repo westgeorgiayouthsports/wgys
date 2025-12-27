@@ -37,7 +37,6 @@ export type PersonSource = typeof PersonSourceValues[keyof typeof PersonSourceVa
 export const SexValues = {
   male: 'male',
   female: 'female',
-  unknown: 'unknown',
 } as const;
 
 export type Sex = typeof SexValues[keyof typeof SexValues];

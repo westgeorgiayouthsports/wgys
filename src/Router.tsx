@@ -26,6 +26,7 @@ const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 const PaymentMethods = lazy(() => import('./pages/PaymentMethods'));
 const Registrations = lazy(() => import('./pages/Registrations'));
 const Seasons = lazy(() => import('./pages/Seasons'));
+const SeasonDetail = lazy(() => import('./pages/SeasonDetail'));
 const Programs = lazy(() => import('./pages/Programs'));
 const ProgramDetail = lazy(() => import('./pages/ProgramDetail'));
 const ProgramTeams = lazy(() => import('./pages/ProgramTeams'));
@@ -40,6 +41,7 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const AdminRegistrations = lazy(() => import('./pages/AdminRegistrations'));
 const AdminPayments = lazy(() => import('./pages/AdminPayments'));
 const PaymentPlans = lazy(() => import('./pages/PaymentPlans'));
+const AdminProgramTemplates = lazy(() => import('./pages/AdminProgramTemplates'));
 
 // Lazy load views
 const EventsView = lazy(() => import('./components/Events/EventsView'));
@@ -122,6 +124,11 @@ function Router() {
             <Route path="/admin/seasons" element={
               <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
                 <Seasons />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/seasons/:seasonId" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                <SeasonDetail />
               </ProtectedRoute>
             } />
             <Route path="/admin/programs" element={
@@ -222,6 +229,11 @@ function Router() {
             <Route path="/admin/audit" element={
               <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
                 <AuditLogs />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/program-templates" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                <AdminProgramTemplates />
               </ProtectedRoute>
             } />
           </Route>

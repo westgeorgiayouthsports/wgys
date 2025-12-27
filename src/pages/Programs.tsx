@@ -451,6 +451,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
             <Form.Item name="sexRestriction" label="Sex" rules={[{ required: true }]}>
               <Select placeholder="Select restriction" style={{ width: 120 }}>
                 <Select.Option value="any">Any</Select.Option>
+                <Select.Option value="male">Male</Select.Option>
                 <Select.Option value="female">Female</Select.Option>
               </Select>
             </Form.Item>

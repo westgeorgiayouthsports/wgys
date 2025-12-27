@@ -191,6 +191,9 @@ export default function RegistrationPage() {
     if (program.sexRestriction === 'female') {
       if (sex !== 'female') return { ok: false, reason: 'Program is for females only' };
     }
+    if (program.sexRestriction === 'male') {
+      if (sex !== 'male') return { ok: false, reason: 'Program is for males only' };
+    }
     return { ok: true };
   };
 
@@ -313,9 +316,12 @@ export default function RegistrationPage() {
                   {/* Sex Restriction */}
                   {p.sexRestriction === 'female' && (
                     <div style={{ marginBottom: 4 }}>
-                      <Tag color="magenta">
-                        Female
-                      </Tag>
+                      <Tag color="magenta">Female</Tag>
+                    </div>
+                  )}
+                  {p.sexRestriction === 'male' && (
+                    <div style={{ marginBottom: 4 }}>
+                      <Tag color="blue">Male</Tag>
                     </div>
                   )}
                   {p.sexRestriction === 'any' && (

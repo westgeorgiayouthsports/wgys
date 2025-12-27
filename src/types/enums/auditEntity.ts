@@ -1,6 +1,7 @@
 export enum AuditEntity {
   Cart = 'cart',
   Program = 'program',
+  ProgramTemplate = 'programTemplate',
   Sport = 'sport',
   Team = 'team',
   Season = 'season',

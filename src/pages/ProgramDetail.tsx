@@ -143,7 +143,7 @@ export default function ProgramDetail() {
     if (program) {
       programForm.setFieldsValue({
         ...program,
-        femaleOnlyToggle: program.sexRestriction === 'female',
+        femaleOnlyToggle: program.sexRestriction || 'any',
         registrationStart: program.registrationStart ? dayjs(program.registrationStart) : null,
         registrationEnd: program.registrationEnd ? dayjs(program.registrationEnd) : null,
         birthDateStart: program.birthDateStart ? dayjs(program.birthDateStart) : null,
@@ -344,8 +344,7 @@ export default function ProgramDetail() {
           <Form form={programForm} layout="vertical" onFinish={(values) => {
             if (!program) return;
 
-            // Convert female toggle to sexRestriction
-            const sexRestriction = values.femaleOnlyToggle ? 'female' : 'any';
+            const sexRestriction = values.sexRestriction || 'any';
 
             // Clean questions - remove undefined/null values from each question
             const cleanedQuestions = (program.questions || []).map(q => {
@@ -407,8 +406,12 @@ export default function ProgramDetail() {
                 </Form.Item>
               </Col>
               <Col span={6}>
-                <Form.Item name="femaleOnlyToggle" label="Female Only" valuePropName="checked">
-                  <Switch checkedChildren="Yes" unCheckedChildren="No" />
+                <Form.Item name="sexRestriction" label="Sex Restriction">
+                  <Select>
+                    <Select.Option value="any">Any</Select.Option>
+                    <Select.Option value="male">Male</Select.Option>
+                    <Select.Option value="female">Female</Select.Option>
+                  </Select>
                 </Form.Item>
               </Col>
               <Col span={6}>
