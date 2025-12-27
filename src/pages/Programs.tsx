@@ -277,8 +277,8 @@ const Programs = forwardRef(function Programs(_props, ref) {
       key: 'registrants',
       render: (record: Program) => (
         <div>
-          <Text>{record.currentRegistrants}</Text>
-          {record.maxParticipants && <Text type="secondary">/{record.maxParticipants}</Text>}
+          <Text>{(record.currentRegistrants ?? 0)}</Text>
+          {record.maxParticipants != null && <Text type="secondary">/{record.maxParticipants}</Text>}
         </div>
       ),
     },

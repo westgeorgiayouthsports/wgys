@@ -110,8 +110,8 @@ export default function PaymentPlans() {
   return (
     <div style={{ padding: 24, minHeight: '100vh' }}>
       <Space style={{ marginBottom: 16 }}>
-        <Button type="default" onClick={() => window.history.back()}>Back</Button>
         <Title level={3} style={{ margin: 0 }}>Payment Plans</Title>
+        {/* <Button  type="default" onClick={() => window.history.back()}>Back</Button> */}
       </Space>
       <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>Manage global payment plans used by the cart and checkout flows.</Text>
 

@@ -7,7 +7,7 @@ import { PaymentPlan } from '../types/paymentPlan';
 export const paymentPlansService = {
   async getPaymentPlans(): Promise<PaymentPlan[]> {
     try {
-      const snap = await get(ref(db, 'payment_plans'));
+      const snap = await get(ref(db, 'paymentPlans'));
       if (!snap.exists()) return [];
       const data = snap.val();
       return Object.entries(data).map(([id, p]: [string, any]) => ({ id, ...(p as any) } as PaymentPlan));
@@ -25,7 +25,7 @@ export const paymentPlansService = {
 
   async getPaymentPlanById(id: string): Promise<PaymentPlan | null> {
     try {
-      const snap = await get(ref(db, `payment_plans/${id}`));
+      const snap = await get(ref(db, `paymentPlans/${id}`));
       if (!snap.exists()) return null;
       return { id, ...(snap.val() as any) } as PaymentPlan;
     } catch (e) {
@@ -36,7 +36,7 @@ export const paymentPlansService = {
 
   async createPaymentPlan(plan: Partial<PaymentPlan>, createdBy?: string): Promise<string | null> {
     try {
-      const plansRef = ref(db, 'payment_plans');
+      const plansRef = ref(db, 'paymentPlans');
       const now = new Date().toISOString();
       const cleaned = Object.fromEntries(Object.entries(plan || {}).filter(([_, v]) => v !== undefined && v !== ''));
       const payload = { ...cleaned, createdAt: now, updatedAt: now, createdBy: createdBy || null };
@@ -51,7 +51,7 @@ export const paymentPlansService = {
 
   async updatePaymentPlan(id: string, updates: Partial<PaymentPlan>) {
     try {
-      const planRef = ref(db, `payment_plans/${id}`);
+      const planRef = ref(db, `paymentPlans/${id}`);
       const cleaned = Object.fromEntries(Object.entries(updates || {}).filter(([_, v]) => v !== undefined && v !== ''));
       const payload = { ...cleaned, updatedAt: new Date().toISOString() };
       await update(planRef, payload as any);
@@ -64,9 +64,9 @@ export const paymentPlansService = {
 
   async deletePaymentPlan(id: string) {
     try {
-      const snap = await get(ref(db, `payment_plans/${id}`));
+      const snap = await get(ref(db, `paymentPlans/${id}`));
       const before = snap.exists() ? snap.val() : null;
-      await remove(ref(db, `payment_plans/${id}`));
+      await remove(ref(db, `paymentPlans/${id}`));
       try { await auditLogService.logDelete(AuditEntity.PaymentPlan, id, before); } catch {}
     } catch (e) {
       console.error('Error deleting payment plan', e);

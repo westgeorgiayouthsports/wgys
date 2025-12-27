@@ -74,6 +74,14 @@
         ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
       }
     },
+    "paymentPlans": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      "$planId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
     "team_budgets": {
       ".read": "auth != null",
 			".write": "auth != null && (auth.token.email == data.child('createdBy').val() || auth.token.email == 'westga.youthsports@gmail.com')",

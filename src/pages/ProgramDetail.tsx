@@ -276,6 +276,13 @@ export default function ProgramDetail() {
     return (
       <div className="page-container full-width">
         <div style={{ width: '100%' }}>
+          <div style={{ marginBottom: '24px' }}>
+            <Space style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Button icon={<ArrowLeftOutlined />} onClick={() => setShowPreview(false)}>
+                Back to Edit
+              </Button>
+            </Space>
+          </div>
           <Register
             program={program}
             isPreview={true}
