@@ -1,0 +1,1 @@
+import{j as o}from"./index-DTW5bq-G.js";import"./vendor-react-Ck9bq5u-.js";import"./vendor-router-Ck4ZuSP9.js";import"./vendor-antd-yu-B_5lv.js";import"./vendor-redux-BbD-gcRX.js";import"./vendor-firebase-C5oG7Anb.js";function e(){return o.jsx("div",{children:"404 - Page Not Found"})}export{e as default};
