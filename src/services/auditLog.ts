@@ -1,7 +1,6 @@
 import { ref, push, set, get, query, orderByChild, limitToLast, remove } from 'firebase/database';
 import { db, auth } from './firebase';
-
-export type AuditEntity = 'program' | 'team' | 'season' | 'person' | 'family' | 'teamAssignment' | 'other';
+import { AuditEntity } from '../types/enums';
 
 export interface AuditRecord {
   id?: string;

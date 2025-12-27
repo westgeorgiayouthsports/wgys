@@ -20,6 +20,7 @@ import { PlusOutlined, ArrowLeftOutlined, ReloadOutlined } from '@ant-design/ico
 import type { RootState } from '../store/store';
 import type { Program } from '../types';
 import { programsService } from '../services/firebasePrograms';
+import { seasonsService } from '../services/firebaseSeasons';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
 import { teamsService } from '../services/firebaseTeams';
 
@@ -32,10 +33,14 @@ export default function ProgramTeams() {
   const { message } = App.useApp();
 
   const [program, setProgram] = useState<Program | null>(null);
+  
+  const [seasons, setSeasons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [assignmentLoading, setAssignmentLoading] = useState(false);
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  const [unassignedTeams, setUnassignedTeams] = useState<any[]>([]);
+  const [selectedUnassignedTeam, setSelectedUnassignedTeam] = useState<string | undefined>(undefined);
   const [createTeamVisible, setCreateTeamVisible] = useState(false);
   const [createTeamForm] = Form.useForm();
 
@@ -43,8 +48,37 @@ export default function ProgramTeams() {
     if (programId) {
       loadProgram();
       loadTeamAssignment();
+      loadProgramsAndSeasons();
+      loadUnassignedTeams();
     }
   }, [programId]);
+
+  const loadUnassignedTeams = async () => {
+    try {
+      const all = await teamsService.getTeams();
+      const unassigned = (all || []).filter((t: any) => !t.programId);
+      setUnassignedTeams(unassigned);
+    } catch (error) {
+      console.error('❌ Error loading unassigned teams:', error);
+    }
+  };
+
+  const loadProgramsAndSeasons = async () => {
+    try {
+      const [, seas] = await Promise.all([programsService.getPrograms(), seasonsService.getSeasons()]);
+      setSeasons(seas || []);
+    } catch (error) {
+      console.error('❌ Error loading programs/seasons:', error);
+    }
+  };
+
+  const getSeasonNameFromProgram = (prog: any) => {
+    if (!prog) return '';
+    if (prog.season && typeof prog.season === 'object' && prog.season.name) return prog.season.name;
+    const sid = prog.seasonId || (typeof prog.season === 'string' ? prog.season : undefined);
+    const found = seasons.find((s: any) => s.id === sid);
+    return found?.name || sid || '';
+  };
 
   const loadProgram = async () => {
     setLoading(true);
@@ -112,10 +146,9 @@ export default function ProgramTeams() {
         budget: 0,
         spent: 0,
         status: 'active',
-        userId: 'admin', // overridden in service by auth
-        createdAt: new Date().toISOString(),
+        // derive program/season/year from current program context
         programId: program.id,
-        season: program.season,
+        seasonId: (program as any).seasonId || (program as any).season?.id || undefined,
         year: program.year,
         ageGroup: program.ageGroup,
       } as any);
@@ -151,7 +184,7 @@ export default function ProgramTeams() {
               Back to Programs
             </Button>
             <div>
-              <Title level={2} style={{ margin: 0 }}>{program.name}</Title>
+              <Title level={2} style={{ margin: 0 }}>{((program as any)?.season?.name ? `${(program as any).season.name} - ` : '') + program.name}</Title>
               <Text type="secondary">Team Assignment</Text>
             </div>
           </Space>
@@ -162,7 +195,35 @@ export default function ProgramTeams() {
       <Card title="Team Assignment">
           <Space style={{ marginBottom: 16 }}>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateTeamVisible(true)}>Create Team</Button>
-            <Button icon={<ReloadOutlined />} onClick={loadTeamAssignment} loading={assignmentLoading}>Refresh</Button>
+            <Select
+              style={{ width: 260 }}
+              placeholder="Assign existing team to this program"
+              value={selectedUnassignedTeam}
+              onChange={(v) => setSelectedUnassignedTeam(v)}
+              options={unassignedTeams.map(t => ({ label: t.name || t.id, value: t.id }))}
+              allowClear
+            />
+            <Button
+              onClick={async () => {
+                if (!selectedUnassignedTeam || !program) return;
+                try {
+                  await teamsService.updateTeam(selectedUnassignedTeam, {
+                    programId: program.id,
+                    seasonId: (program as any).seasonId || (program as any).season?.id || undefined,
+                    year: program.year,
+                    ageGroup: program.ageGroup,
+                  });
+                  message.success('Team assigned to program');
+                  setSelectedUnassignedTeam(undefined);
+                  await loadTeamAssignment();
+                  await loadUnassignedTeams();
+                } catch (err) {
+                  console.error('❌ Error assigning team:', err);
+                  message.error('Failed to assign team');
+                }
+              }}
+            >Assign</Button>
+            <Button icon={<ReloadOutlined />} onClick={() => { loadTeamAssignment(); loadUnassignedTeams(); }} loading={assignmentLoading}>Refresh</Button>
           </Space>
           <Row gutter={16}>
             <Col xs={24} xl={12}>
@@ -245,8 +306,14 @@ export default function ProgramTeams() {
           width={500}
         >
           <Form form={createTeamForm} layout="vertical" onFinish={handleCreateTeam}>
-            <Form.Item name="name" label="Team Name" rules={[{ required: true }]}> 
+            <Form.Item name="name" label="Team Name" rules={[{ required: true }]}>
               <Input placeholder="Enter team name" />
+            </Form.Item>
+            <Form.Item label="Season">
+              <Input value={getSeasonNameFromProgram(program)} disabled />
+            </Form.Item>
+            <Form.Item label="Program">
+              <Input value={program.name} disabled />
             </Form.Item>
             <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
               <Space>

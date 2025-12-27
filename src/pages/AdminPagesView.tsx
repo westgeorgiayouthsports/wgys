@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import DOMPurify from 'dompurify';
-import type { AdminPage } from '../../services/firebaseAdminPages';
-import { adminPagesService } from '../../services/firebaseAdminPages';
-import type { RootState } from '../../store/store';
+import type { AdminPage } from '../services/firebaseAdminPages';
+import { adminPagesService } from '../services/firebaseAdminPages';
+import type { RootState } from '../store/store';
 
 type PageType = 'policies' | 'about' | 'rules';
 
@@ -182,8 +182,8 @@ export const AdminPagesView: React.FC<AdminPagesViewProps> = ({ isAdmin = false 
         <div className="p-6 bg-slate-800 border border-slate-700 rounded-lg">
           <div
             className="prose prose-invert max-w-none text-gray-300"
-            dangerouslySetInnerHTML={{ 
-              __html: DOMPurify.sanitize(editedContent || '<p>No content yet</p>') 
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(editedContent || '<p>No content yet</p>')
             }}
           />
         </div>

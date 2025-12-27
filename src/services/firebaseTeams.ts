@@ -1,6 +1,7 @@
 import { ref, set, get, update, remove, query, orderByChild, equalTo, push } from 'firebase/database';
 import { db, auth } from './firebase';
 import { auditLogService } from './auditLog';
+import { AuditEntity } from '../types/enums';
 import type { Team } from '../store/slices/teamsSlice';
 
 export const teamsService = {
@@ -9,7 +10,7 @@ export const teamsService = {
     try {
       const teamsRef = ref(db, 'teams');
       const snapshot = await get(teamsRef);
-      
+
       if (!snapshot.exists()) {
         return [];
       }
@@ -30,7 +31,7 @@ export const teamsService = {
     try {
       const teamsRef = ref(db, 'teams');
       const snapshot = await get(teamsRef);
-      
+
       if (!snapshot.exists()) {
         return [];
       }
@@ -63,11 +64,17 @@ export const teamsService = {
         createdAt: new Date().toISOString(),
       };
 
-      await set(newTeamRef, teamData);
-      
+      // Remove any undefined properties to avoid RTDB 'value contains undefined' errors
+      const cleaned: Record<string, any> = {};
+      Object.entries(teamData).forEach(([k, v]) => {
+        if (v !== undefined) cleaned[k] = v;
+      });
+
+      await set(newTeamRef, cleaned);
+
       // audit
       try {
-        await auditLogService.log({ action: 'team.created', entityType: 'team', entityId: newTeamRef.key, details: teamData });
+        await auditLogService.log({ action: 'team.created', entityType: AuditEntity.Team, entityId: newTeamRef.key, details: teamData });
       } catch (e) {
         console.error('Error auditing team.created:', e);
       }
@@ -85,12 +92,15 @@ export const teamsService = {
       if (!id) throw new Error('Team ID is required');
       const { id: _, createdAt: _createdAt, ...filteredUpdates } = updates;
       const teamRef = ref(db, `teams/${id}`);
-      await update(teamRef, {
-        ...filteredUpdates,
-        updatedAt: new Date().toISOString(),
+      // remove undefined in updates
+      const cleanedUpdates: Record<string, any> = {};
+      Object.entries(filteredUpdates).forEach(([k, v]) => {
+        if (v !== undefined) cleanedUpdates[k] = v;
       });
+      cleanedUpdates.updatedAt = new Date().toISOString();
+      await update(teamRef, cleanedUpdates);
       try {
-        await auditLogService.log({ action: 'team.updated', entityType: 'team', entityId: id, details: filteredUpdates });
+        await auditLogService.log({ action: 'team.updated', entityType: AuditEntity.Team, entityId: id, details: filteredUpdates });
       } catch (e) {
         console.error('Error auditing team.updated:', e);
       }
@@ -108,7 +118,7 @@ export const teamsService = {
       const before = snap.exists() ? snap.val() : null;
       await remove(teamRef);
       try {
-        await auditLogService.logDelete('team', id, before);
+        await auditLogService.logDelete(AuditEntity.Team, id, before);
       } catch (e) {
         console.error('Error auditing team.delete:', e);
       }

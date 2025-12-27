@@ -1,6 +1,7 @@
 import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
+import { AuditEntity } from '../types/enums';
 import type { PaymentMethodType } from '../types';
 
 export interface PaymentMethod {
@@ -84,7 +85,7 @@ export const paymentMethodsService = {
       try {
         await auditLogService.log({
           action: 'paymentMethod.created',
-          entityType: 'other',
+          entityType: AuditEntity.PaymentMethod,
           entityId: newRef.key ?? null,
           details: { userId, type, brand, last4, isDefault },
         });
@@ -115,7 +116,7 @@ export const paymentMethodsService = {
         updatedAt: now,
       });
       try {
-        await auditLogService.logDelete('other', id, before);
+        await auditLogService.logDelete(AuditEntity.PaymentMethod, id, before);
       } catch (e) {
         console.error('Error auditing paymentMethod.delete:', e);
       }
@@ -145,7 +146,7 @@ export const paymentMethodsService = {
       try {
         const auditId = await auditLogService.log({
           action: 'paymentMethod.restored',
-          entityType: 'other',
+          entityType: AuditEntity.PaymentMethod,
           entityId: id,
           details: { before },
         });
@@ -175,7 +176,7 @@ export const paymentMethodsService = {
         try {
           await auditLogService.log({
             action: method.id === methodId ? 'paymentMethod.set_default' : 'paymentMethod.unset_default',
-            entityType: 'other',
+            entityType: AuditEntity.PaymentMethod,
             entityId: method.id,
             details: { userId, methodId: method.id },
           });

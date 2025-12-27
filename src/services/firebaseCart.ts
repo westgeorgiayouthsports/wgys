@@ -1,6 +1,7 @@
 import { ref, set, get } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
+import { AuditEntity } from '../types/enums';
 
 export const firebaseCartService = {
   async saveCart(userId: string, items: any[]) {
@@ -10,7 +11,7 @@ export const firebaseCartService = {
       const payload = { userId, items, updatedAt: now };
       await set(cartRef, payload);
       try {
-        await auditLogService.log({ action: 'cart.saved', entityType: 'other', entityId: userId, details: { itemsCount: items?.length || 0 } });
+        await auditLogService.log({ action: 'cart.saved', entityType: AuditEntity.Cart, entityId: userId, details: { itemsCount: items?.length || 0 } });
       } catch (e) {
         console.error('Error auditing cart.save:', e);
       }
@@ -37,7 +38,7 @@ export const firebaseCartService = {
     try {
       await set(ref(db, `carts/${userId}`), null);
       try {
-        await auditLogService.log({ action: 'cart.cleared', entityType: 'other', entityId: userId, details: {} });
+        await auditLogService.log({ action: 'cart.cleared', entityType: AuditEntity.Cart, entityId: userId, details: {} });
       } catch (e) {
         console.error('Error auditing cart.clear:', e);
       }

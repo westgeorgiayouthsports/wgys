@@ -4,13 +4,14 @@ import type { Season, SeasonFormData } from '../types/season';
 import { programsService } from './firebasePrograms';
 import { teamsService } from './firebaseTeams';
 import { auditLogService } from './auditLog';
+import { AuditEntity } from '../types/enums';
 
 export const seasonsService = {
   async getSeasons(): Promise<Season[]> {
     try {
       const snapshot = await get(ref(db, 'seasons'));
       if (!snapshot.exists()) return [];
-      
+
       const data = snapshot.val();
       if (!data) return [];
       return Object.entries(data).map(([id, season]: [string, any]) => ({
@@ -55,10 +56,10 @@ export const seasonsService = {
       }
     }
     // write audit log summarizing cascade
-    try {
+      try {
       await auditLogService.log({
         action: 'season.archive_cascade',
-        entityType: 'season',
+        entityType: AuditEntity.Season,
         entityId: seasonId,
         actorId: actorId ?? undefined,
         details: {
@@ -85,7 +86,7 @@ export const seasonsService = {
     try {
       const snapshot = await get(ref(db, `seasons/${seasonId}`));
       if (!snapshot.exists()) return null;
-      
+
       return {
         id: seasonId,
         ...snapshot.val(),
@@ -119,7 +120,7 @@ export const seasonsService = {
       try {
         await auditLogService.log({
           action: 'season.created',
-          entityType: 'season',
+          entityType: AuditEntity.Season,
           entityId: seasonId,
           details: seasonData,
         });
@@ -147,7 +148,7 @@ export const seasonsService = {
       try {
         await auditLogService.log({
           action: 'season.updated',
-          entityType: 'season',
+          entityType: AuditEntity.Season,
           entityId: seasonId,
           actorId: actorId ?? undefined,
           details: cleaned,
@@ -183,7 +184,7 @@ export const seasonsService = {
 
       await remove(ref(db, `seasons/${seasonId}`));
       try {
-        await auditLogService.logDelete('season', seasonId, seasonData, actorId ?? undefined);
+        await auditLogService.logDelete(AuditEntity.Season, seasonId, seasonData, actorId ?? undefined);
       } catch (e) {
         console.error('Error auditing season.delete:', e);
       }

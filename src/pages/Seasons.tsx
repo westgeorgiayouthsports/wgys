@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { ref, get, update } from 'firebase/database';
+import { db } from '../services/firebase';
 import { useSelector } from 'react-redux';
 import {
   Table,
@@ -15,10 +17,13 @@ import {
   message,
   Popconfirm,
   Tooltip,
+  Tabs,
+  Switch,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
 import type { RootState } from '../store/store';
 import { seasonsService } from '../services/firebaseSeasons';
+import { programsService } from '../services/firebasePrograms';
 import type { Season, SeasonFormData } from '../types/season';
 import dayjs from 'dayjs';
 
@@ -43,7 +48,9 @@ export default function Seasons() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingSeason, setEditingSeason] = useState<Season | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'archived'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 15 });
+  const [programCountBySeason, setProgramCountBySeason] = useState<Record<string, number>>({});
   const [form] = Form.useForm();
 
   if (role !== 'admin' && role !== 'owner') {
@@ -57,13 +64,57 @@ export default function Seasons() {
 
   useEffect(() => {
     loadSeasons();
+    loadUserPreferences();
   }, []);
+
+  const loadUserPreferences = async () => {
+    if (user?.uid) {
+      try {
+        const userRef = ref(db, `users/${user.uid}/preferences`);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+          const prefs = snapshot.val();
+          if (prefs.seasonsPageSize) {
+            setPagination(prev => ({ ...prev, pageSize: prefs.seasonsPageSize }));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load user preferences for seasons:', error);
+      }
+    }
+  };
+
+  const saveUserPreferences = async (pageSize: number) => {
+    if (user?.uid) {
+      try {
+        const userRef = ref(db, `users/${user.uid}/preferences`);
+        await update(userRef, { seasonsPageSize: pageSize });
+      } catch (error) {
+        console.error('Failed to save seasons pageSize preference:', error);
+      }
+    }
+  };
 
   const loadSeasons = async () => {
     setLoading(true);
     try {
       const seasonsList = await seasonsService.getSeasons();
-      setSeasons(seasonsList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      const sorted = seasonsList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setSeasons(sorted);
+      // load programs to count assignments per season
+      try {
+        const programs = await programsService.getPrograms();
+        const counts: Record<string, number> = {};
+        (programs || []).forEach((p: any) => {
+          const sid = p.seasonId || (p.season && typeof p.season === 'string' ? p.season : undefined);
+          if (!sid) return;
+          counts[sid] = (counts[sid] || 0) + 1;
+        });
+        setProgramCountBySeason(counts);
+      } catch (e) {
+        console.error('Error loading programs for season counts', e);
+        setProgramCountBySeason({});
+      }
     } catch (error) {
       console.error('Error loading seasons:', error);
       message.error('Failed to load seasons');
@@ -75,7 +126,7 @@ export default function Seasons() {
   const handleAddSeason = () => {
     setEditingSeason(null);
     form.resetFields();
-    form.setFieldsValue({ year: new Date().getFullYear(), paymentPlans: [] });
+    form.setFieldsValue({ year: new Date().getFullYear(), active: true });
     setModalVisible(true);
   };
 
@@ -86,7 +137,7 @@ export default function Seasons() {
       seasonType: season.seasonType,
       year: season.year,
       description: season.description,
-      paymentPlans: season.paymentPlans || [],
+      active: season.status === 'active',
     });
     setModalVisible(true);
   };
@@ -120,8 +171,8 @@ export default function Seasons() {
         seasonType: values.seasonType,
         year: values.year,
         description: values.description,
-        paymentPlans: values.paymentPlans || [],
-      };
+        status: values.active ? 'active' : 'inactive',
+      } as any;
 
       if (editingSeason) {
         await seasonsService.updateSeason(editingSeason.id, {
@@ -148,8 +199,8 @@ export default function Seasons() {
       key: 'status',
       width: 100,
       render: (record: Season) => (
-        <Tag color={record.status === 'active' ? 'green' : 'red'}>
-          {record.status === 'active' ? 'Active' : 'Archived'}
+        <Tag color={record.status === 'active' ? 'green' : record.status === 'archived' ? 'red' : 'default'}>
+          {record.status === 'active' ? 'Active' : record.status === 'archived' ? 'Archived' : 'Inactive'}
         </Tag>
       ),
     },
@@ -191,40 +242,45 @@ export default function Seasons() {
       title: 'Actions',
       key: 'actions',
       width: 220,
-      render: (record: Season) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEditSeason(record)}
-            disabled={record.status === 'archived'}
-          >
-            Edit
-          </Button>
-          {record.status === 'active' && (
+      render: (record: Season) => {
+        const programsCount = programCountBySeason[record.id] || 0;
+        const canDelete = programsCount === 0;
+        const showArchive = record.status !== 'active' && record.status !== 'archived';
+        return (
+          <Space>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEditSeason(record)}
+              disabled={record.status === 'archived'}
+            >
+              Edit
+            </Button>
+            {showArchive && (
+              <Popconfirm
+                title="Archive Season"
+                description="This will archive all programs and teams in this season. Continue?"
+                onConfirm={() => handleArchiveSeason(record.id)}
+                okText="Yes"
+                cancelText="No"
+              >
+                <Button size="small" icon={<LockOutlined />}>Archive</Button>
+              </Popconfirm>
+            )}
             <Popconfirm
-              title="Archive Season"
-              description="This will archive all programs and teams in this season. Continue?"
-              onConfirm={() => handleArchiveSeason(record.id)}
+              title="Delete Season"
+              description={canDelete ? 'Are you sure you want to delete this season?' : 'Cannot delete season with programs assigned'}
+              onConfirm={() => canDelete ? handleDeleteSeason(record.id) : undefined}
               okText="Yes"
               cancelText="No"
             >
-              <Button size="small" icon={<LockOutlined />}>Archive</Button>
+              <Tooltip title={canDelete ? 'Delete season' : 'Season has programs; cannot delete'}>
+                <Button size="small" danger icon={<DeleteOutlined />} disabled={!canDelete} />
+              </Tooltip>
             </Popconfirm>
-          )}
-          <Popconfirm
-            title="Delete Season"
-            description="Are you sure you want to delete this season?"
-            onConfirm={() => handleDeleteSeason(record.id)}
-            okText="Yes"
-            cancelText="No"
-          >
-            <Tooltip title="Delete season">
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
+          </Space>
+        );
+      },
     },
   ];
 
@@ -237,16 +293,6 @@ export default function Seasons() {
             <Text type="secondary">Manage program seasons</Text>
           </div>
           <Space>
-            <Select
-              value={statusFilter}
-              onChange={(val) => setStatusFilter(val)}
-              style={{ width: 160 }}
-              options={[
-                { label: 'All Seasons', value: 'all' },
-                { label: 'Active Only', value: 'active' },
-                { label: 'Archived Only', value: 'archived' },
-              ]}
-            />
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSeason}>
               New Season
             </Button>
@@ -255,11 +301,39 @@ export default function Seasons() {
       </div>
 
       <Card title="Season Directory">
+        <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
+          {(() => {
+            const items = [
+              { key: 'active', label: 'Active' },
+              { key: 'past', label: 'Past' },
+              { key: 'archived', label: 'Archived' },
+              { key: 'all', label: 'All' },
+            ];
+            return <Tabs activeKey={statusFilter} onChange={(k) => setStatusFilter(k)} items={items} />;
+          })()}
+        </div>
         <Table
           columns={columns}
-          dataSource={seasons.filter(s => statusFilter === 'all' ? true : s.status === statusFilter)}
+          dataSource={seasons.filter(s => {
+            const currentYear = new Date().getFullYear();
+            if (statusFilter === 'all') return true;
+            if (statusFilter === 'active') return s.status === 'active';
+            if (statusFilter === 'archived') return s.status === 'archived';
+            if (statusFilter === 'past') return s.status !== 'archived' && (s.year || 0) < currentYear;
+            return true;
+          })}
           rowKey="id"
-          pagination={{ pageSize: 10 }}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} seasons`,
+            onChange: (page, size) => {
+              setPagination({ current: page, pageSize: size || 15 });
+              if (size && size !== pagination.pageSize) saveUserPreferences(size || 15);
+            }
+          }}
           loading={loading}
           size="middle"
         />
@@ -296,49 +370,13 @@ export default function Seasons() {
             <Input.TextArea rows={3} placeholder="Season details, important dates, etc." />
           </Form.Item>
 
-          <Form.List name="paymentPlans">
-            {(fields, { add, remove }) => (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <Title level={5} style={{ margin: 0 }}>Payment Plans</Title>
-                  <Button type="dashed" onClick={() => add({ id: `plan_${Date.now()}`, name: '', active: true, initialAmount: 0, installments: 0, paymentDay: 1 })} icon={<PlusOutlined />}>Add Plan</Button>
-                </div>
-                {fields.length === 0 && <Text type="secondary">No payment plans defined; Pay in Full only.</Text>}
-                {fields.map(field => (
-                  <Card size="small" key={field.key} style={{ marginBottom: 8 }}>
-                    <div style={{ display: 'flex', gap: 12 }}>
-                      <Form.Item name={[field.name, 'id']} initialValue={`plan_${Date.now()}`} hidden>
-                        <Input />
-                      </Form.Item>
-                      <Form.Item name={[field.name, 'name']} label="Plan name" rules={[{ required: true }]} style={{ flex: 2 }}>
-                        <Input placeholder="e.g., 50/50 plan" />
-                      </Form.Item>
-                      <Form.Item name={[field.name, 'active']} label="Active" valuePropName="checked" style={{ width: 100 }}>
-                        <Select>
-                          <Select.Option value={true}>Active</Select.Option>
-                          <Select.Option value={false}>Inactive</Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </div>
-                    <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                      <Form.Item name={[field.name, 'initialAmount']} label="Initial Amount" style={{ width: 160 }}>
-                        <InputNumber min={0} step={0.01} />
-                      </Form.Item>
-                      <Form.Item name={[field.name, 'installments']} label="Installments" style={{ width: 160 }}>
-                        <InputNumber min={0} />
-                      </Form.Item>
-                      <Form.Item name={[field.name, 'paymentDay']} label="Payment Day" style={{ width: 160 }}>
-                        <InputNumber min={1} max={28} />
-                      </Form.Item>
-                      <div style={{ marginLeft: 'auto' }}>
-                        <Button danger onClick={() => remove(field.name)} icon={<DeleteOutlined />}>Remove</Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </Form.List>
+          <Form.Item name="active" valuePropName="checked">
+            <Tooltip title="Toggle whether this season is active (inactive seasons can be archived)">
+              <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+            </Tooltip>
+          </Form.Item>
+
+          {/* Payment plans are now managed globally (see Payment Plans admin). */}
         </Form>
       </Modal>
     </div>

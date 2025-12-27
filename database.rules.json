@@ -52,7 +52,7 @@
         ".write": "auth != null && (data.child('createdBy').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
       }
     },
-    "family_files": {
+    "familyFiles": {
       "$familyId": {
         ".read": "auth != null && (\n          root.child('users').child(auth.uid).child('role').val() == 'admin' ||\n          root.child('users').child(auth.uid).child('role').val() == 'owner' ||\n          (root.child('users_to_person').child(auth.uid).exists() && root.child('people').child(root.child('users_to_person').child(auth.uid).val()).child('familyId').val() == $familyId)\n        )",
         ".write": "auth != null && (\n          root.child('users').child(auth.uid).child('role').val() == 'admin' ||\n          root.child('users').child(auth.uid).child('role').val() == 'owner' ||\n          (root.child('users_to_person').child(auth.uid).exists() && root.child('people').child(root.child('users_to_person').child(auth.uid).val()).child('familyId').val() == $familyId)\n        )"

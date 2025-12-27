@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Dropdown, Button, Badge } from 'antd';
+import { Dropdown, Button, Badge, Modal, Select, Radio, Space, Tooltip } from 'antd';
 import { UserOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import type { RootState } from '../../store/store';
@@ -14,7 +14,9 @@ export default function Header() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.user);
+  const role = useSelector((state: RootState) => state.auth.role);
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
+
   const cartCount = useSelector((s: RootState) => s.cart?.items?.length || 0);
   const [cartOpen, setCartOpen] = useState(false);
   const [CartDrawerComp, setCartDrawerComp] = useState<any | null>(null);
@@ -59,6 +61,23 @@ export default function Header() {
     },
   ];
 
+  // Mobile preview modal state
+  const [mobilePreviewVisible, setMobilePreviewVisible] = useState(false);
+  const [deviceKey, setDeviceKey] = useState<'iphone-se'|'iphone-12'|'pixel-4'|'ipad'>('iphone-12');
+  const [orientation, setOrientation] = useState<'portrait'|'landscape'>('portrait');
+
+  const devices: Record<string, {label: string; w: number; h: number}> = {
+    'iphone-se': { label: 'iPhone SE', w: 375, h: 667 },
+    'iphone-12': { label: 'iPhone 12/13', w: 390, h: 844 },
+    'pixel-4': { label: 'Pixel 4', w: 393, h: 851 },
+    'ipad': { label: 'iPad Mini', w: 768, h: 1024 },
+  };
+
+  const currentHref = typeof window !== 'undefined' ? window.location.href : '/';
+
+  const openMobilePreview = () => setMobilePreviewVisible(true);
+  const closeMobilePreview = () => setMobilePreviewVisible(false);
+
   // lazy-load cart drawer when requested to avoid require() in browser
   useEffect(() => {
     let mounted = true;
@@ -75,7 +94,7 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-content">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img
             src={wgysLogo}
             alt="West Georgia Youth Sports, Inc."
@@ -86,7 +105,7 @@ export default function Header() {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/'); }}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Button type="text" onClick={() => setCartOpen(true)} style={{ fontSize: 14 }}>
             <Badge count={cartCount} offset={[0, 0]}>
               <ShoppingCartOutlined style={{ fontSize: 18 }} />
@@ -114,6 +133,55 @@ export default function Header() {
             <DownOutlined style={{ fontSize: '10px' }} />
           </Button>
         </Dropdown>
+        {/* Admin-only Mobile Preview button */}
+        {(role === 'admin' || role === 'owner') && (
+          <Button type="text" onClick={openMobilePreview} style={{ fontSize: 12, marginLeft: 8 }}>
+            Mobile Preview
+          </Button>
+        )}
+
+        {/* Mobile Preview Modal (Admin only) */}
+        <Modal
+          title="Mobile Preview"
+          open={mobilePreviewVisible}
+          onCancel={closeMobilePreview}
+          footer={null}
+          width={900}
+          style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+        >
+          <Space style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Space>
+              <Select value={deviceKey} onChange={(v) => setDeviceKey(v as any)} options={Object.keys(devices).map(k => ({ value: k, label: devices[k].label }))} />
+              <Radio.Group value={orientation} onChange={(e) => setOrientation(e.target.value)}>
+                <Radio.Button value="portrait">Portrait</Radio.Button>
+                <Radio.Button value="landscape">Landscape</Radio.Button>
+              </Radio.Group>
+            </Space>
+            <Space>
+              <Tooltip title="Open preview in a new window">
+                <Button type="default" onClick={() => window.open(currentHref, '_blank')}>Open</Button>
+              </Tooltip>
+              <Button type="primary" onClick={closeMobilePreview}>Close</Button>
+            </Space>
+          </Space>
+
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            {(() => {
+              const d = devices[deviceKey];
+              const width = orientation === 'portrait' ? d.w : d.h;
+              const height = orientation === 'portrait' ? d.h : d.w;
+              return (
+                <div className="mobile-preview-frame" style={{ width: width + 20, height: height + 60 }}>
+                  <iframe
+                    title="Mobile preview"
+                    src={currentHref}
+                    style={{ width: width, height: height, border: '1px solid #ddd', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                  />
+                </div>
+              );
+            })()}
+          </div>
+        </Modal>
         </div>
         {/* lazy-load cart drawer to avoid circular deps */}
         {cartOpen && (

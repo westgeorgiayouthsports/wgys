@@ -20,17 +20,7 @@ export interface Season {
     active?: boolean;
   }>;
   // payment plans available for this season
-  paymentPlans?: Array<{
-    id: string;
-    name: string;
-    active?: boolean;
-    // initial payment due at checkout (dollars)
-    initialAmount?: number;
-    // number of additional equal installments (integer)
-    installments?: number;
-    // day of month when subsequent payments are due (1-28)
-    paymentDay?: number;
-  }>;
+  // paymentPlans removed: payment plans are now global and configured separately
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
@@ -47,13 +37,5 @@ export interface SeasonFormData {
     type?: 'fixed' | 'percent';
     amount: number;
     active?: boolean;
-  }>;
-  paymentPlans?: Array<{
-    id: string;
-    name: string;
-    active?: boolean;
-    initialAmount?: number;
-    installments?: number;
-    paymentDay?: number;
   }>;
 }

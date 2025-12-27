@@ -7,6 +7,7 @@ import teamsReducer from './slices/teamsSlice';
 import announcementsReducer from './slices/announcementsSlice';
 import themeReducer from './slices/themeSlice';
 import cartReducer from './slices/cartSlice';
+import uiReducer from './slices/uiSlice';
 import { firebaseCartService } from '../services/firebaseCart';
 import type { CartItem } from './slices/cartSlice';
 import { setItems } from './slices/cartSlice';
@@ -21,6 +22,7 @@ export const store = configureStore({
     cart: cartReducer,
     teams: teamsReducer,
     theme: themeReducer,
+    ui: uiReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

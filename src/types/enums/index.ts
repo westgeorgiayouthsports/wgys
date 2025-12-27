@@ -7,3 +7,4 @@ export * from './payments';
 export * from './auth';
 export * from './team';
 export * from './theme';
+export * from './auditEntity';

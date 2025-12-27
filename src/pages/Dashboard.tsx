@@ -14,8 +14,11 @@ import {
   Button,
   Empty,
   Tooltip,
-  Segmented,
+  Popover,
+  DatePicker,
+  Modal,
 } from 'antd';
+import dayjs from 'dayjs';
 import {
   EyeOutlined,
   UserOutlined,
@@ -79,25 +82,26 @@ export default function Dashboard() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [websiteViewsRange, setWebsiteViewsRange] = useState<number>(30);
+  const websiteViewsRange = useSelector((state: any) => state.ui?.websiteViewsRange || 30);
+  const customRange = useSelector((state: any) => state.ui?.customRange || null);
 
   // Load all dashboard data on mount
   useEffect(() => {
     const loadData = async () => {
       try {
         setDataLoading(true);
-        
+
         // Fetch core data in parallel
         const [teamsData, programsData, announcementsData] = await Promise.all([
           teamsService.getTeams(),
           programsService.getPrograms(),
           announcementsService.getAnnouncements(),
         ]);
-        
+
         dispatch(setTeams(teamsData));
         setPrograms(programsData);
         setAnnouncements(announcementsData.slice(0, 5)); // Top 5 recent
-        
+
         // Try to fetch registrations (may fail due to permissions)
         try {
           const registrationsData = await registrationsService.getAllRegistrations();
@@ -171,7 +175,7 @@ export default function Dashboard() {
     const totalSpent = teams.reduce((sum, t) => sum + (t.spent || 0), 0);
     const activeTeams = teams.filter(t => t.status === 'active').length;
     const budgetUtilization = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
-    
+
     const activePrograms = programs.filter(p => p.active).length;
     const totalRegistrants = programs.reduce((sum, p) => sum + (p.currentRegistrants || 0), 0);
     const moneyCollected = programs.reduce((sum, p) => sum + (p.totalPayments || 0), 0);
@@ -270,6 +274,83 @@ export default function Dashboard() {
     );
   };
 
+  // Date range hotspot component (inline)
+  const DateRangeHotspot = (props: { websiteViewsRange: number; customRange: { from?: string; to?: string } | null; onSelectPreset: (d: number) => void; onApplyCustom: (fromIso: string, toIso: string) => void; }) => {
+    const { websiteViewsRange, customRange, onSelectPreset, onApplyCustom } = props;
+    const [popoverOpen, setPopoverOpen] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [rangeDates, setRangeDates] = useState<[any, any] | null>(null);
+
+    const presets = [7, 30, 90, 180, 365];
+    const isCustomActive = Boolean(customRange && customRange.from && customRange.to);
+
+    const label = isCustomActive && customRange && customRange.from && customRange.to
+      ? `${new Date(customRange.from).toLocaleDateString()} → ${new Date(customRange.to).toLocaleDateString()}`
+      : `${websiteViewsRange}d`;
+
+    return (
+      <>
+        <Popover
+          content={
+            <div style={{ padding: 8, minWidth: 260 }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                {presets.map(p => {
+                  const isActive = !isCustomActive && websiteViewsRange === p;
+                  return (
+                    <Button key={p} size="small" type={isActive ? 'primary' : 'default'} onClick={() => { onSelectPreset(p); setPopoverOpen(false); }}>
+                      {p === 365 ? '1y' : p === 180 ? '6m' : `${p}d`}
+                    </Button>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Button size="small" type={isCustomActive ? 'primary' : 'default'} onClick={() => {
+                  // Prefill modal with either existing customRange or derived dates from current preset
+                  if (customRange && customRange.from && customRange.to) {
+                    setRangeDates([dayjs(customRange.from), dayjs(customRange.to)]);
+                  } else if (websiteViewsRange && websiteViewsRange > 0) {
+                    // Match preset behavior: show last N days inclusive (start = today - (N-1))
+                    const startOffset = Math.max(websiteViewsRange - 1, 0);
+                    setRangeDates([dayjs().subtract(startOffset, 'day'), dayjs()]);
+                  } else {
+                    setRangeDates([dayjs().subtract(29, 'day'), dayjs()]);
+                  }
+                  setModalOpen(true);
+                  setPopoverOpen(false);
+                }}>Custom Range</Button>
+                <Text type="secondary" style={{ fontSize: 12 }}>or pick a preset</Text>
+              </div>
+            </div>
+          }
+          title="Select Date Range"
+          trigger="click"
+          open={popoverOpen}
+          onOpenChange={(open) => setPopoverOpen(open)}
+        >
+          <Button type="link" onClick={() => setPopoverOpen(true)} style={{ padding: '4px 8px' }}>
+            Showing: <strong style={{ marginLeft: 6 }}>{label}</strong>
+          </Button>
+        </Popover>
+
+        <Modal title="Select Custom Range" open={modalOpen} onCancel={() => setModalOpen(false)} onOk={() => {
+          if (rangeDates && rangeDates[0] && rangeDates[1]) {
+            const fromIso = rangeDates[0].toISOString();
+            const toIso = rangeDates[1].toISOString();
+            onApplyCustom(fromIso, toIso);
+          }
+          setModalOpen(false);
+        }}>
+          <DatePicker.RangePicker
+            value={rangeDates as any}
+            onChange={(vals: any) => setRangeDates(vals)}
+            allowClear
+            style={{ width: '100%' }}
+          />
+        </Modal>
+      </>
+    );
+  };
+
   // Budget health status
   const getBudgetStatus = (utilization: number) => {
     if (utilization < 50) return { color: '#52c41a', status: 'Healthy' };
@@ -324,31 +405,28 @@ export default function Dashboard() {
 
   return (
     <div
-      style={{
-        padding: '32px',
-        backgroundColor: isDarkMode ? '#141414' : '#fafafa',
-        color: isDarkMode ? '#ffffff' : 'rgba(0, 0, 0, 0.85)',
-        minHeight: '100vh',
-      }}
+      className="dashboard-page"
+      style={{ backgroundColor: isDarkMode ? '#141414' : '#fafafa', color: isDarkMode ? '#ffffff' : 'rgba(0, 0, 0, 0.85)' }}
     >
       {/* Header */}
-      <Space orientation="vertical" style={{ width: '100%', marginBottom: '32px' }} size={8}>
-        <Space style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <Space className="dashboard-header" orientation="vertical" size={8}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
           <div>
             <Title level={2} style={{ margin: 0 }}>
               Dashboard
             </Title>
             <Text type="secondary">Welcome back, {user?.displayName || 'Admin'}! Here's your organization overview.</Text>
           </div>
-          <Space orientation="vertical" align="end" size={4}>
-            <Text type="secondary" style={{ fontSize: '12px' }}>Date Range</Text>
-            <Segmented
-              options={[7, 30, 90, 180, 365].map((d) => ({ label: `${d === 365 ? '1y' : d === 180 ? '6m' : `${d}d`}`, value: d }))}
-              value={websiteViewsRange}
-              onChange={(val) => setWebsiteViewsRange(Number(val))}
-            />
-          </Space>
-        </Space>
+        </div>
+
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
+          <DateRangeHotspot
+            websiteViewsRange={websiteViewsRange}
+            customRange={customRange}
+            onApplyCustom={(fromIso, toIso) => dispatch({ type: 'ui/setWebsiteCustomRange', payload: { from: fromIso, to: toIso } })}
+            onSelectPreset={(d) => dispatch({ type: 'ui/setWebsiteViewsRange', payload: d })}
+          />
+        </div>
       </Space>
 
       {/* KPI Cards */}
@@ -443,8 +521,8 @@ export default function Dashboard() {
                     <div style={{ fontSize: '24px', fontWeight: 700, color: budgetStatus.color }}>
                       {metrics.budgetUtilization}%
                     </div>
-                    <Tag 
-                      style={{ 
+                    <Tag
+                      style={{
                         marginTop: '8px',
                         backgroundColor: isDarkMode ? `${budgetStatus.color}20` : undefined,
                         color: budgetStatus.color,
@@ -647,7 +725,7 @@ export default function Dashboard() {
             <Card
               title="Teams Breakdown"
               extra={
-                <Button type="primary" href="#/teams">
+                <Button type="primary" onClick={() => navigate('/admin/teams')}>
                   Manage Teams
                 </Button>
               }

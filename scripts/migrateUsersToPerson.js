@@ -34,7 +34,7 @@ function initAdmin() {
       databaseURL: process.env.VITE_FIREBASE_DATABASE_URL || process.env.FIREBASE_DATABASE_URL,
     });
   } catch (e) {
-    console.error('Failed to initialize Firebase Admin SDK. Set GOOGLE_APPLICATION_CREDENTIALS or SERVICE_ACCOUNT_PATH to a service account JSON.');
+    console.error('Failed to initialize Firebase Admin SDK. Set GOOGLE_APPLICATION_CREDENTIALS or SERVICE_ACCOUNT_PATH to a service account JSON. ' + e);
     process.exit(1);
   }
 }

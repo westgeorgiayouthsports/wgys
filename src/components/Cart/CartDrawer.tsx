@@ -6,7 +6,9 @@ import { RootState } from '../../store/store';
 import { removeItem, clearCart } from '../../store/slices/cartSlice';
 import { programRegistrationsService } from '../../services/firebaseProgramRegistrations';
 import { seasonsService } from '../../services/firebaseSeasons';
+import { paymentPlansService } from '../../services/paymentPlans';
 import { auditLogService } from '../../services/auditLog';
+import { AuditEntity } from '../../types/enums';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
@@ -40,14 +42,20 @@ export default function CartDrawer({ open, onClose }: Props) {
       try {
         const seasonIds = Array.from(new Set(items.map(it => it.programSeasonId).filter(Boolean) as string[]));
         const plans: Array<any> = [];
+        // load global payment plans and include those that apply to the season/program
+        const allPlans = await paymentPlansService.getPaymentPlans();
         for (const sid of seasonIds) {
+          const seasonItems = items.filter(it => it.programSeasonId === sid);
           const s = await seasonsService.getSeasonById(sid);
-          if (!s) continue;
-          const pplans = s.paymentPlans || [];
-          pplans.forEach((pp: any) => {
-            if (pp.active === false) return;
-            plans.push({ ...pp, seasonId: sid, seasonName: s.name });
-          });
+          for (const pp of (allPlans || [])) {
+            if (pp.active === false) continue;
+            // plan applies if no seasonId (global) OR matches this season OR lists this programId
+            const appliesToSeason = !pp.seasonId || pp.seasonId === sid;
+            const appliesToProgram = !pp.programIds || pp.programIds.length === 0 || seasonItems.some(si => (pp.programIds || []).includes(si.programId));
+            if (appliesToSeason && appliesToProgram) {
+              plans.push({ ...pp, seasonId: sid, seasonName: s ? s.name : undefined });
+            }
+          }
         }
         setAvailablePaymentPlans(plans);
         // default selection: if any plan exists pick the first, else 'full'
@@ -182,7 +190,7 @@ export default function CartDrawer({ open, onClose }: Props) {
         });
         if (resp.ok) {
           const data = await resp.json();
-          await auditLogService.log({ action: 'cart.checkout.initiated', entityType: 'other', details: { items, discounts, finalAmount, session: data } });
+          await auditLogService.log({ action: 'cart.checkout.initiated', entityType: AuditEntity.Cart, details: { items, discounts, finalAmount, session: data } });
           if (data.url) {
             window.location.href = data.url;
             return;
@@ -208,7 +216,7 @@ export default function CartDrawer({ open, onClose }: Props) {
         );
       }
 
-      await auditLogService.log({ action: 'cart.checkout.completed', entityType: 'other', details: { items, discounts, finalAmount } });
+      await auditLogService.log({ action: 'cart.checkout.completed', entityType: AuditEntity.Cart, details: { items, discounts, finalAmount } });
       dispatch(clearCart());
       message.success('Checkout complete — registrations created (pending payment)');
       onClose();
@@ -292,7 +300,7 @@ export default function CartDrawer({ open, onClose }: Props) {
               <Select value={selectedCartPaymentPlanId} onChange={(v) => setSelectedCartPaymentPlanId(v)} style={{ width: '100%' as any }}>
                 <Select.Option value="full">Pay in Full</Select.Option>
                 {availablePaymentPlans.map(p => (
-                  <Select.Option key={`${p.seasonId}_${p.id}`} value={p.id}>{p.name} ({p.seasonName}) — ${p.initialAmount ?? 0} upfront, {p.installments || 0} installments</Select.Option>
+                  <Select.Option key={`${p.seasonId}_${p.id}`} value={p.id}>{`${p.seasonName ? p.seasonName + ' - ' : ''}${p.name}`} — ${p.initialAmount ?? 0} upfront, {p.installments || 0} installments</Select.Option>
                 ))}
               </Select>
             )}

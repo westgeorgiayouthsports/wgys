@@ -35,6 +35,65 @@
   opacity: 0.8;
 }
 
+/* Mobile preview iframe container */
+.mobile-preview-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: #fff;
+  border-radius: 12px;
+}
+
+/* Ensure popovers, datepickers and dropdowns render above the header */
+.ant-popover, .ant-picker-dropdown, .ant-modal, .ant-dropdown {
+  z-index: 11000 !important;
+}
+
+/* When the main layout has collapsed sidebar, nudge header padding left so logo aligns */
+.main-content.collapsed .header {
+  left: var(--sidebar-collapsed-width, 48px);
+  padding-left: 12px;
+}
+
+/* Header left/right containers for responsive repositioning */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* On small screens move user menu left and allow header elements to wrap */
+@media (max-width: 768px) {
+  .header {
+    left: 0;
+    padding-left: 12px;
+  }
+  .header-content {
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .header-right {
+    order: 1;
+    margin-left: 0;
+  }
+  .header-left {
+    order: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-profile-btn {
+    font-size: 11px !important;
+  }
+}
+
 .button--sm {
   padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
   font-size: 12px;

@@ -38,6 +38,7 @@ import {
 } from '../store/slices/teamsSlice';
 import { teamsService } from '../services/firebaseTeams';
 import { programsService } from '../services/firebasePrograms';
+import { seasonsService } from '../services/firebaseSeasons';
 
 const { Title, Text } = Typography;
 
@@ -49,7 +50,7 @@ export default function Teams() {
   const teams = useSelector((state: RootState) => state.teams.teams);
   const loading = useSelector((state: RootState) => state.teams.loading);
 
-  
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [pendingTeam, setPendingTeam] = useState<any | null>(null);
@@ -58,6 +59,7 @@ export default function Teams() {
   const [managers, setManagers] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>('teams');
   const [programs, setPrograms] = useState<any[]>([]);
+  const [seasons, setSeasons] = useState<any[]>([]);
 
   // Load teams and coaches on mount
   useEffect(() => {
@@ -72,6 +74,12 @@ export default function Teams() {
     try {
       const list = await programsService.getPrograms();
       setPrograms(list);
+      try {
+        const seas = await seasonsService.getSeasons();
+        setSeasons(seas || []);
+      } catch (e) {
+        console.error('Failed to load seasons:', e);
+      }
     } catch (err) {
       console.error('Failed to load programs:', err);
     }
@@ -113,13 +121,18 @@ export default function Teams() {
         )}
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="programId" label="Program" rules={[{ required: true, message: 'Select a program' }]}> 
+            <Form.Item name="programId" label="Program" rules={[{ required: true, message: 'Select a program' }]}>
               <Select placeholder="Select program" showSearch optionFilterProp="label">
-                {programs.map((p: any) => (
-                  <Select.Option key={p.id} value={p.id} label={p.name}>
-                    {p.name}
-                  </Select.Option>
-                ))}
+                {programs.map((p: any) => {
+                  const rawSid = p?.season && typeof p.season === 'object' && p.season.name ? p.season.name : (p.seasonId || (typeof p.season === 'string' ? p.season : undefined));
+                  const resolved = seasons.find((s: any) => s.id === rawSid)?.name || rawSid;
+                  const label = `${resolved ? resolved + ' - ' : ''}${p.name}`;
+                  return (
+                    <Select.Option key={p.id} value={p.id} label={label}>
+                      {label}
+                    </Select.Option>
+                  );
+                })}
               </Select>
             </Form.Item>
           </Col>
@@ -139,6 +152,25 @@ export default function Teams() {
                 <Select.Option value="active">Active</Select.Option>
                 <Select.Option value="inactive">Inactive</Select.Option>
               </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item label="Season">
+              <Input
+                value={(() => {
+                  const selectedProgramId = localForm.getFieldValue('programId') || initialTeam?.programId;
+                  const sel = programs.find((p: any) => p.id === selectedProgramId);
+                  if (!sel) return '';
+                  if (sel.season && typeof sel.season === 'object' && sel.season.name) return sel.season.name;
+                  const sid = sel.seasonId || (typeof sel.season === 'string' ? sel.season : undefined);
+                  const s = seasons.find((x: any) => x.id === sid);
+                  return s?.name || sid || '';
+                })()}
+                disabled
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -393,7 +425,7 @@ export default function Teams() {
       render: (coachId: string, record: any) => {
         const coach = coaches.find(c => c.uid === coachId);
         const isAdmin = role === 'admin' || role === 'owner';
-        
+
         if (!isAdmin) {
           return coach ? (
             <Tooltip title={coach.email}>
@@ -401,7 +433,7 @@ export default function Teams() {
             </Tooltip>
           ) : <Text type="secondary">Unassigned</Text>;
         }
-        
+
         return (
           <Select
             size="small"
@@ -448,7 +480,7 @@ export default function Teams() {
         const isAdmin = role === 'admin' || role === 'owner';
         const canEdit = isOwner || isAdmin;
         const isDemoTeam = !record.userId;
-        
+
         return (
           <Space>
               <Button
@@ -471,10 +503,10 @@ export default function Teams() {
               onConfirm={() => handleDelete(record.id)}
               disabled={!canEdit || isDemoTeam}
             >
-              <Button 
-                size="small" 
-                danger 
-                icon={<DeleteOutlined />} 
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
                 disabled={!canEdit || isDemoTeam}
                 title={isDemoTeam ? 'Demo team - cannot delete' : !canEdit ? 'Only team creator can delete' : ''}
               />

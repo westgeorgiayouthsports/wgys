@@ -38,12 +38,13 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const AdminRegistrations = lazy(() => import('./pages/AdminRegistrations'));
 const AdminPayments = lazy(() => import('./pages/AdminPayments'));
+const PaymentPlans = lazy(() => import('./pages/PaymentPlans'));
 
 // Lazy load views
 const EventsView = lazy(() => import('./components/Events/EventsView'));
 const RegistrationsView = lazy(() => import('./components/Registrations/RegistrationsView'));
 const RostersView = lazy(() => import('./components/Rosters/RostersView'));
-const AdminPagesView = lazy(() => import('./components/AdminPages/AdminPagesView'));
+const AdminPagesView = lazy(() => import('./pages/AdminPagesView'));
 
 // Loading component
 const PageLoader = () => (
@@ -204,6 +205,14 @@ function Router() {
                 </ProtectedRoute>
               }
             />
+              <Route
+                path="/admin/payment-plans"
+                element={
+                  <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                    <PaymentPlans />
+                  </ProtectedRoute>
+                }
+              />
             <Route path="/admin/audit" element={
               <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
                 <AuditLogs />

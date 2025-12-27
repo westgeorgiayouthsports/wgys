@@ -31,6 +31,14 @@ export default function App() {
   // Use an AbortController so the fetch can be cancelled on unmount and
   // keep sign-out as a separate effect for safer async updates and easier testing.
   useEffect(() => {
+    // In local dev skip external geo lookups to avoid CORS/rate-limit issues
+    // and to speed up developer experience.
+    // Vite exposes `import.meta.env.DEV` as a boolean during development.
+     
+    if (process.env.NODE_ENV === 'development') {
+      setGeoAllowed(true);
+      return;
+    }
     const controller = new AbortController();
     // Fail-open quickly if geo lookup is slow: abort after 3s to avoid blocking UI/tests
     const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -79,11 +87,11 @@ export default function App() {
           // Try to get Firestore data with timeout
           let displayName = 'User';
           let role = 'user';
-          
+
           try {
             const userRef = ref(db, `users/${firebaseUser.uid}`);
             const userSnapshot = await get(userRef);
-            
+
             if (userSnapshot.exists()) {
               const userData = userSnapshot.val();
               displayName = userData.displayName || 'User';
@@ -93,14 +101,14 @@ export default function App() {
             console.warn('Database read failed, using Firebase displayName:', err);
             displayName = firebaseUser.displayName || 'User';
           }
-          
+
           const enhancedUser = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             displayName,
             photoURL: firebaseUser.photoURL,
           };
-          
+
           dispatch(
             setUser({
               user: enhancedUser,
@@ -108,6 +116,21 @@ export default function App() {
               createdAt: firebaseUser.metadata.creationTime ? new Date(firebaseUser.metadata.creationTime).getTime() : undefined,
             })
           );
+
+          // In local development, log id token result and claims to help debugging RTDB rules/claims
+          // Only run in DEV to avoid leaking tokens in production
+           
+          if (process.env.NODE_ENV === 'development') {
+            try {
+              const idRes = await firebaseUser.getIdTokenResult();
+              console.log('DEBUG: idTokenClaims:', idRes.claims);
+              // For deeper debugging, you can also log the raw token (DEV only)
+              const rawToken = await firebaseUser.getIdToken();
+              console.log('DEBUG: idToken (DEV only):', rawToken);
+            } catch (tokErr) {
+              console.warn('Failed to fetch id token for debug logging', tokErr);
+            }
+          }
         } else {
           dispatch(setUser({ user: null, role: 'user' }));
         }

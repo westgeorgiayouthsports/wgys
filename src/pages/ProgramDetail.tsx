@@ -243,7 +243,13 @@ export default function ProgramDetail() {
                   <Text type="secondary">Program Details</Text>
                 </div>
                 <div style={{ marginTop: 8, fontSize: 13 }}>
-                  <div>Season: {(program as any).season?.name || program.seasonId || '—'}</div>
+                  <div>Season: {(() => {
+                    if (!program) return '—';
+                    if ((program as any).season && typeof (program as any).season === 'object' && (program as any).season.name) return (program as any).season.name;
+                    const sid = program.seasonId || (typeof (program as any).season === 'string' ? (program as any).season : undefined);
+                    const found = seasons.find(s => s.id === sid);
+                    return found?.name || sid || '—';
+                  })()}</div>
                   <div>Birth Date Range: {program.birthDateStart ? dayjs(program.birthDateStart).format('MMM D, YYYY') : '—'} to {program.birthDateEnd ? dayjs(program.birthDateEnd).format('MMM D, YYYY') : '—'}</div>
                   <div>Price: ${(program.basePrice || 0).toFixed(2)}</div>
                 </div>

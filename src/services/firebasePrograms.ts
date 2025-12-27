@@ -2,13 +2,14 @@ import { ref, push, get, update, remove, query, orderByChild, equalTo } from 'fi
 import { db } from './firebase';
 import type { Program, ProgramFormData } from '../types/program';
 import { auditLogService } from './auditLog';
+import { AuditEntity } from '../types/enums';
 
 export const programsService = {
   async getPrograms(): Promise<Program[]> {
     try {
       const programsRef = ref(db, 'programs');
       const snapshot = await get(programsRef);
-      
+
       if (!snapshot.exists()) {
         return [];
       }
@@ -45,11 +46,11 @@ export const programsService = {
     try {
       const programsRef = ref(db, 'programs');
       const now = new Date().toISOString();
-      
+
       const cleanedData = Object.fromEntries(
         Object.entries(programData).filter(([_, value]) => value !== undefined && value !== '')
       );
-      
+
       const newProgram = {
         ...cleanedData,
         registrationOpen: true,
@@ -70,11 +71,11 @@ export const programsService = {
   async updateProgram(programId: string, programData: Partial<ProgramFormData>): Promise<void> {
     try {
       const programRef = ref(db, `programs/${programId}`);
-      
+
       const cleanedData = Object.fromEntries(
         Object.entries(programData).filter(([_, value]) => value !== undefined && value !== '')
       );
-      
+
       const updateData = {
         ...cleanedData,
         updatedAt: new Date().toISOString(),
@@ -94,7 +95,7 @@ export const programsService = {
       const before = snap.exists() ? snap.val() : null;
       await remove(programRef);
       try {
-        await auditLogService.logDelete('program', programId, before);
+        await auditLogService.logDelete(AuditEntity.Program, programId, before);
       } catch (e) {
         console.error('Error auditing program.delete:', e);
       }
@@ -117,7 +118,7 @@ export const programsService = {
         // include program IDs in entityId for visibility in audit UI
         await auditLogService.log({
           action: 'program.bulk_update',
-          entityType: 'program',
+          entityType: AuditEntity.Program,
           entityId: programIds.join(','),
           details: { programIds, updates },
         });

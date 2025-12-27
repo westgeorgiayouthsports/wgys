@@ -8,7 +8,7 @@ import {
   Typography,
   Button,
   Space,
-  
+
   message,
   Tag,
   theme,
@@ -19,6 +19,7 @@ import calculateAgeAt from '../utils/age';
 import type { RootState } from '../store/store';
 import { programsService } from '../services/firebasePrograms';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
+import { seasonsService } from '../services/firebaseSeasons';
 // storageService not required in this page anymore
 import { peopleService } from '../services/firebasePeople';
 import { paymentMethodsService, type PaymentMethod } from '../services/firebasePaymentMethods';
@@ -34,6 +35,7 @@ export default function RegistrationPage() {
   const { token } = theme.useToken();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [modalProgram, setModalProgram] = useState<Program | null>(null);
+  const [seasons, setSeasons] = useState<any[]>([]);
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [parentInfo, setParentInfo] = useState<{ name: string; email: string; phone: string } | null>(null);
@@ -117,9 +119,23 @@ export default function RegistrationPage() {
       }));
       setPrograms(enriched);
     } catch (err) {
+      try {
+        const s = await seasonsService.getSeasons();
+        setSeasons(s || []);
+      } catch (e) {
+        console.error('Failed to load seasons:', e);
+      }
       console.error('Failed to load programs', err);
       message.error('Failed to load programs');
     }
+  };
+
+  const getSeasonName = (prog: Program | any) => {
+    if (!prog) return '';
+    if (prog.season && typeof prog.season === 'object' && prog.season.name) return prog.season.name;
+    const sid = prog.seasonId || (typeof prog.season === 'string' ? prog.season : undefined);
+    const found = seasons.find((s: any) => s.id === sid);
+    return found?.name || sid || '';
   };
 
   const loadPaymentMethods = async () => {
@@ -243,7 +259,7 @@ export default function RegistrationPage() {
                         {regs.length === 0 && <div><Text type="secondary">No registrations</Text></div>}
                         {regs.map((r) => (
                           <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-                            <div>{programs.find(p => p.id === r.programId)?.name || r.programId}</div>
+                            <div>{(() => { const p = programs.find(p => p.id === r.programId); return p ? `${getSeasonName(p) ? getSeasonName(p) + ' - ' : ''}${p.name}` : r.programId; })()}</div>
                             <div>
                               <Button size="small" onClick={() => navigate(`/register/confirmation/${r.id}`)}>View</Button>
                             </div>
@@ -284,7 +300,7 @@ export default function RegistrationPage() {
       <Row gutter={[16, 16]}>
         {programs.map((p) => (
           <Col xs={24} sm={12} md={8} key={p.id}>
-            <Card size="small" title={p.name} extra={<Text strong>${(p.basePrice || 0).toFixed(2)}</Text>}>
+            <Card size="small" title={`${getSeasonName(p) ? getSeasonName(p) + ' - ' : ''}${p.name}`} extra={<Text strong>${(p.basePrice || 0).toFixed(2)}</Text>}>
               {/* Registration Deadline */}
               <div style={{ marginBottom: 8 }}>
                 <Text type="secondary">Last Day: {dayjs(p.registrationEnd).format('MMM D, YYYY')}</Text>

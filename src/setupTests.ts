@@ -10,6 +10,10 @@ console.error = (...args: any[]) => {
     if (first.includes('An update to') && first.includes('inside a test was not wrapped in act')) {
       return;
     }
+    // Suppress known non-actionable Ant Design deprecation warnings during tests
+    // if (first.includes('[antd: Tabs]') && first.includes('TabPane')) {
+    //   return;
+    // }
   } catch {
     // swallow parsing errors and fall through to original
   }

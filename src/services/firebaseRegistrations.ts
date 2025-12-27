@@ -1,6 +1,7 @@
 import { ref, push, set, get, remove } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
+import { AuditEntity } from '../types/enums';
 import type { RegistrationPaymentMethod } from '../types';
 
 export interface TeamAssignment {
@@ -107,7 +108,7 @@ export const registrationsService = {
       await set(newAssignmentRef, assignment);
 
       try {
-        await auditLogService.log({ action: 'registration.created', entityType: 'teamAssignment', entityId: newAssignmentRef.key, details: assignment });
+        await auditLogService.log({ action: 'registration.created', entityType: AuditEntity.TeamAssignment, entityId: newAssignmentRef.key, details: assignment });
       } catch (e) {
         console.error('Error auditing registration.created:', e);
       }
@@ -138,7 +139,7 @@ export const registrationsService = {
           updatedAt: new Date().toISOString(),
         });
         try {
-          await auditLogService.log({ action: 'registration.updated', entityType: 'teamAssignment', entityId: id, details: updates });
+          await auditLogService.log({ action: 'registration.updated', entityType: AuditEntity.TeamAssignment, entityId: id, details: updates });
         } catch (e) {
           console.error('Error auditing registration.updated:', e);
         }
@@ -163,7 +164,7 @@ export const registrationsService = {
           updatedAt: new Date().toISOString(),
         });
         try {
-          await auditLogService.log({ action: 'registration.approved', entityType: 'teamAssignment', entityId: id, details: { rosterPlayerId } });
+          await auditLogService.log({ action: 'registration.approved', entityType: AuditEntity.TeamAssignment, entityId: id, details: { rosterPlayerId } });
         } catch (e) {
           console.error('Error auditing registration.approved:', e);
         }
@@ -187,7 +188,7 @@ export const registrationsService = {
           updatedAt: new Date().toISOString(),
         });
         try {
-          await auditLogService.log({ action: 'registration.paid', entityType: 'teamAssignment', entityId: id });
+          await auditLogService.log({ action: 'registration.paid', entityType: AuditEntity.TeamAssignment, entityId: id });
         } catch (e) {
           console.error('Error auditing registration.paid:', e);
         }
@@ -204,7 +205,7 @@ export const registrationsService = {
       const regRef = ref(db, `registrations/${id}`);
       await remove(regRef);
       try {
-        await auditLogService.log({ action: 'registration.deleted', entityType: 'teamAssignment', entityId: id });
+        await auditLogService.log({ action: 'registration.deleted', entityType: AuditEntity.TeamAssignment, entityId: id });
       } catch (e) {
         console.error('Error auditing registration.deleted:', e);
       }

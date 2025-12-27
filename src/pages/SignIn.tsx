@@ -46,27 +46,27 @@ export default function SignIn() {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'center',
       padding: '20px'
     }}>
-      <Card 
+      <Card
         style={{ width: 400, maxWidth: '100%' }}
         variant="borderless"
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img 
-            src={wgysLogo} 
-            alt="WGYS Logo" 
+          <img
+            src={wgysLogo}
+            alt="WGYS Logo"
             style={{ width: 80, height: 80, marginBottom: 16 }}
           />
-          <Title 
-            level={2} 
-            style={{ 
-              margin: 0, 
+          <Title
+            level={2}
+            style={{
+              margin: 0,
               fontFamily: 'Impact, "Arial Black", sans-serif',
               fontWeight: 900,
               letterSpacing: '1px'

@@ -2,6 +2,7 @@ import { ref, set, get, update, remove, push } from 'firebase/database';
 import { db } from './firebase';
 import type { Family } from '../types/person';
 import auditLogService from './auditLog';
+import { AuditEntity } from '../types/enums';
 
 export const familiesService = {
   async getFamilies(): Promise<Family[]> {
@@ -58,7 +59,7 @@ export const familiesService = {
       const before = snap.exists() ? snap.val() : null;
       await remove(familyRef);
       try {
-        await auditLogService.logDelete('family', familyId, before);
+        await auditLogService.logDelete(AuditEntity.Family, familyId, before);
       } catch (e) {
         console.error('Error auditing family.delete:', e);
       }

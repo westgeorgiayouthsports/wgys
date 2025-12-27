@@ -1,6 +1,7 @@
 import { ref, push, get, update, remove, set, query as _query, orderByChild as _orderByChild } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
+import { AuditEntity } from '../types/enums';
 import type { Person, PersonFormData, Family } from '../types/person';
 
 export const peopleService = {
@@ -32,7 +33,7 @@ export const peopleService = {
 
     await update(newPersonRef, person);
     try {
-      await auditLogService.log({ action: 'person.created', entityType: 'person', entityId: newPersonRef.key, details: person });
+      await auditLogService.log({ action: 'person.created', entityType: AuditEntity.Person, entityId: newPersonRef.key, details: person });
     } catch (e) {
       console.error('Error auditing person.created:', e);
     }
@@ -80,7 +81,7 @@ export const peopleService = {
       updatedAt: new Date().toISOString(),
     });
     try {
-      await auditLogService.log({ action: 'person.updated', entityType: 'person', entityId: id, details: cleanData });
+      await auditLogService.log({ action: 'person.updated', entityType: AuditEntity.Person, entityId: id, details: cleanData });
     } catch (e) {
       console.error('Error auditing person.updated:', e);
     }
@@ -93,7 +94,7 @@ export const peopleService = {
       const before = snap.exists() ? snap.val() : null;
       await remove(personRef);
       try {
-        await auditLogService.logDelete('person', id, before);
+        await auditLogService.logDelete(AuditEntity.Person, id, before);
       } catch (e) {
         console.error('Error auditing person.delete:', e);
       }
@@ -134,7 +135,7 @@ export const peopleService = {
 
     await update(newFamilyRef, family);
     try {
-      await auditLogService.log({ action: 'family.created', entityType: 'family', entityId: newFamilyRef.key, details: family });
+      await auditLogService.log({ action: 'family.created', entityType: AuditEntity.Family, entityId: newFamilyRef.key, details: family });
     } catch (e) {
       console.error('Error auditing family.created:', e);
     }
@@ -182,7 +183,7 @@ export const peopleService = {
         updatedAt: new Date().toISOString(),
       });
       try {
-        await auditLogService.log({ action: 'family.member_added', entityType: 'family', entityId: familyId, details: { memberId: personId } });
+        await auditLogService.log({ action: 'family.member_added', entityType: AuditEntity.Family, entityId: familyId, details: { memberId: personId } });
       } catch (e) {
         console.error('Error auditing family.member_added:', e);
       }

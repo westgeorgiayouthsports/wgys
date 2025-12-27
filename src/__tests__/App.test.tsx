@@ -5,16 +5,12 @@ jest.mock('../services/firebase', () => ({
   db: {} as any,
 }));
 // If App imports onAuthStateChanged from 'firebase/auth'
-jest.mock('firebase/auth', () => {
-  const actual = jest.requireActual('firebase/auth');
-  return {
-    ...actual,
-    onAuthStateChanged: jest.fn((_auth, callback) => {
-      callback(null);      // or fake user
-      return jest.fn();    // unsubscribe
-    }),
-  };
-});
+jest.mock('firebase/auth', () => ({
+  onAuthStateChanged: jest.fn((_auth: any, callback: any) => {
+    callback(null);
+    return jest.fn();
+  }),
+}));
 beforeAll(() => {
   // Make jsdom location look like your production base path
   window.history.pushState({}, 'Test page', '/');

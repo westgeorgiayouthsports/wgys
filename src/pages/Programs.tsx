@@ -18,6 +18,7 @@ import {
   message,
   Spin,
   Popconfirm,
+  Tabs,
 } from 'antd';
 import {
   PlusOutlined,
@@ -214,7 +215,9 @@ const Programs = forwardRef(function Programs(_props, ref) {
 
   const filteredPrograms = selectedSeasonId === 'all'
     ? programs
-    : programs.filter(p => p.seasonId === selectedSeasonId);
+    : selectedSeasonId === 'unassigned'
+      ? programs.filter(p => !p.seasonId)
+      : programs.filter(p => p.seasonId === selectedSeasonId);
 
   const columns = [
     {
@@ -351,19 +354,6 @@ const Programs = forwardRef(function Programs(_props, ref) {
             <Text type="secondary">Manage sports programs and activities</Text>
           </div>
           <Space>
-            <Select
-              value={selectedSeasonId}
-              onChange={(val) => setSelectedSeasonId(val)}
-              style={{ width: 200 }}
-              placeholder="Filter by season"
-            >
-              <Select.Option value="all">All Seasons</Select.Option>
-              {seasons.map(s => (
-                <Select.Option key={s.id} value={s.id}>
-                  {s.name} {s.status === 'archived' ? '(Archived)' : ''}
-                </Select.Option>
-              ))}
-            </Select>
             <Button icon={<ReloadOutlined />} onClick={loadPrograms} loading={loading}>
                 Refresh
             </Button>
@@ -378,6 +368,19 @@ const Programs = forwardRef(function Programs(_props, ref) {
             </Button>
           </Space>
         </Space>
+
+        <div style={{ marginTop: 12 }}>
+          {(() => {
+            const items = [
+              { key: 'all', label: 'All Seasons' },
+              ...seasons.map(s => ({ key: s.id, label: `${s.name}${s.status === 'archived' ? ' (Archived)' : ''}` })),
+              { key: 'unassigned', label: 'Unassigned' },
+            ];
+            return (
+              <Tabs activeKey={selectedSeasonId} onChange={(k) => setSelectedSeasonId(k)} items={items} />
+            );
+          })()}
+        </div>
       </div>
 
       <Card title="Program Directory">

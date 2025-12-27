@@ -1,6 +1,7 @@
 import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
+import { AuditEntity } from '../types/enums';
 import type { ProgramFormResponse } from '../types/program';
 import type { SeasonType } from '../types/season';
 import type { ProgramRegistrationStatus, PaymentPlan } from '../types';
@@ -69,7 +70,7 @@ export const programRegistrationsService = {
       try {
         await auditLogService.log({
           action: 'program.registration.created',
-          entityType: 'program',
+          entityType: AuditEntity.Program,
           entityId: newRef.key ?? null,
           details: { programId, registeredBy, totalAmount, paymentMethod },
         });
@@ -167,7 +168,7 @@ export const programRegistrationsService = {
       try {
         await auditLogService.log({
           action: 'program.registration.updated',
-          entityType: 'program',
+          entityType: AuditEntity.Program,
           entityId: id,
           details: updates,
         });
@@ -197,7 +198,7 @@ export const programRegistrationsService = {
       try {
         await auditLogService.log({
           action: 'program.registration.cancelled',
-          entityType: 'program',
+          entityType: AuditEntity.Program,
           entityId: id,
           details: { reason },
         });

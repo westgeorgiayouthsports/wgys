@@ -26,6 +26,7 @@ const navItems = [
   { key: '/admin/teams', label: 'Teams', icon: <TeamOutlined /> },
   { key: '/admin/people', label: 'People', icon: <ContactsOutlined /> },
   { key: '/admin/settings', label: 'Settings', icon: <SettingOutlined /> },
+  { key: '/admin/payment-plans', label: 'Payment Plans', icon: <CreditCardOutlined /> },
 
   // User items
   { key: '/profile', label: 'My Profile', icon: <UserOutlined /> },
@@ -62,6 +63,7 @@ const USER_KEYS = new Set([
   '/admin/teams',
   '/admin/people',
   '/admin/settings',
+  '/admin/payment-plans',
 ]);
 
 export const selectMenuItems = createSelector([selectRole], (role) => {

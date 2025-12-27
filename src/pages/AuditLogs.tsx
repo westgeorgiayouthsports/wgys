@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Table, Card, Input, Select, Button, Space, Typography, Popconfirm, message } from 'antd';
+import { Table, Card, Input, Select, Button, Space, Typography, Popconfirm, message, Tooltip } from 'antd';
 import { auditLogService } from '../services/auditLog';
 import type { AuditRecord } from '../services/auditLog';
 import type { RootState } from '../store/store';
@@ -16,6 +16,7 @@ export default function AuditLogs() {
   const [qAction, setQAction] = useState('');
   const [qActor, setQActor] = useState('');
   const [qEntityType, setQEntityType] = useState<string | 'all'>('all');
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
 
   useEffect(() => { load(); }, []);
 
@@ -80,13 +81,41 @@ export default function AuditLogs() {
           loading={loading}
           rowKey={(r) => r.id || `${r.timestamp}-${r.action}`}
           pagination={{ pageSize: 25 }}
+          expandable={{
+            expandedRowRender: (record: AuditRecord) => (
+              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, margin: 0 }}>{JSON.stringify(record.details, null, 2)}</pre>
+            ),
+            rowExpandable: (record: AuditRecord) => !!record.details,
+            expandedRowKeys,
+            onExpand: (expanded, record) => {
+              const key = record.id || `${record.timestamp}-${record.action}`;
+              setExpandedRowKeys(prev => expanded ? Array.from(new Set([...prev, key])) : prev.filter(k => k !== key));
+            }
+          }}
           columns={[
             { title: 'Time', dataIndex: 'timestamp', key: 'timestamp', render: (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '' },
             { title: 'Action', dataIndex: 'action', key: 'action' },
             { title: 'Entity', dataIndex: 'entityType', key: 'entityType' },
             { title: 'Entity ID', dataIndex: 'entityId', key: 'entityId' },
             { title: 'Actor', key: 'actor', render: (r: AuditRecord) => r.actorEmail || r.actorId || '' },
-              { title: 'Details', dataIndex: 'details', key: 'details', render: (d: any) => typeof d === 'string' ? d : JSON.stringify(d) },
+              { title: 'Details', dataIndex: 'details', key: 'details', render: (d: any, record: AuditRecord) => {
+                const text = typeof d === 'string' ? d : JSON.stringify(d, null, 2);
+                const key = record.id || `${record.timestamp}-${record.action}`;
+                const isExpanded = expandedRowKeys.includes(key);
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Tooltip
+                      placement="topLeft"
+                      title={<pre style={{ whiteSpace: 'pre-wrap', maxWidth: 800, overflow: 'auto', margin: 0 }}>{text}</pre>}
+                    >
+                      <div style={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</div>
+                    </Tooltip>
+                    <Button size="small" type="link" onClick={() => {
+                      setExpandedRowKeys(prev => prev.includes(key) ? prev.filter(k => k !== key) : Array.from(new Set([...prev, key])));
+                    }}>{isExpanded ? 'Collapse' : 'Expand'}</Button>
+                  </div>
+                );
+              } },
               { title: 'Actions', key: 'actions', render: (r: AuditRecord) => (
                 role === 'owner' ? (
                   <Popconfirm title="Delete this audit entry?" onConfirm={() => handleDelete(r.id)} okText="Delete" cancelText="Cancel">
