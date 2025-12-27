@@ -1,13 +1,13 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
-import type { SeasonType } from '../../types/season';
+import type { SeasonType } from '../../types/enums/season';
 
 export interface Team {
   id: string;
   name: string;
   budget: number;
   spent: number;
-  status: 'active' | 'inactive' | 'archived';
+  status: 'draft' | 'active' | 'closed' | 'archived';
   userId: string;
   createdAt: string;
   updatedAt?: string;

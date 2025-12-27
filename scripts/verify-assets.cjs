@@ -1,6 +1,5 @@
 /* Verify that dist/index.html references vendor-react, vendor-antd, and index- assets,
   and that those assets exist in dist/assets. Exits 1 on mismatch to fail the workflow. */
-/* global process, console */
 const fs = require('fs');
 const path = require('path');
 

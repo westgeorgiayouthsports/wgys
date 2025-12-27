@@ -1,12 +1,41 @@
 import { ref, set, get, update, remove, query as _query, orderByChild as _orderByChild, equalTo as _equalTo } from 'firebase/database';
 import { db } from './firebase';
 import type { Season, SeasonFormData } from '../types/season';
+import { SeasonTypeValues } from '../types/enums/season';
+import type { SeasonType } from '../types/enums/season';
 import { programsService } from './firebasePrograms';
 import { teamsService } from './firebaseTeams';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
+import { SeasonStatusValues } from '../types/enums/season';
 
 export const seasonsService = {
+  deriveSeasonMeta(startDateStr: string): { type: SeasonType; year: number } {
+    try {
+      // Parse YYYY-MM-DD explicitly to avoid timezone shift issues when using Date(string)
+      const m = (startDateStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      let d: Date;
+      if (m) {
+        const y = Number(m[1]);
+        const mo = Number(m[2]);
+        const da = Number(m[3]);
+        d = new Date(y, mo - 1, da);
+      } else {
+        d = new Date(startDateStr);
+      }
+      const month = d.getMonth() + 1;
+      const year = d.getFullYear();
+      let type: SeasonType;
+      if (month >= 3 && month <= 5) type = SeasonTypeValues.spring;
+      else if (month >= 6 && month <= 8) type = SeasonTypeValues.summer;
+      else if (month >= 9 && month <= 11) type = SeasonTypeValues.fall;
+      else type = SeasonTypeValues.winter;
+      return { type, year };
+    } catch (e) {
+      console.log('Error deriving season meta from startDate: ', e);
+      return { type: SeasonTypeValues.spring, year: new Date().getFullYear() };
+    }
+  },
   async getSeasons(): Promise<Season[]> {
     try {
       const snapshot = await get(ref(db, 'seasons'));
@@ -30,7 +59,7 @@ export const seasonsService = {
 
     // 1) Archive season
     await update(ref(db, `seasons/${seasonId}`), {
-      status: 'archived',
+      status: SeasonStatusValues.archived,
       updatedAt: now,
       archivedAt: now,
     });
@@ -75,7 +104,7 @@ export const seasonsService = {
   async getActiveSeasons(): Promise<Season[]> {
     try {
       const allSeasons = await this.getSeasons();
-      return allSeasons.filter(s => s.status === 'active');
+      return allSeasons.filter(s => s.status === SeasonStatusValues.active);
     } catch (error) {
       console.error('Error fetching active seasons:', error);
       throw error;
@@ -107,10 +136,18 @@ export const seasonsService = {
         Object.entries(formData).filter(([_, v]) => v !== undefined && v !== '')
       );
 
+      // derive season meta from startDate if present
+      let derived: any = {};
+      if (cleanedData.startDate) {
+        const meta = (this as any).deriveSeasonMeta(cleanedData.startDate as string);
+        derived.seasonType = meta.type;
+        derived.year = meta.year;
+      }
       const seasonData: Season = {
         id: seasonId,
         ...(cleanedData as any),
-        status: 'active',
+        ...derived,
+        status: (cleanedData as any).status || SeasonStatusValues.active,
         createdAt: now,
         updatedAt: now,
         createdBy: userId,
@@ -141,10 +178,15 @@ export const seasonsService = {
         Object.entries(updates).filter(([_, v]) => v !== undefined && v !== '')
       );
 
-      await update(seasonRef, {
-        ...(cleaned as any),
-        updatedAt: new Date().toISOString(),
-      });
+      // derive season meta if startDate provided
+      const toWrite: any = { ...(cleaned as any), updatedAt: new Date().toISOString() };
+      if ((cleaned as any).startDate) {
+        const meta = (this as any).deriveSeasonMeta((cleaned as any).startDate as string);
+        toWrite.seasonType = meta.type;
+        toWrite.year = meta.year;
+      }
+
+      await update(seasonRef, toWrite);
       try {
         await auditLogService.log({
           action: 'season.updated',
@@ -164,7 +206,7 @@ export const seasonsService = {
 
   async archiveSeason(seasonId: string): Promise<void> {
     try {
-      await this.updateSeason(seasonId, { status: 'archived' });
+      await this.updateSeason(seasonId, { status: SeasonStatusValues.archived });
     } catch (error) {
       console.error('Error archiving season:', error);
       throw error;

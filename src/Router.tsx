@@ -16,6 +16,7 @@ import SignUp from './pages/SignUp';
 // Lazy load all other pages for code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Teams = lazy(() => import('./pages/Teams'));
+const Sports = lazy(() => import('./pages/Sports'));
 const TeamChat = lazy(() => import('./pages/TeamChat'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Announcements = lazy(() => import('./pages/Announcements'));
@@ -213,6 +214,11 @@ function Router() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/admin/sports" element={
+                <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                  <Sports />
+                </ProtectedRoute>
+              } />
             <Route path="/admin/audit" element={
               <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
                 <AuditLogs />

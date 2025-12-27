@@ -18,7 +18,10 @@ import {
   Popconfirm,
   Tooltip,
   Tabs,
-  Switch,
+  Row,
+  Col,
+  DatePicker,
+  Segmented,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
 import type { RootState } from '../store/store';
@@ -26,9 +29,12 @@ import { seasonsService } from '../services/firebaseSeasons';
 import { programsService } from '../services/firebasePrograms';
 import type { Season, SeasonFormData } from '../types/season';
 import dayjs from 'dayjs';
+// DatePicker imported above from 'antd'
+import type { Dayjs } from 'dayjs';
+import { SeasonStatusValues } from '../types/enums/season';
 
 const { Title, Text } = Typography;
-const seasonColor: Record<Season['seasonType'], string> = {
+  const seasonColor: Record<Season['seasonType'], string> = {
   spring: 'blue',
   summer: 'green',
   fall: 'orange',
@@ -48,7 +54,7 @@ export default function Seasons() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingSeason, setEditingSeason] = useState<Season | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [statusFilter, setStatusFilter] = useState<string>(SeasonStatusValues.active);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 15 });
   const [programCountBySeason, setProgramCountBySeason] = useState<Record<string, number>>({});
   const [form] = Form.useForm();
@@ -126,7 +132,10 @@ export default function Seasons() {
   const handleAddSeason = () => {
     setEditingSeason(null);
     form.resetFields();
-    form.setFieldsValue({ year: new Date().getFullYear(), active: true });
+    // Default fiscal year start to Aug 16 of current year on create
+    const year = new Date().getFullYear();
+    const defaultFiscalStart = dayjs(`${year}-08-16`);
+    form.setFieldsValue({ status: SeasonStatusValues.active, fiscalYearStart: defaultFiscalStart, fiscalYearEnd: defaultFiscalStart.add(1, 'year') });
     setModalVisible(true);
   };
 
@@ -136,8 +145,12 @@ export default function Seasons() {
       name: season.name,
       seasonType: season.seasonType,
       year: season.year,
+      startDate: season.startDate ? dayjs(season.startDate) : undefined,
+      endDate: season.endDate ? dayjs(season.endDate) : undefined,
+      fiscalYearStart: season.fiscalYearStart ? dayjs(season.fiscalYearStart) : undefined,
+      fiscalYearEnd: season.fiscalYearEnd ? dayjs(season.fiscalYearEnd) : undefined,
       description: season.description,
-      active: season.status === 'active',
+      status: season.status,
     });
     setModalVisible(true);
   };
@@ -164,15 +177,102 @@ export default function Seasons() {
     }
   };
 
+
+
+  const handleStartDateChange = (date: Dayjs | null) => {
+    if (!date) return;
+    const startStr = date.format('YYYY-MM-DD');
+    const meta = seasonsService.deriveSeasonMeta(startStr);
+    const currentEnd = form.getFieldValue('endDate');
+    const fyStart = date;
+    const fyEnd = date.add(1, 'year');
+    const defaultEnd = (currentEnd || date.add(3, 'month')) as Dayjs;
+    const clampedEnd = defaultEnd.isBefore(fyStart, 'day') ? fyStart : (defaultEnd.isAfter(fyEnd, 'day') ? fyEnd : defaultEnd);
+    form.setFieldsValue({
+      startDate: date,
+      seasonType: meta.type,
+      year: meta.year,
+      fiscalYearStart: fyStart,
+      fiscalYearEnd: fyEnd,
+      endDate: clampedEnd,
+    });
+    // clear any prior validation error on startDate now that user set it
+    form.setFields([{ name: 'startDate', errors: [] }]);
+  };
+
+  const disabledWithinFiscal = (current: Dayjs | null) => {
+    if (!current) return false;
+    const fyStart = form.getFieldValue('fiscalYearStart') as Dayjs | undefined;
+    const fyEnd = form.getFieldValue('fiscalYearEnd') as Dayjs | undefined;
+    if (!fyStart || !fyEnd) return false;
+    return current.isBefore(fyStart, 'day') || current.isAfter(fyEnd, 'day');
+  };
+
+  const handleFiscalYearStartChange = (date: Dayjs | null) => {
+    if (!date) return;
+    const fyStart = date;
+    const fyEnd = date.add(1, 'year');
+    const currentStart = form.getFieldValue('startDate') as Dayjs | undefined;
+    const currentEnd = form.getFieldValue('endDate') as Dayjs | undefined;
+    // Do NOT overwrite the existing season start or end dates; leave them as-is.
+    form.setFieldsValue({ fiscalYearStart: fyStart, fiscalYearEnd: fyEnd });
+    if (currentStart) {
+      if (currentStart.isBefore(fyStart, 'day') || currentStart.isAfter(fyEnd, 'day')) {
+        form.setFields([{ name: 'startDate', errors: ['Start date is outside fiscal year range'] }]);
+      } else {
+        form.setFields([{ name: 'startDate', errors: [] }]);
+      }
+    }
+    if (currentEnd) {
+      if (currentEnd.isBefore(fyStart, 'day') || currentEnd.isAfter(fyEnd, 'day')) {
+        form.setFields([{ name: 'endDate', errors: ['End date is outside fiscal year range'] }]);
+      } else {
+        form.setFields([{ name: 'endDate', errors: [] }]);
+      }
+    }
+  };
+
+  const handleEndDateChange = (date: Dayjs | null) => {
+    if (!date) {
+      form.setFieldsValue({ endDate: null });
+      return;
+    }
+    const fyStart = form.getFieldValue('fiscalYearStart') as Dayjs | undefined;
+    const fyEnd = form.getFieldValue('fiscalYearEnd') as Dayjs | undefined;
+    let clamped = date;
+    if (fyStart && fyEnd) {
+      if (date.isBefore(fyStart, 'day')) clamped = fyStart;
+      if (date.isAfter(fyEnd, 'day')) clamped = fyEnd;
+    }
+    form.setFieldsValue({ endDate: clamped });
+  };
+
   const handleSubmit = async (values: any) => {
     try {
+      // normalize date fields to YYYY-MM-DD strings
+      const startDate = values.startDate ? (values.startDate as Dayjs).format('YYYY-MM-DD') : undefined;
+      const endDate = values.endDate ? (values.endDate as Dayjs).format('YYYY-MM-DD') : undefined;
+      const fiscalYearStart = values.fiscalYearStart ? (values.fiscalYearStart as Dayjs).format('YYYY-MM-DD') : undefined;
+      const fiscalYearEnd = values.fiscalYearEnd ? (values.fiscalYearEnd as Dayjs).format('YYYY-MM-DD') : undefined;
+
       const formData: SeasonFormData = {
         name: values.name,
         seasonType: values.seasonType,
         year: values.year,
+        startDate,
+        endDate,
+        fiscalYearStart,
+        fiscalYearEnd,
         description: values.description,
-        status: values.active ? 'active' : 'inactive',
+        status: values.status || SeasonStatusValues.draft,
       } as any;
+
+      // derive type/year from startDate if present
+      if (startDate && (!formData.seasonType || !formData.year)) {
+        const meta = seasonsService.deriveSeasonMeta(startDate);
+        formData.seasonType = meta.type as any;
+        formData.year = meta.year;
+      }
 
       if (editingSeason) {
         await seasonsService.updateSeason(editingSeason.id, {
@@ -193,14 +293,15 @@ export default function Seasons() {
     }
   };
 
+
   const columns = [
     {
       title: 'Status',
       key: 'status',
       width: 100,
       render: (record: Season) => (
-        <Tag color={record.status === 'active' ? 'green' : record.status === 'archived' ? 'red' : 'default'}>
-          {record.status === 'active' ? 'Active' : record.status === 'archived' ? 'Archived' : 'Inactive'}
+        <Tag color={record.status === SeasonStatusValues.active ? 'green' : record.status === SeasonStatusValues.archived ? 'red' : 'default'}>
+          {record.status === SeasonStatusValues.active ? 'Active' : record.status === SeasonStatusValues.archived ? 'Archived' : 'Draft'}
         </Tag>
       ),
     },
@@ -208,12 +309,13 @@ export default function Seasons() {
       title: 'Season Name',
       dataIndex: 'name',
       key: 'name',
+      width: 200,
       render: (name: string) => <Text strong>{name}</Text>,
     },
     {
       title: 'Type',
       key: 'seasonType',
-      width: 100,
+      width: 75,
       render: (record: Season) => (
         <Tag color={seasonColor[record.seasonType]}>
           {seasonLabel[record.seasonType]}
@@ -224,7 +326,21 @@ export default function Seasons() {
       title: 'Year',
       dataIndex: 'year',
       key: 'year',
-      width: 100,
+      width: 50,
+    },
+    {
+      title: 'Start Date',
+      dataIndex: 'startDate',
+      key: 'startDate',
+      width: 140,
+      render: (val: string) => val ? dayjs(val).format('MMM D, YYYY') : '-',
+    },
+    {
+      title: 'End Date',
+      dataIndex: 'endDate',
+      key: 'endDate',
+      width: 140,
+      render: (val: string) => val ? dayjs(val).format('MMM D, YYYY') : '-',
     },
     {
       title: 'Description',
@@ -245,14 +361,14 @@ export default function Seasons() {
       render: (record: Season) => {
         const programsCount = programCountBySeason[record.id] || 0;
         const canDelete = programsCount === 0;
-        const showArchive = record.status !== 'active' && record.status !== 'archived';
+        const showArchive = record.status !== SeasonStatusValues.active && record.status !== SeasonStatusValues.archived;
         return (
           <Space>
             <Button
               size="small"
               icon={<EditOutlined />}
               onClick={() => handleEditSeason(record)}
-              disabled={record.status === 'archived'}
+              disabled={record.status === SeasonStatusValues.archived}
             >
               Edit
             </Button>
@@ -305,7 +421,8 @@ export default function Seasons() {
           {(() => {
             const items = [
               { key: 'active', label: 'Active' },
-              { key: 'past', label: 'Past' },
+              { key: 'draft', label: 'Draft' },
+              { key: 'closed', label: 'Closed' },
               { key: 'archived', label: 'Archived' },
               { key: 'all', label: 'All' },
             ];
@@ -315,11 +432,11 @@ export default function Seasons() {
         <Table
           columns={columns}
           dataSource={seasons.filter(s => {
-            const currentYear = new Date().getFullYear();
             if (statusFilter === 'all') return true;
-            if (statusFilter === 'active') return s.status === 'active';
-            if (statusFilter === 'archived') return s.status === 'archived';
-            if (statusFilter === 'past') return s.status !== 'archived' && (s.year || 0) < currentYear;
+            if (statusFilter === 'active') return s.status === SeasonStatusValues.active;
+            if (statusFilter === 'archived') return s.status === SeasonStatusValues.archived;
+            if (statusFilter === 'closed') return s.status === SeasonStatusValues.closed;
+            if (statusFilter === 'draft') return s.status === SeasonStatusValues.draft;
             return true;
           })}
           rowKey="id"
@@ -353,30 +470,66 @@ export default function Seasons() {
             <Input placeholder="e.g., Spring 2026" />
           </Form.Item>
 
-          <Form.Item name="seasonType" label="Season Type" rules={[{ required: true }]}>
-            <Select placeholder="Select season type">
-              <Select.Option value="spring">Spring</Select.Option>
-              <Select.Option value="summer">Summer</Select.Option>
-              <Select.Option value="fall">Fall</Select.Option>
-              <Select.Option value="winter">Winter</Select.Option>
-            </Select>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="startDate" label="Start Date" rules={[{ required: true, message: 'Please select start date' }]}>
+                <DatePicker allowClear={false} style={{ width: '100%' }} format="YYYY-MM-DD" onChange={handleStartDateChange} disabledDate={disabledWithinFiscal} />
+              </Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item name="endDate" label="End Date">
+                <DatePicker allowClear={false} style={{ width: '100%' }} format="YYYY-MM-DD" onChange={handleEndDateChange} disabledDate={disabledWithinFiscal} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="fiscalYearStart" label="Fiscal Year Start">
+                <DatePicker allowClear={false} style={{ width: '100%' }} format="YYYY-MM-DD" onChange={handleFiscalYearStartChange} />
+              </Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item name="fiscalYearEnd" label="Fiscal Year End" tooltip="Derived from fiscal year start">
+                <DatePicker allowClear={false} style={{ width: '100%' }} format="YYYY-MM-DD" disabled />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="seasonType" label="Season Type" tooltip="Derived from start date">
+                <Select placeholder="(Derived from start date)" disabled>
+                  <Select.Option value="spring">Spring</Select.Option>
+                  <Select.Option value="summer">Summer</Select.Option>
+                  <Select.Option value="fall">Fall</Select.Option>
+                  <Select.Option value="winter">Winter</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item name="year" label="Year" tooltip="Derived from start date">
+                <InputNumber min={2020} max={2099} style={{ width: '100%' }} placeholder="(Derived from start date)" disabled />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="description" label="Description">
+            <Input.TextArea rows={3} placeholder="Season details" />
           </Form.Item>
 
-          <Form.Item name="year" label="Year" rules={[{ required: true }]}>
-            <InputNumber min={2020} max={2099} style={{ width: '100%' }} placeholder="2026" />
+          <Form.Item name="status" label="Status" rules={[{ required: true }]}>
+            <Segmented
+              options={Object.entries(SeasonStatusValues).map(([key, val]) => ({
+                label: key.charAt(0).toUpperCase() + key.slice(1),
+                value: val,
+              }))}
+            />
           </Form.Item>
 
-          <Form.Item name="description" label="Description (Optional)">
-            <Input.TextArea rows={3} placeholder="Season details, important dates, etc." />
-          </Form.Item>
-
-          <Form.Item name="active" valuePropName="checked">
-            <Tooltip title="Toggle whether this season is active (inactive seasons can be archived)">
-              <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-            </Tooltip>
-          </Form.Item>
-
-          {/* Payment plans are now managed globally (see Payment Plans admin). */}
         </Form>
       </Modal>
     </div>

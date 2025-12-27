@@ -8,6 +8,18 @@
         ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
       }
     },
+    "sports": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".indexOn": ["name","ageControlDate"],
+      "$sportId": {
+        ".read": true,
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+        ".validate": "newData.hasChildren(['name','ageControlDate'])",
+        "name": { ".validate": "newData.isString() && newData.val().length > 1" },
+        "ageControlDate": { ".validate": "newData.isString() && newData.val().length == 5" }
+      }
+    },
     "comments": {
       ".read": "auth != null",
       "$announcementId": {
@@ -61,6 +73,7 @@
     "programs": {
       ".read": "auth != null",
       ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".indexOn": ["seasonId"],
       "$programId": {
         ".read": "auth != null",
         ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
@@ -80,6 +93,26 @@
       "$planId": {
         ".read": "auth != null",
         ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
+      }
+    },
+    "seasonPrograms": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".indexOn": ["seasonId","programId","enabled"],
+      "$spId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+        ".validate": "newData.hasChildren(['seasonId','programId'])",
+        "seasonId": { ".validate": "newData.isString() && newData.val().length > 0" },
+        "programId": { ".validate": "newData.isString() && newData.val().length > 0" },
+        "enabled": { ".validate": "newData.isBoolean()" },
+        "basePrice": { ".validate": "newData.val() == null || newData.isNumber()" },
+        "maxParticipants": { ".validate": "newData.val() == null || newData.isNumber()" },
+        "registrationStart": { ".validate": "newData.val() == null || newData.isString()" },
+        "registrationEnd": { ".validate": "newData.val() == null || newData.isString()" },
+        "questions": { ".validate": "newData.val() == null || newData.hasChildren()" },
+        "createdAt": { ".validate": "newData.isString()" },
+        "updatedAt": { ".validate": "newData.isString()" }
       }
     },
     "team_budgets": {

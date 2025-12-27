@@ -3,7 +3,7 @@ export * from './season';
 export * from './program';
 export * from './event';
 export * from './analytics';
-export * from './payments';
+export * from './payment';
 export * from './auth';
 export * from './team';
 export * from './theme';

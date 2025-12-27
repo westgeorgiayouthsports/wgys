@@ -63,6 +63,21 @@ export default [
     },
   },
   {
+    files: ['scripts/**', 'scripts/**/*.{js,cjs,mjs,ts}'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        ...globals.node,
+        process: 'readonly',
+        console: 'readonly'
+      }
+    },
+    rules: {
+      'no-console': 'off'
+    }
+  },
+  {
     files: ['**/*.{test,spec}.{js,jsx,ts,tsx}', 'setupTests.ts'],
     languageOptions: {
       globals: {

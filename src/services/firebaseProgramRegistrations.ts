@@ -3,7 +3,7 @@ import { db } from './firebase';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
 import type { ProgramFormResponse } from '../types/program';
-import type { SeasonType } from '../types/season';
+import type { SeasonType } from '../types/enums/season';
 import type { ProgramRegistrationStatus, PaymentPlan } from '../types';
 
 export interface ProgramRegistrationRecord {

@@ -1,5 +1,5 @@
 import type { PersonRole, Sex } from './enums/person';
-import type { PaymentStatus } from './enums/payments';
+import type { PaymentStatus } from './enums/payment';
 import type { ProgramRegistration } from './registration';
 export type { PersonRole, PaymentStatus, ProgramRegistration };
 

@@ -1,5 +1,5 @@
 import type { QuestionType, SportType, ProgramRegistrationStatus, PaymentPlan, PaymentPlanFrequency } from './enums/program';
-import type { SeasonType } from './season';
+import type { SeasonType } from './enums/season';
 export type { QuestionType, SportType, ProgramRegistrationStatus, PaymentPlan, PaymentPlanFrequency };
 export type SexRestriction = 'female' | 'any';
 export type ProgramType = 'sport' | 'lesson' | 'training' | 'tryout' | 'camp';

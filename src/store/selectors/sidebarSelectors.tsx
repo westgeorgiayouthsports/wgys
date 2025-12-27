@@ -16,12 +16,14 @@ import {
   CreditCardOutlined,
   FileTextOutlined,
   FireOutlined,
+  DribbbleOutlined,
 } from '@ant-design/icons';
 
 const navItems = [
   // Admin-only items (will be placed in Admin section via selector)
   { key: '/admin/dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
   { key: '/admin/seasons', label: 'Seasons', icon: <FireOutlined /> },
+  { key: '/admin/sports', label: 'Sports', icon: <DribbbleOutlined /> },
   { key: '/admin/programs', label: 'Programs', icon: <TrophyOutlined /> },
   { key: '/admin/teams', label: 'Teams', icon: <TeamOutlined /> },
   { key: '/admin/people', label: 'People', icon: <ContactsOutlined /> },
@@ -58,6 +60,7 @@ const USER_KEYS = new Set([
   const ADMIN_KEYS = new Set([
   '/admin/dashboard',
   '/admin/seasons',
+  '/admin/sports',
     '/admin/audit',
   '/admin/programs',
   '/admin/teams',

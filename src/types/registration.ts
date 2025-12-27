@@ -1,5 +1,5 @@
 import type { ProgramRegistrationStatus } from './enums/program';
-import type { PaymentStatus } from './enums/payments';
+import type { PaymentStatus } from './enums/payment';
 
 // Shared superset for registrations used across Person (nested) and Family (document)
 export interface ProgramRegistration {

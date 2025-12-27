@@ -31,6 +31,7 @@ import { programsService } from '../services/firebasePrograms';
 import { seasonsService } from '../services/firebaseSeasons';
 import type { Program } from '../types/program';
 import type { Season } from '../types/season';
+import { SeasonStatusValues } from '../types/enums/season';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -82,7 +83,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
     try {
       const seasonsList = await seasonsService.getSeasons();
       setSeasons(seasonsList);
-      const firstActive = seasonsList.find(s => s.status === 'active');
+      const firstActive = seasonsList.find(s => s.status === SeasonStatusValues.active);
       if (firstActive && selectedSeasonId === 'all') {
         setSelectedSeasonId(firstActive.id);
       }
@@ -373,7 +374,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
           {(() => {
             const items = [
               { key: 'all', label: 'All Seasons' },
-              ...seasons.map(s => ({ key: s.id, label: `${s.name}${s.status === 'archived' ? ' (Archived)' : ''}` })),
+              ...seasons.map(s => ({ key: s.id, label: `${s.name}${s.status === SeasonStatusValues.archived ? ' (Archived)' : ''}` })),
               { key: 'unassigned', label: 'Unassigned' },
             ];
             return (
@@ -410,7 +411,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
           <Form.Item label="Target Season">
             <Select value={bulkTargetSeason || undefined} onChange={(v) => setBulkTargetSeason(v)} placeholder="Select season">
               {seasons.map(s => (
-                <Select.Option key={s.id} value={s.id}>{s.name} {s.status === 'archived' ? '(Archived)' : ''}</Select.Option>
+                <Select.Option key={s.id} value={s.id}>{s.name} {s.status === SeasonStatusValues.archived ? '(Archived)' : ''}</Select.Option>
               ))}
             </Select>
           </Form.Item>
@@ -456,7 +457,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
 
             <Form.Item name="seasonId" label="Season">
               <Select placeholder="Select season" style={{ width: 150 }}>
-                {seasons.filter(s => s.status === 'active').map(season => (
+                {seasons.filter(s => s.status === SeasonStatusValues.active).map(season => (
                   <Select.Option key={season.id} value={season.id}>
                     {season.name} ({season.year})
                   </Select.Option>

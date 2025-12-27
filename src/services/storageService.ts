@@ -16,7 +16,7 @@ export const storageService = {
 
   // Upload with progress callback. onProgress receives percent (0-100).
   async uploadFileWithProgress(path: string, file: File, onProgress?: (percent: number) => void): Promise<{ url: string; path: string }> {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       try {
         const ref = storageRef(storage, path);
         const task = uploadBytesResumable(ref, file as Blob);
@@ -28,13 +28,12 @@ export const storageService = {
         }, (err) => {
           console.error('Upload failed', err);
           reject(err);
-        }, async () => {
-          try {
-            const url = await getDownloadURL(task.snapshot.ref);
+        }, () => {
+          getDownloadURL(task.snapshot.ref).then((url) => {
             resolve({ url, path });
-          } catch (e) {
+          }).catch((e) => {
             reject(e);
-          }
+          });
         });
       } catch (e) {
         console.error('uploadFileWithProgress error', e);

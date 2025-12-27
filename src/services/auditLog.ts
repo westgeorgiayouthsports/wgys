@@ -30,7 +30,7 @@ export const auditLogService = {
       await set(newRef, payload);
       return newRef.key;
     } catch (error) {
-      console.error('Error writing audit log:', error);
+      console.error(`Error writing audit entry: `, error || 'unknown error');
       // don't throw; audit failures should not block main flow
       return null;
     }
@@ -65,7 +65,7 @@ export const auditLogService = {
   async logBulk(action: string, entityType: AuditEntity, entityIds: string[], details?: any) {
     return this.log({ action, entityType, entityId: null, details: { ids: entityIds, ...details } });
   },
-  
+
   // helper to log deletions with a snapshot of the record before removal
   async logDelete(entityType: AuditEntity, entityId: string | null, beforeData?: any, actorId?: string | null) {
     try {
@@ -77,7 +77,7 @@ export const auditLogService = {
         details: { before: beforeData ?? null },
       });
     } catch (error) {
-      console.error('Error writing delete audit log:', error);
+      console.error(`Error writing delete audit entry for ${entityType}.deleted:`, error || 'unknown error');
       return null;
     }
   },

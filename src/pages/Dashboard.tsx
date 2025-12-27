@@ -36,6 +36,7 @@ import { setTeams, setLoading as _setLoading } from '../store/slices/teamsSlice'
 import { teamsService } from '../services/firebaseTeams';
 import { fetchWebsiteTrends } from '../services/analyticsClient';
 import { programsService } from '../services/firebasePrograms';
+import { SeasonStatusValues } from '../types/enums/season';
 import { announcementsService } from '../services/firebaseAnnouncements';
 import { registrationsService } from '../services/firebaseRegistrations';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
@@ -173,7 +174,7 @@ export default function Dashboard() {
   useEffect(() => {
     const totalBudget = teams.reduce((sum, t) => sum + (t.budget || 0), 0);
     const totalSpent = teams.reduce((sum, t) => sum + (t.spent || 0), 0);
-    const activeTeams = teams.filter(t => t.status === 'active').length;
+    const activeTeams = teams.filter(t => t.status === SeasonStatusValues.active).length;
     const budgetUtilization = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
     const activePrograms = programs.filter(p => p.active).length;
@@ -373,7 +374,7 @@ export default function Dashboard() {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={status === 'active' ? 'green' : 'default'}>
+        <Tag color={status === SeasonStatusValues.active ? 'green' : 'default'}>
           {status?.toUpperCase() || 'UNKNOWN'}
         </Tag>
       ),

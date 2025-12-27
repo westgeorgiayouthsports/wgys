@@ -36,6 +36,7 @@ import { QuestionTypeList } from '../types/enums/program';
 import { programsService } from '../services/firebasePrograms';
 import { seasonsService } from '../services/firebaseSeasons';
 import type { Season } from '../types/season';
+import { SeasonStatusValues } from '../types/enums/season';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
 import dayjs from 'dayjs';
 import Register from '../components/Registrations/Register';
@@ -99,7 +100,7 @@ export default function ProgramDetail() {
   const loadSeasons = async () => {
     try {
       const list = await seasonsService.getSeasons();
-      setSeasons(list.filter(s => s.status === 'active'));
+      setSeasons(list.filter(s => s.status === SeasonStatusValues.active));
     } catch (err) {
       console.error('Failed to load seasons', err);
       setSeasons([]);
@@ -426,7 +427,7 @@ export default function ProgramDetail() {
                   <Select placeholder="Select season">
                     <Select.Option value={undefined}>None</Select.Option>
                     {seasons.map(s => (
-                      <Select.Option key={s.id} value={s.id}>{s.name} {s.status === 'archived' ? '(Archived)' : ''}</Select.Option>
+                      <Select.Option key={s.id} value={s.id}>{s.name} {s.status === SeasonStatusValues.archived ? '(Archived)' : ''}</Select.Option>
                     ))}
                   </Select>
                 </Form.Item>

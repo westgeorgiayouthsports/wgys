@@ -1,13 +1,15 @@
 export enum AuditEntity {
+  Cart = 'cart',
   Program = 'program',
+  Sport = 'sport',
   Team = 'team',
   Season = 'season',
   Person = 'person',
   Family = 'family',
   File = 'file',
+  SeasonProgram = 'seasonProgram',
   TeamAssignment = 'teamAssignment',
   PaymentPlan = 'paymentPlan',
   PaymentMethod = 'paymentMethod',
-  Cart = 'cart',
   Other = 'other',
 }

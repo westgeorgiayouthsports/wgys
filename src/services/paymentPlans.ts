@@ -41,7 +41,7 @@ export const paymentPlansService = {
       const cleaned = Object.fromEntries(Object.entries(plan || {}).filter(([_, v]) => v !== undefined && v !== ''));
       const payload = { ...cleaned, createdAt: now, updatedAt: now, createdBy: createdBy || null };
       const res = await push(plansRef, payload);
-      try { await auditLogService.log({ action: 'paymentPlan.created', entityType: AuditEntity.PaymentPlan, entityId: res.key, details: payload }); } catch {}
+      try { await auditLogService.log({ action: 'paymentPlan.created', entityType: AuditEntity.PaymentPlan, entityId: res.key, details: payload }); } catch (error) { console.error("Error auditing paymentPlan.created", error); }
       return res.key;
     } catch (e) {
       console.error('Error creating payment plan', e);
@@ -55,7 +55,7 @@ export const paymentPlansService = {
       const cleaned = Object.fromEntries(Object.entries(updates || {}).filter(([_, v]) => v !== undefined && v !== ''));
       const payload = { ...cleaned, updatedAt: new Date().toISOString() };
       await update(planRef, payload as any);
-      try { await auditLogService.log({ action: 'paymentPlan.updated', entityType: AuditEntity.PaymentPlan, entityId: id, details: payload }); } catch {}
+      try { await auditLogService.log({ action: 'paymentPlan.updated', entityType: AuditEntity.PaymentPlan, entityId: id, details: payload }); } catch (error) { console.error("Error auditing paymentPlan.updated", error); }
     } catch (e) {
       console.error('Error updating payment plan', e);
       throw e;
@@ -67,7 +67,7 @@ export const paymentPlansService = {
       const snap = await get(ref(db, `paymentPlans/${id}`));
       const before = snap.exists() ? snap.val() : null;
       await remove(ref(db, `paymentPlans/${id}`));
-      try { await auditLogService.logDelete(AuditEntity.PaymentPlan, id, before); } catch {}
+      try { await auditLogService.logDelete(AuditEntity.PaymentPlan, id, before); } catch (error) { console.error("Error auditing paymentPlan.deleted", error); }
     } catch (e) {
       console.error('Error deleting payment plan', e);
       throw e;
