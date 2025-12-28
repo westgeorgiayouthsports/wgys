@@ -16,6 +16,7 @@ import {
   Tooltip,
   Tabs,
 } from 'antd';
+import logger from '../utils/logger';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
 import type { RootState } from '../store/store';
 import { seasonsService } from '../services/firebaseSeasons';
@@ -24,6 +25,7 @@ import type { Season, SeasonFormData } from '../types/season';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import SeasonEditor, { SeasonEditorRef } from '../components/SeasonEditor';
+import { getCachedPref } from '../utils/prefs';
 import { SeasonStatusValues } from '../types/enums/season';
 
 const { Title, Text } = Typography;
@@ -48,7 +50,8 @@ export default function Seasons() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingSeason, setEditingSeason] = useState<Season | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>(SeasonStatusValues.active);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 15 });
+  const initialSeasonsPageSize = getCachedPref<number>('seasonsPageSize') ?? 15;
+  const [pagination, setPagination] = useState({ current: 1, pageSize: initialSeasonsPageSize });
   const [programCountBySeason, setProgramCountBySeason] = useState<Record<string, number>>({});
   const editorRef = useRef<SeasonEditorRef>(null);
   // modal form moved into shared SeasonEditor component
@@ -94,7 +97,7 @@ export default function Seasons() {
           }
         }
       } catch (error) {
-        console.error('Failed to load user preferences for seasons:', error);
+        logger.error('Failed to load user preferences for seasons:', error);
       }
     }
   };
@@ -130,8 +133,8 @@ export default function Seasons() {
         console.error('Error loading programs for season counts', e);
         setProgramCountBySeason({});
       }
-    } catch (error) {
-      console.error('Error loading seasons:', error);
+      } catch (error) {
+      logger.error('Error loading seasons:', error);
       message.error('Failed to load seasons');
     } finally {
       setLoading(false);
@@ -151,7 +154,7 @@ export default function Seasons() {
       await loadSeasons();
       message.success('Season and all related programs/teams archived');
     } catch (error) {
-      console.error('Error archiving season:', error);
+      logger.error('Error archiving season:', error);
       message.error('Failed to archive season');
     }
   };
@@ -162,7 +165,7 @@ export default function Seasons() {
       await loadSeasons();
       message.success('Season deleted');
     } catch (error) {
-      console.error('Error deleting season:', error);
+      logger.error('Error deleting season:', error);
       message.error('Failed to delete season');
     }
   };
@@ -189,8 +192,8 @@ export default function Seasons() {
       }
       if (candidateType && candidateYear) {
         const dupTY = seasons.find(s => s.seasonType === candidateType && s.year === candidateYear && s.id !== editingSeason?.id);
-        if (dupTY) {
-          message.error('A season with that type and year already exists');
+          if (dupTY) {
+            message.error('A season with that type and year already exists');
           return;
         }
       }
@@ -219,11 +222,11 @@ export default function Seasons() {
         formData.year = meta.year;
       }
 
-      if (editingSeason) {
+        if (editingSeason) {
         await seasonsService.updateSeason(editingSeason.id, {
           ...formData,
         }, user?.uid || undefined);
-        message.success('Season updated successfully');
+          message.success('Season updated successfully');
       } else {
         await seasonsService.createSeason(formData, user?.uid || '');
         message.success('Season created successfully');
@@ -232,7 +235,7 @@ export default function Seasons() {
       await loadSeasons();
       setModalVisible(false);
     } catch (error: any) {
-      console.error('Error saving season:', error);
+      logger.error('Error saving season:', error);
       message.error(error?.message || 'Failed to save season');
     }
   };

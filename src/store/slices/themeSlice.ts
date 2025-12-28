@@ -6,7 +6,7 @@ export interface ThemeState {
 }
 
 const initialState: ThemeState = {
-  isDarkMode: localStorage.getItem('theme') === 'light' ? false : true,
+  isDarkMode: true,
 };
 
 const themeSlice = createSlice({
@@ -15,11 +15,9 @@ const themeSlice = createSlice({
   reducers: {
     toggleTheme: (state) => {
       state.isDarkMode = !state.isDarkMode;
-      localStorage.setItem('theme', state.isDarkMode ? 'dark' : 'light');
     },
     setTheme: (state, action: PayloadAction<boolean>) => {
       state.isDarkMode = action.payload;
-      localStorage.setItem('theme', state.isDarkMode ? 'dark' : 'light');
     },
   },
 });

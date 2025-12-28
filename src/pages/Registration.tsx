@@ -20,6 +20,7 @@ import type { RootState } from '../store/store';
 import { programsService } from '../services/firebasePrograms';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
 import { seasonsService } from '../services/firebaseSeasons';
+import logger from '../utils/logger';
 // storageService not required in this page anymore
 import { peopleService } from '../services/firebasePeople';
 import { paymentMethodsService, type PaymentMethod } from '../services/firebasePaymentMethods';
@@ -93,11 +94,11 @@ export default function RegistrationPage() {
             });
             setRegistrationsMap(map);
           } catch (e) {
-            console.error('Error loading registrations for family', e);
+            logger.error('Error loading registrations for family', e);
           }
         }
       } catch (err) {
-        console.error('Error loading family members', err);
+        logger.error('Error loading family members', err);
       }
     })();
   }, [user]);
@@ -123,9 +124,9 @@ export default function RegistrationPage() {
         const s = await seasonsService.getSeasons();
         setSeasons(s || []);
       } catch (e) {
-        console.error('Failed to load seasons:', e);
+        logger.error('Failed to load seasons:', e);
       }
-      console.error('Failed to load programs', err);
+      logger.error('Failed to load programs', err);
       message.error('Failed to load programs');
     }
   };
@@ -144,7 +145,7 @@ export default function RegistrationPage() {
       const methods = await paymentMethodsService.getPaymentMethodsByUser(user.uid);
       setSavedCards(methods);
     } catch (err) {
-      console.error('Failed to load payment methods', err);
+      logger.error('Failed to load payment methods', err);
     }
   };
 

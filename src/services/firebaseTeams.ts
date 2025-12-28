@@ -2,6 +2,7 @@ import { ref, set, get, update, remove, query, orderByChild, equalTo, push } fro
 import { db, auth } from './firebase';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
+import logger from '../utils/logger';
 import type { Team } from '../store/slices/teamsSlice';
 
 export const teamsService = {
@@ -21,7 +22,7 @@ export const teamsService = {
         return { id, ...teamData } as Team;
       });
     } catch (error) {
-      console.error('Error fetching teams:', error);
+      logger.error('Error fetching teams:', error);
       throw error;
     }
   },
@@ -42,7 +43,7 @@ export const teamsService = {
         return { id, ...teamData } as Team;
       });
     } catch (error) {
-      console.error('Error fetching teams:', error);
+      logger.error('Error fetching teams:', error);
       throw error;
     }
   },
@@ -76,12 +77,12 @@ export const teamsService = {
       try {
         await auditLogService.log({ action: 'team.created', entityType: AuditEntity.Team, entityId: newTeamRef.key, details: teamData });
       } catch (e) {
-        console.error('Error auditing team.created:', e);
+        logger.error('Error auditing team.created:', e);
       }
 
       return teamData as Team;
     } catch (error) {
-      console.error('Error creating team:', error);
+      logger.error('Error creating team:', error);
       throw error;
     }
   },
@@ -102,10 +103,10 @@ export const teamsService = {
       try {
         await auditLogService.log({ action: 'team.updated', entityType: AuditEntity.Team, entityId: id, details: filteredUpdates });
       } catch (e) {
-        console.error('Error auditing team.updated:', e);
+        logger.error('Error auditing team.updated:', e);
       }
     } catch (error) {
-      console.error('Error updating team:', error);
+      logger.error('Error updating team:', error);
       throw error;
     }
   },
@@ -120,10 +121,10 @@ export const teamsService = {
       try {
         await auditLogService.logDelete(AuditEntity.Team, id, before);
       } catch (e) {
-        console.error('Error auditing team.delete:', e);
+        logger.error('Error auditing team.delete:', e);
       }
     } catch (error) {
-      console.error('Error deleting team:', error);
+      logger.error('Error deleting team:', error);
       throw error;
     }
   },
@@ -138,7 +139,7 @@ export const teamsService = {
       const data = snapshot.val();
       return { id, ...data } as Team;
     } catch (error) {
-      console.error('Error fetching team:', error);
+      logger.error('Error fetching team:', error);
       throw error;
     }
   },
@@ -153,7 +154,7 @@ export const teamsService = {
       const teams = snapshot.val();
       return Object.entries(teams).map(([id, team]) => ({ id, ...(team as any) })) as Team[];
     } catch (error) {
-      console.error('Error fetching teams by program:', error);
+      logger.error('Error fetching teams by program:', error);
       throw error;
     }
   },

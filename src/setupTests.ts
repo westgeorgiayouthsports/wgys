@@ -103,6 +103,12 @@ process.env.VITE_FIREBASE_STORAGE_BUCKET = 'test.firebasestorage.app';
 process.env.VITE_FIREBASE_MESSAGING_SENDER_ID = '123456789';
 process.env.VITE_FIREBASE_APP_ID = 'test-app-id';
 
+// Expose a Vite-like runtime env shim for code paths that read from
+// `globalThis.__VITE_ENV__` (getEnv helper relies on this). This keeps
+// tests consistent with the browser runtime shim we add in `main.tsx`.
+(globalThis as any).__VITE_ENV__ = process.env;
+(globalThis as any).__vite_env__ = process.env;
+
 // jsdom in Node may not provide TextEncoder/TextDecoder used by some libs
 import { TextEncoder, TextDecoder } from 'util';
 (global as any).TextEncoder = TextEncoder;

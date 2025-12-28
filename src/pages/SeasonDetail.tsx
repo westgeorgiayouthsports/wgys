@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Typography, Button, Space, message } from 'antd';
 import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
 import { seasonsService } from '../services/firebaseSeasons';
+import logger from '../utils/logger';
 import type { Season } from '../types/season';
 import { SeasonStatusValues } from '../types/enums/season';
 import { useSelector } from 'react-redux';
@@ -39,14 +40,14 @@ export default function SeasonDetail() {
       try {
         const s = await seasonsService.getSeasonById(seasonId);
         if (!s) {
-          message.error('Season not found');
+              message.error('Season not found');
           navigate('/admin/seasons');
           return;
         }
         setSeason(s);
       } catch (e) {
-        console.error('Error loading season', e);
-        message.error('Failed to load season');
+        logger.error('Error loading season', e);
+            message.error('Failed to load season');
       }
     })();
   }, [seasonId]);
@@ -85,7 +86,7 @@ export default function SeasonDetail() {
         }
       } catch (err) {
         // non-fatal: proceed to server-side checks if fetch fails
-        console.error('Could not perform client-side duplicate check', err);
+        logger.error('Could not perform client-side duplicate check', err);
       }
       const startDate = values.startDate ? (values.startDate as any).format('YYYY-MM-DD') : undefined;
       const endDate = values.endDate ? (values.endDate as any).format('YYYY-MM-DD') : undefined;
@@ -126,13 +127,15 @@ export default function SeasonDetail() {
         navigate(`/admin/seasons/${id}`);
       }
     } catch (e: any) {
-      console.error('Save failed', e);
+      logger.error('Save failed', e);
       message.error(e?.message || 'Failed to save season');
     }
   };
 
   return (
-    <div className="page-container">
+    <>
+
+      <div className="page-container">
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space orientation="vertical" style={{ flex: 1 }}>
           <Button
@@ -167,6 +170,7 @@ export default function SeasonDetail() {
           <SeasonEditor ref={editorRef} season={season} onFinish={handleSubmit} />
         )}
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

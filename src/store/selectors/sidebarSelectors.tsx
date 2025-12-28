@@ -71,11 +71,14 @@ const USER_KEYS = new Set([
   '/admin/payment-plans',
 ]);
 
-export const selectMenuItems = createSelector([selectRole], (role) => {
+const selectShowMy = (state: RootState) => state.ui.showMyMenuItems;
+
+export const selectMenuItems = createSelector([selectRole, selectShowMy], (role, showMy) => {
   const isAdmin = role === 'admin' || role === 'owner';
 
   const userItems = navItems
     .filter((i) => USER_KEYS.has(i.key))
+    .filter((i) => showMy ? true : !(typeof i.label === 'string' && i.label.startsWith('My ')))
     .map((item) => ({ key: item.key, icon: item.icon, label: item.label }));
 
   const adminCore = navItems

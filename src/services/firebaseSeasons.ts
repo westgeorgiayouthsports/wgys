@@ -8,6 +8,7 @@ import { teamsService } from './firebaseTeams';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
 import { SeasonStatusValues } from '../types/enums/season';
+import logger from '../utils/logger';
 
 export const seasonsService = {
   deriveSeasonMeta(startDateStr: string): { type: SeasonType; year: number } {
@@ -32,7 +33,7 @@ export const seasonsService = {
       else type = SeasonTypeValues.winter;
       return { type, year };
     } catch (e) {
-      console.log('Error deriving season meta from startDate: ', e);
+      logger.error('Error deriving season meta from startDate: ', e);
       return { type: SeasonTypeValues.spring, year: new Date().getFullYear() };
     }
   },
@@ -48,7 +49,7 @@ export const seasonsService = {
         ...season,
       }));
     } catch (error) {
-      console.error('Error fetching seasons:', error);
+      logger.error('Error fetching seasons:', error);
       return [];
     }
   },
@@ -97,7 +98,7 @@ export const seasonsService = {
         },
       });
     } catch (e) {
-      console.error('Error auditing season.archive_cascade:', e);
+      logger.error('Error auditing season.archive_cascade:', e);
     }
   },
 
@@ -106,7 +107,7 @@ export const seasonsService = {
       const allSeasons = await this.getSeasons();
       return allSeasons.filter(s => s.status === SeasonStatusValues.active);
     } catch (error) {
-      console.error('Error fetching active seasons:', error);
+      logger.error('Error fetching active seasons:', error);
       throw error;
     }
   },
@@ -121,7 +122,7 @@ export const seasonsService = {
         ...snapshot.val(),
       };
     } catch (error) {
-      console.error('Error fetching season:', error);
+      logger.error('Error fetching season:', error);
       throw error;
     }
   },
@@ -184,11 +185,11 @@ export const seasonsService = {
           details: seasonData,
         });
       } catch (e) {
-        console.error('Error auditing season.created:', e);
+        logger.error('Error auditing season.created:', e);
       }
       return seasonId;
     } catch (error) {
-      console.error('Error creating season:', error);
+      logger.error('Error creating season:', error);
       throw error;
     }
   },
@@ -247,10 +248,10 @@ export const seasonsService = {
           details: cleaned,
         });
       } catch (e) {
-        console.error('Error auditing season.updated:', e);
+        logger.error('Error auditing season.updated:', e);
       }
     } catch (error) {
-      console.error('Error updating season:', error);
+      logger.error('Error updating season:', error);
       throw error;
     }
   },
@@ -259,7 +260,7 @@ export const seasonsService = {
     try {
       await this.updateSeason(seasonId, { status: SeasonStatusValues.archived });
     } catch (error) {
-      console.error('Error archiving season:', error);
+      logger.error('Error archiving season:', error);
       throw error;
     }
   },
@@ -279,10 +280,10 @@ export const seasonsService = {
       try {
         await auditLogService.logDelete(AuditEntity.Season, seasonId, seasonData, actorId ?? undefined);
       } catch (e) {
-        console.error('Error auditing season.delete:', e);
+        logger.error('Error auditing season.delete:', e);
       }
     } catch (error) {
-      console.error('Error deleting season:', error);
+      logger.error('Error deleting season:', error);
       throw error;
     }
   },

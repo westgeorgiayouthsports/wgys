@@ -3,6 +3,7 @@ import { db } from './firebase';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
 import type { RegistrationPaymentMethod } from '../types';
+import logger from '../utils/logger';
 
 export interface TeamAssignment {
   id: string;
@@ -46,7 +47,7 @@ export const registrationsService = {
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     } catch (error) {
-      console.error('❌ Error fetching team assignments:', error);
+      logger.error('❌ Error fetching team assignments:', error);
       throw error;
     }
   },
@@ -70,7 +71,7 @@ export const registrationsService = {
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     } catch (error) {
-      console.error('❌ Error fetching all team assignments:', error);
+      logger.error('❌ Error fetching all team assignments:', error);
       throw error;
     }
   },
@@ -110,7 +111,7 @@ export const registrationsService = {
       try {
         await auditLogService.log({ action: 'registration.created', entityType: AuditEntity.TeamAssignment, entityId: newAssignmentRef.key, details: assignment });
       } catch (e) {
-        console.error('Error auditing registration.created:', e);
+        logger.error('Error auditing registration.created:', e);
       }
 
       return {
@@ -118,7 +119,7 @@ export const registrationsService = {
         ...assignment,
       } as TeamAssignment;
     } catch (error) {
-      console.error('❌ Error creating registration:', error);
+      logger.error('❌ Error creating registration:', error);
       throw error;
     }
   },
@@ -141,11 +142,11 @@ export const registrationsService = {
         try {
           await auditLogService.log({ action: 'registration.updated', entityType: AuditEntity.TeamAssignment, entityId: id, details: updates });
         } catch (e) {
-          console.error('Error auditing registration.updated:', e);
+          logger.error('Error auditing registration.updated:', e);
         }
       }
     } catch (error) {
-      console.error('❌ Error updating registration:', error);
+      logger.error('❌ Error updating registration:', error);
       throw error;
     }
   },
@@ -166,11 +167,11 @@ export const registrationsService = {
         try {
           await auditLogService.log({ action: 'registration.approved', entityType: AuditEntity.TeamAssignment, entityId: id, details: { rosterPlayerId } });
         } catch (e) {
-          console.error('Error auditing registration.approved:', e);
+          logger.error('Error auditing registration.approved:', e);
         }
       }
     } catch (error) {
-      console.error('❌ Error approving registration:', error);
+      logger.error('❌ Error approving registration:', error);
       throw error;
     }
   },
@@ -190,11 +191,11 @@ export const registrationsService = {
         try {
           await auditLogService.log({ action: 'registration.paid', entityType: AuditEntity.TeamAssignment, entityId: id });
         } catch (e) {
-          console.error('Error auditing registration.paid:', e);
+          logger.error('Error auditing registration.paid:', e);
         }
       }
     } catch (error) {
-      console.error('❌ Error marking registration as paid:', error);
+      logger.error('❌ Error marking registration as paid:', error);
       throw error;
     }
   },
@@ -207,10 +208,10 @@ export const registrationsService = {
       try {
         await auditLogService.log({ action: 'registration.deleted', entityType: AuditEntity.TeamAssignment, entityId: id });
       } catch (e) {
-        console.error('Error auditing registration.deleted:', e);
+        logger.error('Error auditing registration.deleted:', e);
       }
     } catch (error) {
-      console.error('❌ Error deleting registration:', error);
+      logger.error('❌ Error deleting registration:', error);
       throw error;
     }
   },
@@ -239,7 +240,7 @@ export const registrationsService = {
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     } catch (error) {
-      console.error('❌ Error fetching team assignments by status:', error);
+      logger.error('❌ Error fetching team assignments by status:', error);
       throw error;
     }
   },

@@ -1,5 +1,6 @@
 import { ref as storageRef, uploadBytes, getDownloadURL, uploadBytesResumable, deleteObject } from 'firebase/storage';
 import { storage } from './firebase';
+import logger from '../utils/logger';
 
 export const storageService = {
   async uploadFile(path: string, file: File): Promise<string> {
@@ -9,7 +10,7 @@ export const storageService = {
       const url = await getDownloadURL(snapshot.ref);
       return url;
     } catch (error) {
-      console.error('❌ Error uploading file to storage:', error);
+      logger.error('❌ Error uploading file to storage:', error);
       throw error;
     }
   },
@@ -26,7 +27,7 @@ export const storageService = {
             onProgress(percent);
           }
         }, (err) => {
-          console.error('Upload failed', err);
+          logger.error('Upload failed', err);
           reject(err);
         }, () => {
           getDownloadURL(task.snapshot.ref).then((url) => {
@@ -36,7 +37,7 @@ export const storageService = {
           });
         });
       } catch (e) {
-        console.error('uploadFileWithProgress error', e);
+        logger.error('uploadFileWithProgress error', e);
         reject(e);
       }
     });
@@ -47,7 +48,7 @@ export const storageService = {
       const ref = storageRef(storage, path);
       await deleteObject(ref);
     } catch (error) {
-      console.error('❌ Error deleting file from storage:', error);
+      logger.error('❌ Error deleting file from storage:', error);
       // don't throw to avoid breaking flows when file is already missing
     }
   },
@@ -58,7 +59,7 @@ export const storageService = {
       const url = await getDownloadURL(ref);
       return url;
     } catch (error) {
-      console.error('❌ Error getting download URL:', error);
+      logger.error('❌ Error getting download URL:', error);
       throw error;
     }
   }

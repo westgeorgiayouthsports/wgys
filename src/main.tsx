@@ -4,15 +4,18 @@ import { Provider } from 'react-redux';
 import App from './App';
 import store from './store/store';
 import { initAnalytics } from './services/analytics';
+import NotificationProvider from './components/NotificationProvider';
 import './styles/globals.css';
 import './styles/theme-variables.css';
 
-initAnalytics(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID);
+initAnalytics();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>
-      <App />
+      <NotificationProvider>
+        <App />
+      </NotificationProvider>
     </Provider>
   </React.StrictMode>,
 );

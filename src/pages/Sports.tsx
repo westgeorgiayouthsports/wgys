@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Table, Card, Button, Space, Modal, Form, Input, message, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { sportsService } from '../services/firebaseSports';
+import logger from '../utils/logger';
 
 export default function Sports() {
   const [sports, setSports] = useState<any[]>([]);
@@ -17,7 +18,7 @@ export default function Sports() {
       const sorted = (list || []).slice().sort((a,b) => String((a?.name||'')).localeCompare(String((b?.name||''))));
       setSports(sorted);
     } catch (e) {
-      console.error('Failed loading sports', e);
+      logger.error('Failed loading sports', e);
       message.error('Failed to load sports');
     } finally {
       setLoading(false);
@@ -28,7 +29,7 @@ export default function Sports() {
 
   const openCreate = () => { setEditing(null); form.resetFields(); setModalVisible(true); };
   const openEdit = (s: any) => {
-    console.log('Editing sport:', s);
+    logger.info('Editing sport:', s);
     setEditing(s);
     // defensive mapping in case DB keys differ
     form.setFieldsValue({
@@ -44,7 +45,7 @@ export default function Sports() {
       message.success('Sport deleted');
       load();
     } catch (e) {
-      console.error('Delete failed', e);
+      logger.error('Delete failed', e);
       message.error('Failed to delete sport');
     }
   };
@@ -85,7 +86,7 @@ export default function Sports() {
       setModalVisible(false);
       load();
     } catch (e) {
-      console.error('Save failed', e);
+      logger.error('Save failed', e);
       message.error('Failed to save sport');
     }
   };
@@ -125,7 +126,7 @@ export default function Sports() {
 
       <Modal title={editing ? 'Edit Sport' : 'Add Sport'} open={modalVisible} onOk={handleOk} onCancel={() => setModalVisible(false)}>
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}> 
+          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           <Form.Item name="ageControlDate" label="Age Control (MM-DD)" rules={[{ required: true, pattern: /^\d{2}-\d{2}$/ }]}>

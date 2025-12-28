@@ -33,6 +33,7 @@ import type { Program } from '../types/program';
 import type { Season } from '../types/season';
 import { SeasonStatusValues } from '../types/enums/season';
 import dayjs from 'dayjs';
+import logger from '../utils/logger';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -72,7 +73,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
       const programsList = await programsService.getPrograms();
       setPrograms(programsList);
     } catch (error) {
-      console.error('❌ Error loading programs:', error);
+      logger.error('❌ Error loading programs:', error);
       message.error('Failed to load programs');
     } finally {
       setLoading(false);
@@ -88,7 +89,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
         setSelectedSeasonId(firstActive.id);
       }
     } catch (error) {
-      console.error('Error loading seasons:', error);
+      logger.error('Error loading seasons:', error);
       // Don't show error message for initial load if no seasons exist
       setSeasons([]);
     }
@@ -117,7 +118,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
       setBulkModalVisible(false);
       message.success('Programs moved to selected season');
     } catch (err) {
-      console.error('Bulk move failed', err);
+      logger.error('Bulk move failed', err);
       message.error('Failed to move programs');
     }
   };
@@ -163,7 +164,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
       setPrograms(programs.filter(p => p.id !== programId));
       message.success('Program deleted successfully');
     } catch (error) {
-      console.error('❌ Error deleting program:', error);
+      logger.error('❌ Error deleting program:', error);
       message.error('Failed to delete program');
     }
   };
@@ -209,7 +210,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
       setModalVisible(false);
       form.resetFields();
     } catch (error) {
-      console.error('❌ Error saving program:', error);
+      logger.error('❌ Error saving program:', error);
       message.error('Failed to save program');
     }
   };

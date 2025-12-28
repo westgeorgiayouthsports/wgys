@@ -5,25 +5,8 @@ type GtagEvent = {
 
 let analyticsInitialized = false;
 
-// Helper to access environment variables in a way that works in tests (Jest/CommonJS)
-function getEnv(name: string): string | undefined {
-  try {
-    // Prefer Node env (useful in tests and SSR)
-    if (typeof process !== 'undefined' && (process.env as any)[name]) {
-      return (process.env as any)[name];
-    }
-  } catch {
-    // ignore
-  }
-  try {
-    // In browser builds Vite provides import.meta.env; some environments may expose a global shim
-    const g = (globalThis as any).__VITE_ENV__ || (globalThis as any).__vite_env__;
-    if (g && g[name]) return g[name];
-  } catch {
-    // ignore
-  }
-  return undefined;
-}
+import { getEnv } from '../utils/env';
+import logger from '../utils/logger';
 
 function loadGtag(measurementId: string) {
   if (analyticsInitialized) return;
@@ -31,7 +14,7 @@ function loadGtag(measurementId: string) {
 
   // Initialize dataLayer FIRST
   window.dataLayer = window.dataLayer || [];
-  
+
   // Define a gtag function that will queue events until the real gtag loads
   function gtag(...args: unknown[]) {
     window.dataLayer?.push(args);
@@ -52,47 +35,51 @@ function loadGtag(measurementId: string) {
   const script = document.createElement('script');
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
-  
+
   script.onload = () => {
-    console.log('[ga] gtag script loaded successfully');
-    console.log('[ga] window.gtag is now:', typeof window.gtag);
-    console.log('[ga] dataLayer after script load:', window.dataLayer);
+    logger.info('[ga] gtag script loaded successfully');
+    logger.info('[ga] window.gtag is now:', typeof window.gtag);
+    logger.info('[ga] dataLayer after script load:', window.dataLayer);
   };
-  
+
   script.onerror = (error) => {
-    console.error('[ga] Failed to load gtag script - likely blocked by ad blocker or privacy settings', error);
+    logger.error('[ga] Failed to load gtag script - likely blocked by ad blocker or privacy settings', error);
   };
-  
+
   document.head.appendChild(script);
-  console.log('[ga] gtag script element created and appended');
-  
+  logger.info('[ga] gtag script element created and appended');
+
   analyticsInitialized = true;
 }
 
-export function initAnalytics(measurementId: string | undefined) {
-  console.log('[ga] measurementId', measurementId);
+export function initAnalytics() {
+  const measurementId = getEnv('VITE_FIREBASE_MEASUREMENT_ID');
+  logger.info('[ga] resolved measurementId', measurementId);
   if (!measurementId) return;
   loadGtag(measurementId);
-  console.log('[ga] gtag initialization started');
-  
-  // Send a test event to verify GA is working
-  setTimeout(() => {
-    if (window.gtag) {
-      window.gtag('event', 'app_initialized', { debug_mode: true });
-      console.log('[ga] test event sent, dataLayer:', window.dataLayer);
-    } else {
-      console.warn('[ga] window.gtag not available after 1 second');
-    }
-  }, 1000);
+  logger.info('[ga] gtag initialization started');
+
+  // Only run debug event in non-production environments
+  if (getEnv('VITE_ENV') !== 'production') {
+    setTimeout(() => {
+      if (window.gtag) {
+        window.gtag('event', 'app_initialized', { debug_mode: true });
+        // logger.info('[ga] test event sent, dataLayer:', window.dataLayer);
+      } else {
+        logger.info('[ga] window.gtag not available after 1 second');
+      }
+    }, 1000);
+  }
 }
 
 export function trackPageView(page: { page_path: string; page_title?: string; page_location?: string }) {
   if (!window.gtag) return;
-  console.log('[ga] trackPageView', page.page_path);
+  logger.info('[ga] trackPageView', page.page_path);
   window.gtag('event', 'page_view', page);
   // Measurement Protocol fallback - ensures GA receives events even when browser blocks gtag beacons
   // GA4 API secrets are safe for client-side use (unlike Stripe secret keys)
-  if (getEnv('VITE_GA4_API_SECRET')) {
+  const apiSecret = getEnv('VITE_GA4_API_SECRET');
+  if (apiSecret) {
     trackPageViewMPFallback(page);
   }
 }
@@ -179,12 +166,12 @@ async function sendMeasurementProtocolEvent(
   const url = `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(
     measurementId
   )}&api_secret=${encodeURIComponent(apiSecret)}`;
-  
+
   // Use sendBeacon to avoid CORS preflight issues
   // Falls back to fetch without Content-Type header if sendBeacon unavailable
-  if (navigator.sendBeacon) {
+    if (navigator.sendBeacon) {
     const success = navigator.sendBeacon(url, JSON.stringify(payload));
-    console.log('[ga][mp] sendBeacon:', success ? 'queued' : 'failed');
+    logger.info('[ga][mp] sendBeacon:', success ? 'queued' : 'failed');
   } else {
     try {
       // Don't set Content-Type to avoid CORS preflight
@@ -192,9 +179,9 @@ async function sendMeasurementProtocolEvent(
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      console.log('[ga][mp] fetch status:', res.status);
+      logger.info('[ga][mp] fetch status:', res.status);
     } catch (e) {
-      console.warn('[ga][mp] fetch failed', e);
+      logger.info('[ga][mp] fetch failed', e);
     }
   }
 }

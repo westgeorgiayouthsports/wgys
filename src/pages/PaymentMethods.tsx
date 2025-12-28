@@ -23,8 +23,9 @@ import { httpsCallable } from 'firebase/functions';
 
 const { Title, Text } = Typography;
 
-// Initialize Stripe with your publishable key
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+// Initialize Stripe with your publishable key (resolved via getEnv to avoid import.meta at module scope)
+import { getEnv } from '../utils/env';
+const stripePromise = loadStripe(getEnv('VITE_STRIPE_PUBLISHABLE_KEY') || '');
 
 // Card element styling
 const CARD_ELEMENT_OPTIONS = {
@@ -46,12 +47,12 @@ const CARD_ELEMENT_OPTIONS = {
 };
 
 // Separate component for the add card form (needs access to Stripe hooks)
-function AddPaymentMethodForm({ 
-  onSuccess, 
+function AddPaymentMethodForm({
+  onSuccess,
   onCancel,
-  userId 
-}: { 
-  onSuccess: () => void; 
+  userId
+}: {
+  onSuccess: () => void;
   onCancel: () => void;
   userId: string;
 }) {

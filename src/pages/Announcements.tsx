@@ -11,22 +11,23 @@ import {
 import { announcementsService } from '../services/firebaseAnnouncements';
 import AnnouncementEditor from '../components/Announcements/AnnouncementEditor';
 import AnnouncementComments from '../components/Announcements/AnnouncementComments';
-import { 
-  Table, 
-  Card, 
-  Button, 
-  Tag, 
-  Space, 
-  Typography, 
-  Row, 
-  Col, 
-  Statistic 
+import logger from '../utils/logger';
+import {
+  Table,
+  Card,
+  Button,
+  Tag,
+  Space,
+  Typography,
+  Row,
+  Col,
+  Statistic
   , Switch } from 'antd';
-import { 
-  EditOutlined, 
-  DeleteOutlined, 
+import {
+  EditOutlined,
+  DeleteOutlined,
   SendOutlined,
-  EyeOutlined 
+  EyeOutlined
 } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -86,13 +87,13 @@ export default function Announcements() {
         a.id === id ? { ...a, views: (a.views || 0) + 1 } : a
       );
       dispatch(setAnnouncements(updatedAnnouncements));
-      
+
       // Update in Firebase (you can add this service call later)
       // await announcementsService.incrementViews(id);
     } catch (error) {
-      console.error('Failed to update view count:', error);
+      logger.error('Failed to update view count:', error);
     }
-    
+
     setViewingId(id);
     setView('detail');
   };
@@ -106,17 +107,17 @@ export default function Announcements() {
 
   const handleSave = async (title: string, content: string, showOnFeed: boolean, allowComments: boolean) => {
     if (!user?.uid) {
-      console.error('No user ID available');
+      logger.error('No user ID available');
       return;
     }
 
     try {
       setLocalError('');
-      console.log('🔄 Starting save operation...', { editingId, title, content });
+      logger.info('🔄 Starting save operation...', { editingId, title, content });
 
       if (editingId) {
         // Update existing
-        console.log('📝 Updating existing announcement:', editingId);
+        logger.info('📝 Updating existing announcement:', editingId);
         await announcementsService.updateAnnouncement(editingId, {
           title,
           content,
@@ -127,10 +128,10 @@ export default function Announcements() {
           a.id === editingId ? { ...a, title, content } : a
         );
         dispatch(setAnnouncements(updatedAnnouncements));
-        console.log('✅ Updated announcement successfully');
+        logger.info('✅ Updated announcement successfully');
       } else {
         // Create new (as draft)
-        console.log('📝 Creating new announcement...');
+        logger.info('📝 Creating new announcement...');
         const newAnnouncement = await announcementsService.createAnnouncement(
           user.uid,
           user.email || 'Unknown',
@@ -139,18 +140,18 @@ export default function Announcements() {
           showOnFeed,
           allowComments
         );
-        console.log('✅ Created new announcement:', newAnnouncement);
+        logger.info('✅ Created new announcement:', newAnnouncement);
         dispatch(addAnnouncement(newAnnouncement));
-        console.log('✅ Added to Redux store');
+        logger.info('✅ Added to Redux store');
       }
 
       setView('list');
       setEditingId(null);
-      console.log('✅ Save operation completed successfully');
+      logger.info('✅ Save operation completed successfully');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Operation failed';
       setLocalError(errorMsg);
-      console.error('❌ Save error:', err);
+      logger.error('❌ Save error:', err);
       throw err;
     }
   };
@@ -208,7 +209,7 @@ export default function Announcements() {
       );
       dispatch(setAnnouncements(updatedAnnouncements));
     } catch (error) {
-      console.error(`Failed to update ${field}:`, error);
+      logger.error(`Failed to update ${field}:`, error);
     }
   };
 
@@ -223,7 +224,7 @@ export default function Announcements() {
 
           {/* Create Button - Admin/Owner Only */}
           {(role === 'admin' || role === 'owner') && (
-            <Card 
+            <Card
               title="Create New Announcement"
               style={{ marginBottom: '24px' }}
             >
@@ -232,7 +233,7 @@ export default function Announcements() {
               </Button>
             </Card>
           )}
-          
+
           {/* Statistics Cards */}
           {announcements.length > 0 && (
             <Row gutter={16} style={{ marginBottom: '24px' }}>
@@ -304,7 +305,7 @@ export default function Announcements() {
                   title: 'Show on Feed',
                   key: 'showOnFeed',
                   render: (record: any) => (
-                    <Switch 
+                    <Switch
                       checked={record.showOnFeed ?? true}
                       onChange={(checked) => handleToggleField(record.id, 'showOnFeed', checked)}
                       disabled={role !== 'admin' && role !== 'owner'}
@@ -313,9 +314,9 @@ export default function Announcements() {
                 },
                 {
                   title: 'Allow Comments',
-                  key: 'allowComments', 
+                  key: 'allowComments',
                   render: (record: any) => (
-                    <Switch 
+                    <Switch
                       checked={record.allowComments ?? true}
                       onChange={(checked) => handleToggleField(record.id, 'allowComments', checked)}
                       disabled={role !== 'admin' && role !== 'owner'}
@@ -356,7 +357,7 @@ export default function Announcements() {
       {/* View: Detail */}
       {view === 'detail' && viewingId && (
         <>
-          <Card 
+          <Card
             title={announcements.find(a => a.id === viewingId)?.title}
             extra={(
               (role === 'admin' || role === 'owner') && (
@@ -370,12 +371,12 @@ export default function Announcements() {
               ← Back to List
             </Button>
             <div style={{ marginTop: '16px' }}>
-              <div dangerouslySetInnerHTML={{ 
-                __html: announcements.find(a => a.id === viewingId)?.content || '' 
+              <div dangerouslySetInnerHTML={{
+                __html: announcements.find(a => a.id === viewingId)?.content || ''
               }} />
             </div>
           </Card>
-          
+
           <AnnouncementComments
             announcementId={viewingId}
             allowComments={announcements.find(a => a.id === viewingId)?.allowComments ?? true}

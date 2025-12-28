@@ -3,6 +3,7 @@ import { db } from './firebase';
 import type { Program, ProgramFormData } from '../types/program';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
+import logger from '../utils/logger';
 
 export const programsService = {
   async getPrograms(): Promise<Program[]> {
@@ -20,7 +21,7 @@ export const programsService = {
         ...data,
       }));
     } catch (error) {
-      console.error('Error fetching programs:', error);
+      logger.error('Error fetching programs:', error);
       throw error;
     }
   },
@@ -37,7 +38,7 @@ export const programsService = {
         ...data,
       }));
     } catch (error) {
-      console.error('Error fetching programs by season:', error);
+      logger.error('Error fetching programs by season:', error);
       throw error;
     }
   },
@@ -63,7 +64,7 @@ export const programsService = {
       const result = await push(programsRef, newProgram);
       return result.key!;
     } catch (error) {
-      console.error('Error creating program:', error);
+      logger.error('Error creating program:', error);
       throw error;
     }
   },
@@ -83,7 +84,7 @@ export const programsService = {
 
       await update(programRef, updateData);
     } catch (error) {
-      console.error('Error updating program:', error);
+      logger.error('Error updating program:', error);
       throw error;
     }
   },
@@ -97,10 +98,10 @@ export const programsService = {
       try {
         await auditLogService.logDelete(AuditEntity.Program, programId, before);
       } catch (e) {
-        console.error('Error auditing program.delete:', e);
+        logger.error('Error auditing program.delete:', e);
       }
     } catch (error) {
-      console.error('Error deleting program:', error);
+      logger.error('Error deleting program:', error);
       throw error;
     }
   },
@@ -123,10 +124,10 @@ export const programsService = {
           details: { programIds, updates },
         });
       } catch (e) {
-        console.error('Error auditing program.bulk_update:', e);
+        logger.error('Error auditing program.bulk_update:', e);
       }
     } catch (error) {
-      console.error('Error bulk updating programs:', error);
+      logger.error('Error bulk updating programs:', error);
       throw error;
     }
   },

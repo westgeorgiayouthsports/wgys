@@ -3,6 +3,7 @@ import { db } from './firebase';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
 import type { PaymentMethodType } from '../types';
+import logger from '../utils/logger';
 
 export interface PaymentMethod {
   id: string;
@@ -44,7 +45,7 @@ export const paymentMethodsService = {
 
       return methods;
     } catch (error) {
-      console.error('Error fetching payment methods:', error);
+      logger.error('Error fetching payment methods:', error);
       throw error;
     }
   },
@@ -90,7 +91,7 @@ export const paymentMethodsService = {
           details: { userId, type, brand, last4, isDefault },
         });
       } catch (e) {
-        console.error('Error auditing paymentMethod.created:', e);
+        logger.error('Error auditing paymentMethod.created:', e);
       }
 
       return {
@@ -98,7 +99,7 @@ export const paymentMethodsService = {
         ...method,
       } as PaymentMethod;
     } catch (error) {
-      console.error('Error creating payment method:', error);
+      logger.error('Error creating payment method:', error);
       throw error;
     }
   },
@@ -118,10 +119,10 @@ export const paymentMethodsService = {
       try {
         await auditLogService.logDelete(AuditEntity.PaymentMethod, id, before);
       } catch (e) {
-        console.error('Error auditing paymentMethod.delete:', e);
+        logger.error('Error auditing paymentMethod.delete:', e);
       }
     } catch (error) {
-      console.error('Error deleting paymentMethod:', error);
+      logger.error('Error deleting paymentMethod:', error);
       throw error;
     }
   },
@@ -152,11 +153,11 @@ export const paymentMethodsService = {
         });
         return auditId ?? null;
       } catch (e) {
-        console.error('Error auditing paymentMethod.restored:', e);
+        logger.error('Error auditing paymentMethod.restored:', e);
         return null;
       }
     } catch (error) {
-      console.error('Error restoring paymentMethod:', error);
+      logger.error('Error restoring paymentMethod:', error);
       throw error;
     }
   },
@@ -181,11 +182,11 @@ export const paymentMethodsService = {
             details: { userId, methodId: method.id },
           });
         } catch (e) {
-          console.error(`Error auditing ${method.id === methodId ? 'paymentMethod.set_default' : 'paymentMethod.unset_default'}:`, e);
+          logger.error(`Error auditing ${method.id === methodId ? 'paymentMethod.set_default' : 'paymentMethod.unset_default'}:`, e);
         }
       }
     } catch (error) {
-      console.error('Error setting default payment method:', error);
+      logger.error('Error setting default payment method:', error);
       throw error;
     }
   },

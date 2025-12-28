@@ -41,7 +41,7 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const AdminRegistrations = lazy(() => import('./pages/AdminRegistrations'));
 const AdminPayments = lazy(() => import('./pages/AdminPayments'));
 const PaymentPlans = lazy(() => import('./pages/PaymentPlans'));
-const AdminProgramTemplates = lazy(() => import('./pages/AdminProgramTemplates'));
+const ProgramTemplates = lazy(() => import('./pages/ProgramTemplates'));
 
 // Lazy load views
 const EventsView = lazy(() => import('./components/Events/EventsView'));
@@ -233,7 +233,7 @@ function Router() {
             } />
             <Route path="/admin/program-templates" element={
               <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
-                <AdminProgramTemplates />
+                <ProgramTemplates />
               </ProtectedRoute>
             } />
           </Route>

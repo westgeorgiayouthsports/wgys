@@ -1,5 +1,6 @@
 import { ref, push, set, get, remove } from 'firebase/database';
 import { db } from './firebase';
+import logger from '../utils/logger';
 
 export interface Player {
   id: string;
@@ -27,7 +28,7 @@ export const rostersService = {
 
       return players.sort((a, b) => a.number - b.number);
     } catch (error) {
-      console.error('❌ Error fetching team roster:', error);
+      logger.error('❌ Error fetching team roster:', error);
       throw error;
     }
   },
@@ -59,7 +60,7 @@ export const rostersService = {
         ...player,
       };
     } catch (error) {
-      console.error('❌ Error adding player to roster:', error);
+      logger.error('❌ Error adding player to roster:', error);
       throw error;
     }
   },
@@ -81,7 +82,7 @@ export const rostersService = {
         });
       }
     } catch (error) {
-      console.error('❌ Error updating player:', error);
+      logger.error('❌ Error updating player:', error);
       throw error;
     }
   },
@@ -92,7 +93,7 @@ export const rostersService = {
       const playerRef = ref(db, `rosters/${teamId}/${playerId}`);
       await remove(playerRef);
     } catch (error) {
-      console.error('❌ Error removing player from roster:', error);
+      logger.error('❌ Error removing player from roster:', error);
       throw error;
     }
   },
@@ -118,7 +119,7 @@ export const rostersService = {
 
       return foundPlayer;
     } catch (error) {
-      console.error('❌ Error fetching player by number:', error);
+      logger.error('❌ Error fetching player by number:', error);
       throw error;
     }
   },
@@ -144,7 +145,7 @@ export const rostersService = {
 
       return players.sort((a, b) => a.number - b.number);
     } catch (error) {
-      console.error('❌ Error fetching players by position:', error);
+      logger.error('❌ Error fetching players by position:', error);
       throw error;
     }
   },
@@ -166,7 +167,7 @@ export const rostersService = {
         });
       }
     } catch (error) {
-      console.error('❌ Error linking registration to player:', error);
+      logger.error('❌ Error linking registration to player:', error);
       throw error;
     }
   },

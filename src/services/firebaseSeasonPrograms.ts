@@ -2,6 +2,7 @@ import { ref, push, get, update, remove } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
+import logger from '../utils/logger';
 
 export type SeasonProgram = {
   id?: string;
@@ -26,7 +27,7 @@ export const seasonProgramsService = {
       const data = snap.val();
       return Object.entries(data).map(([id, v]: [string, any]) => ({ id, ...(v as any) } as SeasonProgram));
     } catch (e) {
-      console.error('Error fetching seasonPrograms', e);
+      logger.error('Error fetching seasonPrograms', e);
       return [];
     }
   },
@@ -40,7 +41,7 @@ export const seasonProgramsService = {
         .map(([id, v]: [string, any]) => ({ id, ...(v as any) } as SeasonProgram))
         .filter(sp => sp.seasonId === seasonId);
     } catch (e) {
-      console.error('Error fetching seasonPrograms by season', e);
+      logger.error('Error fetching seasonPrograms by season', e);
       return [];
     }
   },
@@ -51,7 +52,7 @@ export const seasonProgramsService = {
       if (!snap.exists()) return null;
       return { id, ...(snap.val() as any) } as SeasonProgram;
     } catch (e) {
-      console.error('Error fetching seasonProgram', e);
+      logger.error('Error fetching seasonProgram', e);
       return null;
     }
   },
@@ -67,10 +68,10 @@ export const seasonProgramsService = {
         createdBy: createdBy || null,
       } as any;
       const res = await push(ref(db, 'seasonPrograms'), clean);
-      try { await auditLogService.log({ action: 'seasonProgram.created', entityType: AuditEntity.SeasonProgram, entityId: res.key, details: clean }); } catch (e) { console.error('Audit log failed', e); }
+      try { await auditLogService.log({ action: 'seasonProgram.created', entityType: AuditEntity.SeasonProgram, entityId: res.key, details: clean }); } catch (e) { logger.error('Audit log failed', e); }
       return res.key;
     } catch (e) {
-      console.error('Error creating seasonProgram', e);
+      logger.error('Error creating seasonProgram', e);
       throw e;
     }
   },
@@ -79,9 +80,9 @@ export const seasonProgramsService = {
     try {
       const payload = { ...updates, updatedAt: new Date().toISOString() } as any;
       await update(ref(db, `seasonPrograms/${id}`), payload);
-      try { await auditLogService.log({ action: 'seasonProgram.updated', entityType: AuditEntity.SeasonProgram, entityId: id, details: payload }); } catch (e) { console.error('Audit log failed', e); }
+      try { await auditLogService.log({ action: 'seasonProgram.updated', entityType: AuditEntity.SeasonProgram, entityId: id, details: payload }); } catch (e) { logger.error('Audit log failed', e); }
     } catch (e) {
-      console.error('Error updating seasonProgram', e);
+      logger.error('Error updating seasonProgram', e);
       throw e;
     }
   },
@@ -91,9 +92,9 @@ export const seasonProgramsService = {
       const snap = await get(ref(db, `seasonPrograms/${id}`));
       const before = snap.exists() ? snap.val() : null;
       await remove(ref(db, `seasonPrograms/${id}`));
-      try { await auditLogService.log({ action: 'seasonProgram.deleted', entityType: AuditEntity.SeasonProgram, entityId: id, details: before }); } catch (e) { console.error('Audit log failed', e); }
+      try { await auditLogService.log({ action: 'seasonProgram.deleted', entityType: AuditEntity.SeasonProgram, entityId: id, details: before }); } catch (e) { logger.error('Audit log failed', e); }
     } catch (e) {
-      console.error('Error deleting seasonProgram', e);
+      logger.error('Error deleting seasonProgram', e);
       throw e;
     }
   }

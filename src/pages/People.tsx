@@ -50,9 +50,11 @@ import { familiesService } from '../services/firebaseFamilies';
 import type { Person, PersonFormData, PersonRole, Family } from '../types/person';
 import dayjs from 'dayjs';
 import calculateCurrentGrade from '../utils/grade';
+import logger from '../utils/logger';
 import calculateAgeAt from '../utils/age';
 import { storageService } from '../services/storageService';
 import { firebaseFilesService } from '../services/firebaseFiles';
+import { getCachedPref } from '../utils/prefs';
 
 const { Title, Text } = Typography;
 
@@ -81,7 +83,8 @@ export default function People() {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [photoURL, setPhotoURL] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 15 });
+  const initialPeoplePageSize = getCachedPref<number>('peoplePageSize') ?? 15;
+  const [pagination, setPagination] = useState({ current: 1, pageSize: initialPeoplePageSize });
   const [syncing, setSyncing] = useState(false);
   const [linkModalVisible, setLinkModalVisible] = useState(false);
   const [mergeModalVisible, setMergeModalVisible] = useState(false);
@@ -114,7 +117,7 @@ export default function People() {
           }
         }
       } catch (error) {
-        console.error('Failed to load user preferences:', error);
+        logger.error('Failed to load user preferences:', error);
       }
     }
   };
@@ -125,7 +128,7 @@ export default function People() {
         const userRef = ref(db, `users/${user.uid}/preferences`);
         await update(userRef, { peoplePageSize: pageSize });
       } catch (error) {
-        console.error('Failed to save user preferences:', error);
+        logger.error('Failed to save user preferences:', error);
       }
     }
   };
@@ -135,7 +138,7 @@ export default function People() {
       const familiesList = await familiesService.getFamilies();
       setFamilies(familiesList);
     } catch (error) {
-      console.error('❌ Error loading families:', error);
+      logger.error('❌ Error loading families:', error);
     }
   };
 
@@ -145,7 +148,7 @@ export default function People() {
       const peopleList = await peopleService.getPeople();
       setPeople(peopleList);
     } catch (error) {
-      console.error('❌ Error loading people:', error);
+      logger.error('❌ Error loading people:', error);
       message.error({ content: 'Failed to load people' });
     } finally {
       setLoading(false);
@@ -174,7 +177,7 @@ export default function People() {
 
       setUsers(usersList);
     } catch (error) {
-      console.error('❌ Error loading users:', error);
+      logger.error('❌ Error loading users:', error);
       message.error({ content: 'Failed to load users' });
     }
   };
@@ -193,7 +196,7 @@ export default function People() {
       setEditingUser(null);
       message.success({ content: `System role updated to ${newRole}` });
     } catch (error) {
-      console.error('❌ Error updating role:', error);
+      logger.error('❌ Error updating role:', error);
       message.error({ content: 'Failed to update role' });
     }
   };
@@ -217,7 +220,7 @@ export default function People() {
         setProfileModalVisible(false);
       }
     } catch (error) {
-      console.error('❌ Error updating profile:', error);
+      logger.error('❌ Error updating profile:', error);
       message.error({ content: 'Failed to update profile' });
     }
   };
@@ -257,7 +260,7 @@ export default function People() {
           const files = await firebaseFilesService.getFilesByFamily(editingPerson.familyId);
           setFamilyFiles(files || []);
         } catch (e) {
-          console.error('Failed to load family files for admin view', e);
+          logger.error('Failed to load family files for admin view', e);
           const err = e as any;
           if (err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.toLowerCase().includes('permission')))) {
             message.error('You do not have permission to access family files');
@@ -279,7 +282,7 @@ export default function People() {
       setPeople(people.filter(p => p.id !== personId));
       message.success({ content: 'Person deleted successfully' });
     } catch (error) {
-      console.error('❌ Error deleting person:', error);
+      logger.error('❌ Error deleting person:', error);
       message.error({ content: 'Failed to delete person' });
     }
   };
@@ -294,7 +297,7 @@ export default function People() {
           content: `Sync completed with ${results.errors.length} errors. Created: ${results.created}, Linked: ${results.linked}`,
           duration: 5
         });
-        console.error('Sync errors:', results.errors);
+        logger.error('Sync errors:', results.errors);
       } else {
         message.success({
           content: `Sync completed successfully! Created: ${results.created} people, Linked: ${results.linked} accounts`,
@@ -305,7 +308,7 @@ export default function People() {
       // Refresh data
       await Promise.all([loadPeople(), loadUsers()]);
     } catch (error) {
-      console.error('❌ Error syncing users:', error);
+      logger.error('❌ Error syncing users:', error);
       message.error({ content: 'Failed to sync users with people records' });
     } finally {
       setSyncing(false);
@@ -374,7 +377,7 @@ export default function People() {
       setModalVisible(false);
       form.resetFields();
     } catch (error) {
-      console.error('❌ Error saving person:', error);
+      logger.error('❌ Error saving person:', error);
       message.error({ content: 'Failed to save person' });
     }
   };
@@ -1302,7 +1305,7 @@ export default function People() {
             await Promise.all([loadPeople(), loadFamilies()]);
           } catch (error) {
             message.error({ content: 'Failed to link family members' });
-            console.log(`Failed to link family members, ${error}`);
+            logger.error('Failed to link family members', error);
           }
         }}
         width={600}
@@ -1358,7 +1361,7 @@ export default function People() {
             loadPeople();
           } catch (error) {
             message.error({ content: 'Failed to merge people' });
-            console.log(`Failed to merge people, ${error}`);
+            logger.error('Failed to merge people', error);
           }
         }}
         width={800}
@@ -1459,7 +1462,7 @@ export default function People() {
             await Promise.all([loadPeople(), loadFamilies()]);
           } catch (error) {
             message.error({ content: 'Failed to delete person' });
-            console.log(`Failed to delete person, ${error}`);
+            logger.error('Failed to delete person', error);
           }
         }}
         width={500}

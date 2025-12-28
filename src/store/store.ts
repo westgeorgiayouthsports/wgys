@@ -11,6 +11,7 @@ import uiReducer from './slices/uiSlice';
 import { firebaseCartService } from '../services/firebaseCart';
 import type { CartItem } from './slices/cartSlice';
 import { setItems } from './slices/cartSlice';
+import logger from '../utils/logger';
 
 export const store = configureStore({
   reducer: {
@@ -55,7 +56,7 @@ store.subscribe(() => {
           store.dispatch(setItems(serverItems as CartItem[]));
         }
       } catch (e) {
-        console.error('Error loading server cart on login', e);
+        logger.error('Error loading server cart on login', e);
       }
     })();
   }
@@ -67,7 +68,7 @@ store.subscribe(() => {
       try {
         await firebaseCartService.saveCart(authUid, state.cart.items as CartItem[]);
       } catch (e) {
-        console.error('Error saving cart to server', e);
+        logger.error('Error saving cart to server', e);
       }
     })();
   }

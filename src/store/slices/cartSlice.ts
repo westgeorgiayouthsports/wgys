@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import logger from '../../utils/logger';
 import type { PaymentPlan } from '../../../src/types/enums/program';
 
 export interface CartItem {
@@ -28,7 +29,7 @@ const loadFromStorage = (): CartItem[] => {
     if (!raw) return [];
     return JSON.parse(raw) as CartItem[];
   } catch (e) {
-    console.error('Error loading cart from localStorage', e);
+    logger.error('Error loading cart from localStorage', e);
     return [];
   }
 };
@@ -37,7 +38,7 @@ const saveToStorage = (items: CartItem[]) => {
   try {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(items));
   } catch (e) {
-    console.error('Error saving cart to localStorage', e);
+    logger.error('Error saving cart to localStorage', e);
   }
 };
 

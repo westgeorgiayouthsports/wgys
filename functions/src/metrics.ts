@@ -20,9 +20,9 @@ interface MetricsResponse {
  * Requires GA4_KEY (service account JSON) and GA4_PROPERTY_ID in environment.
  */
 export const metricsViews = onRequest(
-  { 
-    region: 'us-central1', 
-    memory: '256MiB', 
+  {
+    region: 'us-central1',
+    memory: '256MiB',
     timeoutSeconds: 60,
     cors: true, // Enable CORS for all origins
     secrets: ['GA4_KEY', 'GA4_PROPERTY_ID', 'ALLOWED_ORIGIN'] // Load Firebase secrets
@@ -92,6 +92,7 @@ export const metricsViews = onRequest(
       const daysParam = Number(req.query.days) || 30;
       const days = Math.min(Math.max(1, daysParam), 365);
       const wantTimeseries = req.query.timeseries === 'true' || req.query.timeseries === '1';
+      const wantHourly = wantTimeseries && (req.query.granularity === 'hour' || req.query.granularity === 'hourly');
 
       // Query GA4 for page views from last N days (standard report - may have latency)
       let source: MetricsResponse['source'] = 'standard';
@@ -100,18 +101,22 @@ export const metricsViews = onRequest(
 
       const baseDateRange = [{ startDate: `${Math.max(0, days - 1)}daysAgo`, endDate: 'today' }];
 
+      // Use GA4's `dateHour` dimension when hourly granularity is requested
+      const dimensions = wantTimeseries ? (wantHourly ? [ { name: 'dateHour' } ] : [ { name: 'date' } ]) : undefined;
       const [response] = await client.runReport({
         property: `properties/${propertyId}`,
         dateRanges: baseDateRange,
         metrics: [ { name: 'screenPageViews' } ],
-        dimensions: wantTimeseries ? [ { name: 'date' } ] : undefined,
+        dimensions,
       });
 
       // Extract view count from response
       let views = 0;
       if (wantTimeseries && response.rows?.length) {
         timeseries = response.rows.map((row) => {
-          const date = row.dimensionValues?.[0]?.value ?? '';
+          const dateDim = row.dimensionValues?.[0]?.value ?? '';
+          // when using `dateHour` the returned value is already YYYYMMDDHH
+          const date = dateDim;
           const v = Number(row.metricValues?.[0]?.value ?? '0');
           views += Number.isNaN(v) ? 0 : v;
           return { date, views: Number.isNaN(v) ? 0 : v, source };
@@ -124,21 +129,19 @@ export const metricsViews = onRequest(
 
       // Fallback #1: some properties report views primarily via eventCount 'page_view'
       if (!views) {
+        const fallbackDimensions = wantTimeseries ? (wantHourly ? [ { name: 'dateHour' } ] : [ { name: 'date' } ]) : [ { name: 'eventName' } ];
         const [fallback] = await client.runReport({
           property: `properties/${propertyId}`,
           dateRanges: baseDateRange,
-          dimensions: wantTimeseries ? [ { name: 'date' } ] : [ { name: 'eventName' } ],
+          dimensions: fallbackDimensions,
           metrics: [ { name: 'eventCount' } ],
-          dimensionFilter: wantTimeseries
-            ? { filter: { fieldName: 'eventName', stringFilter: { value: 'page_view' } } }
-            : { filter: { fieldName: 'eventName', stringFilter: { value: 'page_view' } } }
+          dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: 'page_view' } } },
         });
 
         if (wantTimeseries && fallback.rows?.length) {
           timeseries = fallback.rows.map((row) => {
             const dim0 = row.dimensionValues?.[0]?.value ?? '';
-            // When timeseries, dim0 is date; when aggregate, dim0 might be eventName
-            const date = dim0.length === 8 ? dim0 : '';
+            const date = wantHourly ? dim0 : (dim0.length === 8 ? dim0 : '');
             const v = Number(row.metricValues?.[0]?.value ?? '0');
             return { date, views: Number.isNaN(v) ? 0 : v, source: 'eventCount' };
           });

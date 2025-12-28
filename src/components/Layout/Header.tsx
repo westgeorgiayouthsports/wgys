@@ -1,11 +1,14 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Dropdown, Button, Badge, Modal, Select, Radio, Space, Tooltip } from 'antd';
-import { UserOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined, ShoppingCartOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import type { RootState } from '../../store/store';
 import { logout } from '../../store/slices/authSlice';
-import { toggleTheme } from '../../store/slices/themeSlice';
+import { setTheme } from '../../store/slices/themeSlice';
+import { ref as dbRef, update as dbUpdate } from 'firebase/database';
+import logger from '../../utils/logger';
+import { db } from '../../services/firebase';
 import { signOut } from '../../services/firebaseAuth';
 import './Header.css';
 import wgysLogo from '../../assets/wgys.webp';
@@ -27,7 +30,7 @@ export default function Header() {
       dispatch(logout());
       navigate('/signin');
     } catch (error) {
-      console.error('Sign out failed:', error);
+      logger.error('Sign out failed:', error);
     }
   };
 
@@ -45,10 +48,43 @@ export default function Header() {
       onClick: () => navigate('/my-family'),
     },
     {
+      key: 'payment-methods',
+      icon: <ShoppingCartOutlined />,
+      label: 'My Payment Methods',
+      onClick: () => navigate('/payment-methods'),
+    },
+    {
+      key: 'my-registrations',
+      icon: <FileTextOutlined />,
+      label: 'My Registrations',
+      onClick: () => navigate('/my-registrations'),
+    },
+    {
       key: 'theme',
       icon: <BulbOutlined />,
       label: isDarkMode ? 'Light Mode' : 'Dark Mode',
-      onClick: () => dispatch(toggleTheme()),
+      onClick: async () => {
+        const newTheme = !isDarkMode ? 'dark' : 'light';
+        dispatch(setTheme(!isDarkMode));
+        try {
+          // persist to RTDB for the user
+          if (user?.uid) {
+            const prefRef = dbRef(db, `users/${user.uid}/preferences`);
+            await dbUpdate(prefRef, { theme: newTheme });
+          }
+        } catch (e) {
+          logger.error('Failed to persist theme preference to RTDB', e);
+        }
+
+        try {
+          // cache locally for fast reads and legacy compatibility
+          localStorage.setItem('wgys.pref.theme', newTheme);
+          // legacy key
+          localStorage.setItem('wgys.theme', newTheme);
+        } catch (e) {
+          logger.error('Failed to cache theme preference locally', e);
+        }
+      },
     },
     {
       type: 'divider',
@@ -85,7 +121,7 @@ export default function Header() {
       import('../Cart/CartDrawer').then((m) => {
         if (mounted) setCartDrawerComp(() => m.default);
       }).catch((e) => {
-        console.error('Failed to load CartDrawer', e);
+        logger.error('Failed to load CartDrawer', e);
       });
     }
     return () => { mounted = false; };

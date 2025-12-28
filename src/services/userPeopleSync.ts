@@ -1,6 +1,7 @@
 import { ref, get, update as _update } from 'firebase/database';
 import { db } from './firebase';
 import { peopleService } from './firebasePeople';
+import logger from '../utils/logger';
 import type { PersonFormData } from '../types/person';
 
 export const userPeopleSync = {
@@ -10,28 +11,28 @@ export const userPeopleSync = {
    */
   async syncUsersWithPeople(): Promise<{ created: number; linked: number; errors: string[] }> {
     const results = { created: 0, linked: 0, errors: [] as string[] };
-    
+
     try {
       // Get all users
       const usersRef = ref(db, 'users');
       const usersSnapshot = await get(usersRef);
-      
+
       if (!usersSnapshot.exists()) {
         return results;
       }
-      
+
       // Get all people
       const people = await peopleService.getPeople();
       const peopleByUserId = new Map(
         people.filter(p => p.userId).map(p => [p.userId!, p])
       );
-      
+
       const users = usersSnapshot.val();
-      
+
       for (const [uid, userData] of Object.entries(users)) {
         try {
           const existingPerson = peopleByUserId.get(uid);
-          
+
           if (!existingPerson) {
             // Create person record for user
             const personData: PersonFormData = {
@@ -40,10 +41,10 @@ export const userPeopleSync = {
               email: (userData as any).email || '',
               roles: ['parent'], // Default role for account holders
             };
-            
+
             const newPersonId = await peopleService.createPerson(personData, uid);
             await peopleService.linkPersonToAccount(newPersonId, uid);
-            
+
             results.created++;
           } else if (!existingPerson.hasAccount) {
             // Link existing person to account
@@ -51,14 +52,14 @@ export const userPeopleSync = {
             results.linked++;
           }
         } catch (error) {
-          console.error(`Error syncing user ${uid}:`, error);
+          logger.error(`Error syncing user ${uid}:`, error);
           results.errors.push(`Failed to sync user ${uid}: ${error}`);
         }
       }
-      
+
       return results;
     } catch (error) {
-      console.error('Error syncing users with people:', error);
+      logger.error('Error syncing users with people:', error);
       results.errors.push(`Sync failed: ${error}`);
       return results;
     }
@@ -71,17 +72,17 @@ export const userPeopleSync = {
     try {
       const usersRef = ref(db, 'users');
       const usersSnapshot = await get(usersRef);
-      
+
       if (!usersSnapshot.exists()) {
         return [];
       }
-      
+
       const people = await peopleService.getPeople();
       const linkedUserIds = new Set(people.filter(p => p.userId).map(p => p.userId));
-      
+
       const users = usersSnapshot.val();
       const unlinkedUsers = [];
-      
+
       for (const [uid, userData] of Object.entries(users)) {
         if (!linkedUserIds.has(uid)) {
           unlinkedUsers.push({
@@ -91,10 +92,10 @@ export const userPeopleSync = {
           });
         }
       }
-      
+
       return unlinkedUsers;
     } catch (error) {
-      console.error('Error getting unlinked users:', error);
+      logger.error('Error getting unlinked users:', error);
       return [];
     }
   }

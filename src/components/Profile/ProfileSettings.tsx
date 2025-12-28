@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Card,
@@ -20,10 +20,14 @@ import {
   CloseOutlined,
   BulbOutlined,
 } from '@ant-design/icons';
+import StaticField from './StaticField';
 import type { RootState } from '../../store/store';
-import { toggleTheme } from '../../store/slices/themeSlice';
+import { setTheme } from '../../store/slices/themeSlice';
+import { setShowMyMenuItems, setDebugLogging } from '../../store/slices/uiSlice';
+import logger from '../../utils/logger';
 import { updateProfile } from 'firebase/auth';
-import { auth } from '../../services/firebase';
+import { auth, db } from '../../services/firebase';
+import { ref as dbRef, update as dbUpdate } from 'firebase/database';
 import { setUser } from '../../store/slices/authSlice';
 import { peopleService } from '../../services/firebasePeople';
 import type { Person } from '../../types/person';
@@ -41,11 +45,18 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
   const user = useSelector((state: RootState) => state.auth.user);
   const { role } = useSelector((state: RootState) => state.auth);
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
+  const showMy = useSelector((state: RootState) => state.ui.showMyMenuItems);
+  const showDebug = useSelector((state: RootState) => state.ui.debugLogging);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [displayName, setDisplayName] = useState(person.displayName || `${person.firstName} ${person.lastName}`);
   const [photoURL, setPhotoURL] = useState(person.photoURL || '');
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  const [localTheme, setLocalTheme] = useState<boolean>(isDarkMode);
+  const [localShowMy, setLocalShowMy] = useState<boolean>(showMy);
+  const [localDebug, setLocalDebug] = useState<boolean>(showDebug);
 
   // Only allow editing if it's the current user's profile or admin/owner
   const canEdit = person.userId === user?.uid || role === 'admin' || role === 'owner';
@@ -67,14 +78,14 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
 
       // Update Person record
       await peopleService.updatePersonProfile(person.id, profileData);
-      
+
       // Update Firebase Auth if this is the current user
       if (person.userId === user?.uid && auth.currentUser && user) {
         await updateProfile(auth.currentUser, {
           displayName,
           photoURL: photoURL || null,
         });
-        
+
         // Update Redux store
         dispatch(setUser({
           user: { ...user, displayName, photoURL },
@@ -91,10 +102,34 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
         updatedAt: new Date().toISOString(),
       });
 
+      // Persist UI preferences for current user
+      if (person.userId === user?.uid && user?.uid) {
+        try {
+          const prefRef = dbRef(db, `users/${user.uid}/preferences`);
+          await dbUpdate(prefRef, {
+            theme: localTheme ? 'dark' : 'light',
+            showMyMenuItems: localShowMy,
+            debugLogging: localDebug,
+          });
+          dispatch(setTheme(localTheme));
+          dispatch(setShowMyMenuItems(localShowMy));
+          dispatch(setDebugLogging(localDebug));
+          try {
+            localStorage.setItem(`wgys.pref.theme`, localTheme ? 'dark' : 'light');
+            localStorage.setItem(`wgys.pref.showMyMenuItems`, String(localShowMy));
+            localStorage.setItem('wgys.debugLogging', localDebug ? '1' : '0');
+          } catch (e) {
+            logger.error('Failed to cache preferences locally', e);
+          }
+        } catch (e) {
+          logger.error('Failed to persist preferences to RTDB', e);
+        }
+      }
+
       message.success('Profile updated successfully!');
       setIsEditing(false);
     } catch (error) {
-      console.error('Error updating profile:', error);
+      logger.error('Error updating profile:', error);
       message.error('Failed to update profile');
     } finally {
       setIsSaving(false);
@@ -104,11 +139,22 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
   const handleCancel = () => {
     setDisplayName(person.displayName || `${person.firstName} ${person.lastName}`);
     setPhotoURL(person.photoURL || '');
+    setLocalTheme(isDarkMode);
+    setLocalShowMy(showMy);
+    setLocalDebug(showDebug);
     setIsEditing(false);
   };
 
+
+  // Keep local theme in sync with global theme when it changes elsewhere
+  useEffect(() => {
+    setLocalTheme(isDarkMode);
+  }, [isDarkMode]);
+
   return (
-    <Card
+    <>
+      
+      <Card
       title="Profile Settings"
       extra={
         canEdit && !isEditing ? (
@@ -141,9 +187,9 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
       }
     >
       <Row gutter={[24, 24]}>
-        <Col span={24} md={6} style={{ textAlign: 'center' }}>
+          <Col span={24} md={6} style={{ textAlign: 'center' }}>
           <Avatar
-            size={120}
+            size={96}
             src={photoURL || person.photoURL}
             icon={<UserOutlined />}
             style={{
@@ -169,8 +215,8 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
           </div>
         </Col>
 
-        <Col span={24} md={18}>
-          <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+          <Col span={24} md={18}>
+          <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
             {/* Display Name */}
             <div>
               <Text strong style={{ display: 'block', marginBottom: '8px' }}>
@@ -181,7 +227,7 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
                 onChange={(e) => { setDisplayName(e.target.value); }}
                 disabled={!isEditing || !canEdit}
                 placeholder="Enter display name"
-                size="large"
+                size="middle"
                 maxLength={50}
               />
               {isEditing && (
@@ -191,41 +237,27 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
               )}
             </div>
 
-            {/* Email */}
-            <div>
-              <Text strong style={{ display: 'block', marginBottom: '8px' }}>
-                Email Address
+            {/* System assigned fields (read-only) */}
+            <div style={{ padding: '12px 16px', border: '1px solid #d9d9d9', borderRadius: 8 }}>
+              <Text strong style={{ display: 'block', marginBottom: 8 }}>System Assigned</Text>
+              <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+                These values are managed by the system and are read-only.
               </Text>
-              <Input
+              <StaticField
+                label="Email Address"
                 value={person.email || ''}
-                disabled
-                size="large"
+                help="Managed by authentication system"
               />
-              <Text type="secondary" style={{ fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                Email is managed in basic information
-              </Text>
-            </div>
 
-            {/* User ID - Only for account holders */}
-            {person.userId && (
-              <div>
-                <Text strong style={{ display: 'block', marginBottom: '8px' }}>
-                  User ID
-                </Text>
-                <Input
+              {person.userId && (
+                <StaticField
+                  label="User ID"
                   value={person.userId}
-                  disabled
-                  size="large"
-                  style={{
-                    fontFamily: 'monospace',
-                    fontSize: '12px'
-                  }}
+                  monospace
+                  help="System-assigned unique identifier (read-only)"
                 />
-                <Text type="secondary" style={{ fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                  This is your unique identifier in the system
-                </Text>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Theme Preference - Only for current user */}
             {showThemeToggle && person.userId === user?.uid && (
@@ -242,11 +274,12 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
                   alignItems: 'center',
                 }}>
                   <Text>
-                    {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+                    {localTheme ? 'Dark Mode' : 'Light Mode'}
                   </Text>
                   <Switch
-                    checked={isDarkMode}
-                    onChange={() => dispatch(toggleTheme())}
+                    checked={localTheme}
+                    onChange={(v) => setLocalTheme(v)}
+                    disabled={!isEditing || !canEdit}
                     checkedChildren="🌙"
                     unCheckedChildren="☀️"
                   />
@@ -254,6 +287,60 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
                 <Text type="secondary" style={{ fontSize: '12px', marginTop: '4px', display: 'block' }}>
                   Choose your preferred theme appearance
                 </Text>
+              </div>
+            )}
+            {/* Sidebar "My" items preference */}
+            {person.userId === user?.uid && (
+              <div>
+                <Text strong style={{ display: 'block', marginBottom: '8px' }}>
+                  Sidebar Preferences
+                </Text>
+                <div style={{
+                  padding: '12px 16px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <Text>
+                    Show "My" items in left sidebar
+                  </Text>
+                  <Switch
+                    checked={localShowMy}
+                    onChange={(v) => setLocalShowMy(v)}
+                    disabled={!isEditing || !canEdit}
+                    checkedChildren="On"
+                    unCheckedChildren="Off"
+                  />
+                </div>
+                <Text type="secondary" style={{ fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  When off, menu items starting with "My" will be available from your user menu only.
+                </Text>
+              </div>
+            )}
+            {/* Diagnostics (hidden by default) */}
+            {person.userId === user?.uid && (
+              <div>
+                <div style={{ marginTop: 8, marginBottom: 8 }}>
+                  <Button type="link" onClick={() => setShowDiagnostics(s => !s)} style={{ padding: 0 }}>
+                    {showDiagnostics ? 'Hide diagnostics' : 'Show diagnostics'}
+                  </Button>
+                </div>
+                {showDiagnostics && (
+                  <div style={{ padding: '12px 16px', border: '1px solid #f0f0f0', borderRadius: 8, marginBottom: 12 }}>
+                    <Text strong style={{ display: 'block', marginBottom: 8 }}>Diagnostics</Text>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text>Enable debug logging</Text>
+                      <Switch
+                        checked={localDebug}
+                        onChange={(v) => setLocalDebug(v)}
+                        disabled={!isEditing || !canEdit}
+                      />
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Useful for support; logs will be visible in browser console.</Text>
+                  </div>
+                )}
               </div>
             )}
           </Space>
@@ -274,17 +361,18 @@ export default function ProfileSettings({ person, onPersonUpdate, showThemeToggl
             value={photoURL}
             onChange={(e) => { setPhotoURL(e.target.value); }}
             placeholder="https://example.com/image.jpg"
-            size="large"
+            size="middle"
             type="url"
           />
           {photoURL && (
             <div style={{ textAlign: 'center' }}>
               <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>Preview:</Text>
-              <Avatar size={80} src={photoURL} icon={<UserOutlined />} onError={() => true} />
+              <Avatar size={64} src={photoURL} icon={<UserOutlined />} onError={() => true} />
             </div>
           )}
         </div>
       </Modal>
-    </Card>
+      </Card>
+    </>
   );
 }

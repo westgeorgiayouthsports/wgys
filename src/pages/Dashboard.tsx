@@ -198,8 +198,14 @@ export default function Dashboard() {
   useEffect(() => {
     const loadViews = async () => {
       try {
-        const { timeseries } = await fetchWebsiteTrends(websiteViewsRange);
-        const totalViews = timeseries?.reduce((sum, d) => sum + d.views, 0) || 0;
+        const { timeseries, views, realtimeViews } = await fetchWebsiteTrends(websiteViewsRange);
+        const timeseriesTotal = Array.isArray(timeseries)
+          ? timeseries.reduce((sum, d) => sum + Number(d.views || 0), 0)
+          : 0;
+        const numericViews = typeof views === 'number' ? views : Number(views || 0);
+        const numericRealtime = typeof realtimeViews === 'number' ? realtimeViews : Number(realtimeViews || 0);
+        const fallbackViews = numericViews === 0 && numericRealtime > 0 ? numericRealtime : numericViews;
+        const totalViews = timeseriesTotal || fallbackViews || 0;
         setMetrics(prev => ({ ...prev, websiteViews: totalViews }));
       } catch (error) {
         // Silently fail - metrics will show 0
@@ -282,7 +288,7 @@ export default function Dashboard() {
     const [modalOpen, setModalOpen] = useState(false);
     const [rangeDates, setRangeDates] = useState<[any, any] | null>(null);
 
-    const presets = [7, 30, 90, 180, 365];
+    const presets = [1, 7, 30, 90, 180, 365];
     const isCustomActive = Boolean(customRange && customRange.from && customRange.to);
 
     const label = isCustomActive && customRange && customRange.from && customRange.to
@@ -328,8 +334,16 @@ export default function Dashboard() {
           open={popoverOpen}
           onOpenChange={(open) => setPopoverOpen(open)}
         >
-          <Button type="link" onClick={() => setPopoverOpen(true)} style={{ padding: '4px 8px' }}>
-            Showing: <strong style={{ marginLeft: 6 }}>{label}</strong>
+          <Button
+            type="link"
+            onClick={() => setPopoverOpen(true)}
+            style={{ padding: '4px 8px' }}
+            className={`date-range-hotspot pulse`}
+            aria-haspopup="dialog"
+            aria-label={`Range ${label} — open date range selector`}
+          >
+            <span style={{ marginRight: 6, opacity: 0.9 }}>Range:</span>
+            <span>{label}</span>
           </Button>
         </Popover>
 

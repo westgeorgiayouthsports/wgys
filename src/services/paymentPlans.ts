@@ -2,6 +2,7 @@ import { ref, push, get, update, remove } from 'firebase/database';
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
+import logger from '../utils/logger';
 import { PaymentPlan } from '../types/paymentPlan';
 
 export const paymentPlansService = {
@@ -12,7 +13,7 @@ export const paymentPlansService = {
       const data = snap.val();
       return Object.entries(data).map(([id, p]: [string, any]) => ({ id, ...(p as any) } as PaymentPlan));
     } catch (e) {
-      console.error('Error fetching payment plans', e);
+      logger.error('Error fetching payment plans', e);
       const code = (e as any)?.code || '';
       const msg = (e as any)?.message || String(e || '');
       // If permission denied, rethrow so callers can surface a user-visible error
@@ -29,7 +30,7 @@ export const paymentPlansService = {
       if (!snap.exists()) return null;
       return { id, ...(snap.val() as any) } as PaymentPlan;
     } catch (e) {
-      console.error('Error fetching payment plan', e);
+      logger.error('Error fetching payment plan', e);
       return null;
     }
   },
@@ -41,10 +42,10 @@ export const paymentPlansService = {
       const cleaned = Object.fromEntries(Object.entries(plan || {}).filter(([_, v]) => v !== undefined && v !== ''));
       const payload = { ...cleaned, createdAt: now, updatedAt: now, createdBy: createdBy || null };
       const res = await push(plansRef, payload);
-      try { await auditLogService.log({ action: 'paymentPlan.created', entityType: AuditEntity.PaymentPlan, entityId: res.key, details: payload }); } catch (error) { console.error("Error auditing paymentPlan.created", error); }
+      try { await auditLogService.log({ action: 'paymentPlan.created', entityType: AuditEntity.PaymentPlan, entityId: res.key, details: payload }); } catch (error) { logger.error("Error auditing paymentPlan.created", error); }
       return res.key;
     } catch (e) {
-      console.error('Error creating payment plan', e);
+      logger.error('Error creating payment plan', e);
       throw e;
     }
   },
@@ -55,9 +56,9 @@ export const paymentPlansService = {
       const cleaned = Object.fromEntries(Object.entries(updates || {}).filter(([_, v]) => v !== undefined && v !== ''));
       const payload = { ...cleaned, updatedAt: new Date().toISOString() };
       await update(planRef, payload as any);
-      try { await auditLogService.log({ action: 'paymentPlan.updated', entityType: AuditEntity.PaymentPlan, entityId: id, details: payload }); } catch (error) { console.error("Error auditing paymentPlan.updated", error); }
+      try { await auditLogService.log({ action: 'paymentPlan.updated', entityType: AuditEntity.PaymentPlan, entityId: id, details: payload }); } catch (error) { logger.error("Error auditing paymentPlan.updated", error); }
     } catch (e) {
-      console.error('Error updating payment plan', e);
+      logger.error('Error updating payment plan', e);
       throw e;
     }
   },
@@ -67,9 +68,9 @@ export const paymentPlansService = {
       const snap = await get(ref(db, `paymentPlans/${id}`));
       const before = snap.exists() ? snap.val() : null;
       await remove(ref(db, `paymentPlans/${id}`));
-      try { await auditLogService.logDelete(AuditEntity.PaymentPlan, id, before); } catch (error) { console.error("Error auditing paymentPlan.deleted", error); }
+      try { await auditLogService.logDelete(AuditEntity.PaymentPlan, id, before); } catch (error) { logger.error("Error auditing paymentPlan.deleted", error); }
     } catch (e) {
-      console.error('Error deleting payment plan', e);
+      logger.error('Error deleting payment plan', e);
       throw e;
     }
   },

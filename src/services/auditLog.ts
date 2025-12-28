@@ -1,6 +1,7 @@
 import { ref, push, set, get, query, orderByChild, limitToLast, remove } from 'firebase/database';
 import { db, auth } from './firebase';
 import { AuditEntity } from '../types/enums';
+import logger from '../utils/logger';
 
 export interface AuditRecord {
   id?: string;
@@ -27,6 +28,30 @@ export const auditLogService = {
         actorEmail: record.actorEmail ?? (user?.email ?? null),
         timestamp: now,
       };
+      // Sanitize details: Firebase Realtime Database rejects `undefined` values.
+      const sanitize = (v: any): any => {
+        if (v === undefined) return null;
+        if (v === null) return null;
+        if (Array.isArray(v)) return v.map(sanitize);
+        if (typeof v === 'object') {
+          const out: any = {};
+          for (const [k, val] of Object.entries(v)) {
+            if (val === undefined) continue; // drop undefined properties
+            out[k] = sanitize(val);
+          }
+          return out;
+        }
+        return v;
+      };
+      if (payload.details !== undefined) {
+        try {
+          payload.details = sanitize(payload.details);
+        } catch (e) {
+          // fallback: stringify to preserve something readable
+          logger.info('Error sanitizing audit log details, falling back to stringification', e);
+          payload.details = String(payload.details);
+        }
+      }
       await set(newRef, payload);
       return newRef.key;
     } catch (error) {

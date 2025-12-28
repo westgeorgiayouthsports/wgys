@@ -40,6 +40,7 @@ import { SeasonStatusValues } from '../types/enums/season';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
 import dayjs from 'dayjs';
 import Register from '../components/Registrations/Register';
+import logger from '../utils/logger';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -102,7 +103,7 @@ export default function ProgramDetail() {
       const list = await seasonsService.getSeasons();
       setSeasons(list.filter(s => s.status === SeasonStatusValues.active));
     } catch (err) {
-      console.error('Failed to load seasons', err);
+      logger.error('Failed to load seasons', err);
       setSeasons([]);
     }
   };
@@ -126,13 +127,13 @@ export default function ProgramDetail() {
           // payment plans, discount groups and stripe account are available on program record
           // but not displayed in this admin view yet
         } catch (e) {
-          console.error('Error loading program registration metrics', e);
+          logger.error('Error loading program registration metrics', e);
         }
       } else {
         message.error('Program not found');
       }
     } catch (error) {
-      console.error('❌ Error loading program:', error);
+      logger.error('❌ Error loading program:', error);
       message.error('Failed to load program');
     } finally {
       setLoading(false);
@@ -385,7 +386,7 @@ export default function ProgramDetail() {
                 message.success('Program updated successfully!');
               })
               .catch((error) => {
-                console.error('❌ Error saving program:', error);
+                logger.error('❌ Error saving program:', error);
                 message.error('Failed to save program');
               });
           }}>

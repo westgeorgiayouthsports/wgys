@@ -8,11 +8,15 @@ interface CustomRange {
 interface UIState {
   websiteViewsRange: number;
   customRange: CustomRange | null;
+  showMyMenuItems: boolean;
+  debugLogging: boolean;
 }
 
 const initialState: UIState = {
   websiteViewsRange: 30,
   customRange: null,
+  showMyMenuItems: true,
+  debugLogging: false,
 };
 
 const uiSlice = createSlice({
@@ -29,8 +33,15 @@ const uiSlice = createSlice({
       // when custom range is set, represent it by 0 (custom) in the numeric range
       if (action.payload) state.websiteViewsRange = 0;
     },
+    setShowMyMenuItems(state, action: PayloadAction<boolean>) {
+      state.showMyMenuItems = action.payload;
+    },
+    setDebugLogging(state, action: PayloadAction<boolean>) {
+      state.debugLogging = action.payload;
+    },
   },
 });
 
 export const { setWebsiteViewsRange, setWebsiteCustomRange } = uiSlice.actions;
+export const { setShowMyMenuItems, setDebugLogging } = uiSlice.actions;
 export default uiSlice.reducer;

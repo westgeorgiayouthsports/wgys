@@ -1,4 +1,5 @@
 import { useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import logger from '../utils/logger';
 import { Form, Input, Row, Col, DatePicker, InputNumber, Segmented, Select, message } from 'antd';
 import type { Season } from '../types/season';
 import { seasonsService } from '../services/firebaseSeasons';
@@ -20,6 +21,7 @@ export type SeasonEditorRef = {
 const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, readOnly },
   ref) => {
   const [form] = Form.useForm();
+  const [msgApi, contextHolder] = message.useMessage();
 
   useImperativeHandle(ref, () => ({
     submit: () => form.submit(),
@@ -77,7 +79,7 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
     });
     form.setFields([{ name: 'startDate', errors: [] }]);
     // revalidate registrationClose when season start changes
-    try { form.validateFields(['registrationClose']); } catch (error) { console.log("Failed to validate fields", error); }
+    try { form.validateFields(['registrationClose']); } catch (error) { logger.error('Failed to validate fields', error); }
   };
 
   // Debounced wrapper to limit remote duplicate-check calls
@@ -128,7 +130,7 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
           const earliest = dupByName.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())[0];
           const label = formatSeasonLabel(earliest as Season);
           form.setFields([{ name: 'name', errors: [`Conflicts with ${label}`] }]);
-          message.error(`Name conflicts with ${label}`);
+          msgApi.error(`Name conflicts with ${label}`);
           return true;
         } else {
           form.setFields([{ name: 'name', errors: [] }]);
@@ -146,7 +148,7 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
             }
             return s.seasonType === seasonType && s.year === year;
           } catch (e) {
-            console.log('Error deriving season meta for duplicate check', e);
+            logger.error('Error deriving season meta for duplicate check', e);
             return s.seasonType === seasonType && s.year === year;
           }
         });
@@ -158,14 +160,14 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
           })[0];
           const label = formatSeasonLabel(earliest as Season);
           form.setFields([{ name: 'seasonType', errors: [`Conflicts with ${label}`] }]);
-          message.error(`${label} already exists`);
+          msgApi.error(`${label} already exists`);
           return true;
         } else {
           form.setFields([{ name: 'seasonType', errors: [] }]);
         }
       }
     } catch (e) {
-      console.error('Duplicate check failed', e);
+      logger.error('Duplicate check failed', e);
     }
     return false;
   };
@@ -217,7 +219,9 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
   };
 
   return (
-    <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={(changed, all) => {
+    <div>
+      {contextHolder}
+      <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={(changed, all) => {
       // if seasonType, year, or startDate change (startDate may compute type/year), re-run duplicate checks
       if (changed.startDate || changed.seasonType || changed.year) {
         runDebouncedCheck(all);
@@ -286,7 +290,7 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
               style={{ width: '100%' }}
               format="YYYY-MM-DD"
               disabled={!!readOnly}
-              onChange={() => { try { form.validateFields(['registrationClose']); } catch (error) { console.log("Failed to validate fields", error); } } } />
+              onChange={() => { try { form.validateFields(['registrationClose']); } catch (error) { logger.error("Failed to validate fields", error); } } } />
           </Form.Item>
         </Col>
 
@@ -313,7 +317,7 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
               style={{ width: '100%' }}
               format="YYYY-MM-DD"
               disabled={!!readOnly}
-              onChange={() => { try { form.validateFields(['registrationOpen']); } catch (error) { console.log("Failed to validate fields", error); } } } />
+              onChange={() => { try { form.validateFields(['registrationOpen']); } catch (error) { logger.error("Failed to validate fields", error); } } } />
           </Form.Item>
         </Col>
       </Row>
@@ -385,7 +389,8 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
           }))}
           disabled={!!readOnly} />
       </Form.Item>
-    </Form>
+      </Form>
+    </div>
   );
 });
 

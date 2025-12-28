@@ -3,6 +3,7 @@ import { db } from './firebase';
 import type { ProgramTemplate } from '../types/programTemplate';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
+import logger from '../utils/logger';
 
 export const programTemplatesService = {
   async getTemplates(): Promise<ProgramTemplate[]> {
@@ -12,7 +13,7 @@ export const programTemplatesService = {
       const data = snapshot.val();
       return Object.entries(data).map(([id, tpl]: [string, any]) => ({ id, ...(tpl || {}) }));
     } catch (e) {
-      console.error('Error fetching program templates', e);
+      logger.error('Error fetching program templates', e);
       return [];
     }
   },
@@ -23,7 +24,7 @@ export const programTemplatesService = {
       if (!snap.exists()) return null;
       return { id, ...(snap.val() || {}) } as ProgramTemplate;
     } catch (e) {
-      console.error('Error fetching program template', e);
+      logger.error('Error fetching program template', e);
       throw e;
     }
   },
@@ -36,10 +37,10 @@ export const programTemplatesService = {
       await set(ref(db, `programTemplates/${id}`), toWrite);
       try {
         await auditLogService.log({ action: 'programTemplate.created', entityType: AuditEntity.ProgramTemplate, entityId: id, details: toWrite });
-      } catch (err) { console.error('Error auditing programTemplate.create', err); }
+      } catch (err) { logger.error('Error auditing programTemplate.create', err); }
       return id;
     } catch (e) {
-      console.error('Error creating program template', e);
+      logger.error('Error creating program template', e);
       throw e;
     }
   },
@@ -48,9 +49,9 @@ export const programTemplatesService = {
     try {
       const toWrite = { ...updates, updatedAt: new Date().toISOString() } as any;
       await update(ref(db, `programTemplates/${id}`), toWrite);
-      try { await auditLogService.log({ action: 'programTemplate.updated', entityType: AuditEntity.ProgramTemplate, entityId: id, details: updates }); } catch (e) { console.error('Error auditing programTemplate.update', e); }
+      try { await auditLogService.log({ action: 'programTemplate.updated', entityType: AuditEntity.ProgramTemplate, entityId: id, details: updates }); } catch (e) { logger.error('Error auditing programTemplate.update', e); }
     } catch (e) {
-      console.error('Error updating program template', e);
+      logger.error('Error updating program template', e);
       throw e;
     }
   },
@@ -60,9 +61,9 @@ export const programTemplatesService = {
       const snap = await get(ref(db, `programTemplates/${id}`));
       const data = snap.exists() ? snap.val() : null;
       await remove(ref(db, `programTemplates/${id}`));
-      try { await auditLogService.logDelete(AuditEntity.ProgramTemplate, id, data, userId); } catch (e) { console.log('Error auditing programTemplate.delete', e); }
+      try { await auditLogService.logDelete(AuditEntity.ProgramTemplate, id, data, userId); } catch (e) { logger.error('Error auditing programTemplate.delete', e); }
     } catch (e) {
-      console.error('Error deleting program template', e);
+      logger.error('Error deleting program template', e);
       throw e;
     }
   }

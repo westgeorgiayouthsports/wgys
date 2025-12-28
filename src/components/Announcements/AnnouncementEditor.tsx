@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react';
 import type { Announcement } from '../../store/slices/announcementsSlice';
 import RichTextEditor from '../RichTextEditor/RichTextEditor';
-import { 
-  Card, 
-  Input, 
-  Button, 
-  Space, 
-  Typography, 
-  Switch, 
-  Row, 
-  Col, 
-  message 
+import {
+  Card,
+  Input,
+  Button,
+  Space,
+  Typography,
+  Switch,
+  Row,
+  Col,
+  message
 } from 'antd';
 import { SaveOutlined, CloseOutlined } from '@ant-design/icons';
+import logger from '../../utils/logger';
 
-const { Title: _Title, Text } = Typography;
+const { Text } = Typography;
 
 interface Props {
   announcement?: Announcement;
@@ -30,15 +31,13 @@ export default function AnnouncementEditor({ announcement, onSave, onCancel }: P
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // console.log('📝 AnnouncementEditor received announcement:', announcement);
+    logger.info('📝 AnnouncementEditor received announcement:', announcement);
     if (announcement) {
-      // console.log('📝 Loading existing announcement:', { title: announcement.title, content: announcement.content });
       setTitle(announcement.title);
       setContent(announcement.content);
       setShowOnFeed(announcement.showOnFeed ?? true);
       setAllowComments(announcement.allowComments ?? true);
     } else {
-      // console.log('📝 Resetting form for new announcement');
       setTitle('');
       setContent('');
       setShowOnFeed(true);
@@ -47,14 +46,8 @@ export default function AnnouncementEditor({ announcement, onSave, onCancel }: P
   }, [announcement]);
 
   const handleSubmit = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-    }
+    if (e) e.preventDefault();
 
-    // console.log('💾 Save Draft button clicked');
-    // console.log('State:', { title, content, isEditing: !!announcement });
-
-    // Validation
     if (!title || title.trim().length === 0) {
       message.error('Title is required');
       return;
@@ -66,13 +59,12 @@ export default function AnnouncementEditor({ announcement, onSave, onCancel }: P
     }
 
     setIsSaving(true);
-    // console.log('🔄 Saving...');
-
     try {
       await onSave(title.trim(), content.trim(), showOnFeed, allowComments);
       message.success('Announcement saved successfully!');
+      onCancel();
     } catch (error) {
-      console.error('❌ Save failed:', error);
+      logger.error('❌ Save failed:', error);
       message.error('Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsSaving(false);
@@ -81,18 +73,18 @@ export default function AnnouncementEditor({ announcement, onSave, onCancel }: P
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card 
+      <Card
         title={announcement ? '✏️ Edit Announcement' : '📝 New Announcement'}
         extra={
           <Space>
-            <Button 
+            <Button
               icon={<CloseOutlined />}
               onClick={onCancel}
               disabled={isSaving}
             >
                 Cancel
             </Button>
-            <Button 
+            <Button
               type="primary"
               icon={<SaveOutlined />}
               onClick={handleSubmit}
@@ -120,28 +112,28 @@ export default function AnnouncementEditor({ announcement, onSave, onCancel }: P
 
           {/* Settings */}
           <Card size="small" title="Announcement Settings">
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <Space>
-                  <Switch 
-                    checked={showOnFeed} 
+          <Row gutter={[16, 16]}>
+            <Col span={12}>
+              <Space>
+                  <Switch
+                    checked={showOnFeed}
                     onChange={setShowOnFeed}
                     disabled={isSaving}
                   />
-                  <Text>Show On Announcement Feed</Text>
-                </Space>
-              </Col>
-              <Col span={12}>
-                <Space>
-                  <Switch 
-                    checked={allowComments} 
+                <Text>Show On Announcement Feed</Text>
+              </Space>
+            </Col>
+            <Col span={12}>
+              <Space>
+                  <Switch
+                    checked={allowComments}
                     onChange={setAllowComments}
                     disabled={isSaving}
                   />
-                  <Text>Allow Comments</Text>
-                </Space>
-              </Col>
-            </Row>
+                <Text>Allow Comments</Text>
+              </Space>
+            </Col>
+          </Row>
           </Card>
 
           {/* Rich Text Editor */}

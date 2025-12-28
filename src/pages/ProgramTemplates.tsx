@@ -28,6 +28,7 @@ import type { Season } from '../types/season';
 import { ProgramDivisionList, getProgramTypeLabel, ProgramTypeItems } from '../types/enums/program';
 import dayjs from 'dayjs';
 import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+import logger from '../utils/logger';
 
 const { Title } = Typography;
 
@@ -68,7 +69,7 @@ export default function AdminProgramTemplates() {
       setSports(sps || []);
       setSeasonPrograms(spsList || []);
     } catch (e) {
-      console.error('Error loading templates', e);
+        logger.error('Error loading templates', e);
       message.error('Failed to load');
     } finally { setLoading(false); }
   };
@@ -91,7 +92,7 @@ export default function AdminProgramTemplates() {
       setTemplates(templates.filter(t => t.id !== id));
       message.success('Template deleted');
     } catch (e) {
-      console.error(e);
+        logger.error('Error deleting template', e);
       message.error('Failed to delete');
     }
   };
@@ -109,7 +110,7 @@ export default function AdminProgramTemplates() {
       }
       setModalVisible(false);
       form.resetFields();
-    } catch (e) { console.error(e); message.error('Save failed'); }
+    } catch (e) { logger.error('Error saving template', e); message.error('Save failed'); }
   };
 
   const openAttach = (tpl: ProgramTemplate) => {
@@ -133,7 +134,7 @@ export default function AdminProgramTemplates() {
       await seasonProgramsService.createSeasonProgram(payload, user?.uid);
       message.success('Template attached to season');
       setAttachModalVisible(false);
-    } catch (e) { console.error(e); message.error('Attach failed'); }
+    } catch (e) { logger.error('Error attaching template to season', e); message.error('Attach failed'); }
   };
 
   const columns = [

@@ -2,6 +2,7 @@ import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/data
 import { db } from './firebase';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
+import logger from '../utils/logger';
 import type { ProgramFormResponse } from '../types/program';
 import type { SeasonType } from '../types/enums/season';
 import type { ProgramRegistrationStatus, PaymentPlan } from '../types';
@@ -75,7 +76,7 @@ export const programRegistrationsService = {
           details: { programId, registeredBy, totalAmount, paymentMethod },
         });
       } catch (e) {
-        console.error('Error auditing program.registration.created:', e);
+        logger.error('Error auditing program.registration.created:', e);
       }
 
       return {
@@ -83,7 +84,7 @@ export const programRegistrationsService = {
         ...record,
       } as ProgramRegistrationRecord;
     } catch (error) {
-      console.error('❌ Error creating program registration:', error);
+      logger.error('❌ Error creating program registration:', error);
       throw error;
     }
   },
@@ -95,7 +96,7 @@ export const programRegistrationsService = {
       if (!snap.exists()) return null;
       return { id, ...snap.val() } as ProgramRegistrationRecord;
     } catch (error) {
-      console.error('❌ Error fetching program registration:', error);
+      logger.error('❌ Error fetching program registration:', error);
       throw error;
     }
   }
@@ -109,7 +110,7 @@ export const programRegistrationsService = {
       const data = snap.val();
       return Object.entries(data).map(([id, val]) => ({ id, ...(val as any) })) as ProgramRegistrationRecord[];
     } catch (error) {
-      console.error('❌ Error querying registrations by family:', error);
+      logger.error('❌ Error querying registrations by family:', error);
       throw error;
     }
   },
@@ -123,7 +124,7 @@ export const programRegistrationsService = {
       const data = snap.val();
       return Object.entries(data).map(([id, val]) => ({ id, ...(val as any) })) as ProgramRegistrationRecord[];
     } catch (error) {
-      console.error('❌ Error querying registrations by athlete:', error);
+      logger.error('❌ Error querying registrations by athlete:', error);
       throw error;
     }
   },
@@ -136,7 +137,7 @@ export const programRegistrationsService = {
       const data = snap.val();
       return Object.entries(data).map(([id, val]) => ({ id, ...(val as any) })) as ProgramRegistrationRecord[];
     } catch (error) {
-      console.error('❌ Error querying registrations by program:', error);
+      logger.error('❌ Error querying registrations by program:', error);
       throw error;
     }
   },
@@ -149,7 +150,7 @@ export const programRegistrationsService = {
       const list = Object.entries(data).map(([id, val]) => ({ id, ...(val as any) })) as ProgramRegistrationRecord[];
       return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (error) {
-      console.error('❌ Error fetching all program registrations:', error);
+      logger.error('❌ Error fetching all program registrations:', error);
       throw error;
     }
   },
@@ -173,10 +174,10 @@ export const programRegistrationsService = {
           details: updates,
         });
       } catch (e) {
-        console.error('Error auditing program.registration.updated:', e);
+        logger.error('Error auditing program.registration.updated:', e);
       }
     } catch (error) {
-      console.error('❌ Error updating program registration:', error);
+      logger.error('❌ Error updating program registration:', error);
       throw error;
     }
   },
@@ -203,10 +204,10 @@ export const programRegistrationsService = {
           details: { reason },
         });
       } catch (e) {
-        console.error('Error auditing program.registration.cancelled:', e);
+        logger.error('Error auditing program.registration.cancelled:', e);
       }
     } catch (error) {
-      console.error('❌ Error cancelling program registration:', error);
+      logger.error('❌ Error cancelling program registration:', error);
       throw error;
     }
   },

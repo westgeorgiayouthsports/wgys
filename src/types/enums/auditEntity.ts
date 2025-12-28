@@ -13,4 +13,5 @@ export enum AuditEntity {
   PaymentPlan = 'paymentPlan',
   PaymentMethod = 'paymentMethod',
   Other = 'other',
+  User = 'user',
 }

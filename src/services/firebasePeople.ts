@@ -3,6 +3,7 @@ import { db } from './firebase';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
 import type { Person, PersonFormData, Family } from '../types/person';
+import logger from '../utils/logger';
 
 export const peopleService = {
   // Person CRUD operations
@@ -35,7 +36,7 @@ export const peopleService = {
     try {
       await auditLogService.log({ action: 'person.created', entityType: AuditEntity.Person, entityId: newPersonRef.key, details: person });
     } catch (e) {
-      console.error('Error auditing person.created:', e);
+      logger.error('Error auditing person.created:', e);
     }
     return newPersonRef.key;
   },
@@ -83,7 +84,7 @@ export const peopleService = {
     try {
       await auditLogService.log({ action: 'person.updated', entityType: AuditEntity.Person, entityId: id, details: cleanData });
     } catch (e) {
-      console.error('Error auditing person.updated:', e);
+      logger.error('Error auditing person.updated:', e);
     }
   },
 
@@ -96,10 +97,10 @@ export const peopleService = {
       try {
         await auditLogService.logDelete(AuditEntity.Person, id, before);
       } catch (e) {
-        console.error('Error auditing person.delete:', e);
+        logger.error('Error auditing person.delete:', e);
       }
     } catch (error) {
-      console.error('Error deleting person:', error);
+      logger.error('Error deleting person:', error);
       throw error;
     }
   },
@@ -115,7 +116,7 @@ export const peopleService = {
       const mappingRef = ref(db, `users_to_person/${userId}`);
       await set(mappingRef, personId);
     } catch (e) {
-      console.error('Failed to write users_to_person mapping:', e);
+      logger.error('Failed to write users_to_person mapping:', e);
     }
   },
 
@@ -137,7 +138,7 @@ export const peopleService = {
     try {
       await auditLogService.log({ action: 'family.created', entityType: AuditEntity.Family, entityId: newFamilyRef.key, details: family });
     } catch (e) {
-      console.error('Error auditing family.created:', e);
+      logger.error('Error auditing family.created:', e);
     }
 
     // Update person with family ID
@@ -185,7 +186,7 @@ export const peopleService = {
       try {
         await auditLogService.log({ action: 'family.member_added', entityType: AuditEntity.Family, entityId: familyId, details: { memberId: personId } });
       } catch (e) {
-        console.error('Error auditing family.member_added:', e);
+        logger.error('Error auditing family.member_added:', e);
       }
     }
   },

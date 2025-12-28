@@ -4,6 +4,7 @@ import { ConfigProvider, App as AntApp } from 'antd';
 import { onAuthStateChanged } from 'firebase/auth';
 import { ref, get } from 'firebase/database';
 import { auth, db } from './services/firebase';
+import { ref as dbRef, update as dbUpdate } from 'firebase/database';
 import { setUser, setLoading } from './store/slices/authSlice';
 import type { RootState } from './store/store';
 import { darkTheme, lightTheme } from './theme/themeConfig';
@@ -11,6 +12,9 @@ import Router from './Router';
 import { setUserProperties } from './services/analytics';
 import './App.css';
 import './styles/theme-variables.css';
+import { setTheme } from './store/slices/themeSlice';
+import { setShowMyMenuItems, setDebugLogging } from './store/slices/uiSlice';
+import logger from './utils/logger';
 
 export default function App() {
   const [geoAllowed, setGeoAllowed] = useState<boolean | null>(null);
@@ -34,7 +38,7 @@ export default function App() {
     // In local dev skip external geo lookups to avoid CORS/rate-limit issues
     // and to speed up developer experience.
     // Vite exposes `import.meta.env.DEV` as a boolean during development.
-     
+
     if (process.env.NODE_ENV === 'development') {
       setGeoAllowed(true);
       return;
@@ -56,7 +60,7 @@ export default function App() {
         }
       } catch (err: any) {
         if (err && err.name === 'AbortError') return; // expected on unmount
-        console.warn('Geo check failed, default allow', err);
+        logger.error('Geo check failed, default allow', err);
         if (!cancelled) setGeoAllowed(true); // fail-open to avoid accidental lockout
       }
     };
@@ -74,7 +78,7 @@ export default function App() {
         try {
           await auth.signOut();
         } catch (e) {
-          console.warn('signOut after geo block failed', e);
+          logger.error('signOut after geo block failed', e);
         }
       })();
     }
@@ -98,7 +102,7 @@ export default function App() {
               role = userData.role || 'user';
             }
           } catch (err) {
-            console.warn('Database read failed, using Firebase displayName:', err);
+            logger.error('Database read failed, using Firebase displayName:', err);
             displayName = firebaseUser.displayName || 'User';
           }
 
@@ -117,25 +121,92 @@ export default function App() {
             })
           );
 
+          // Migrate legacy localStorage preferences into RTDB under users/{uid}/preferences
+          try {
+            const prefsToWrite: Record<string, any> = {};
+            // migrate sidebar preference
+            try {
+              const v = localStorage.getItem('wgys.showMyMenuItems');
+              if (v === '0' || v === '1') prefsToWrite.showMyMenuItems = v === '1';
+            } catch (e) { logger.error('reading localStorage wgys.showMyMenuItems failed', e); }
+            // migrate theme preference
+            try {
+              const t = localStorage.getItem('theme');
+              if (t === 'dark' || t === 'light') prefsToWrite.theme = t;
+            } catch (e) { logger.error('reading localStorage theme failed', e); }
+
+            if (Object.keys(prefsToWrite).length > 0) {
+              const prefRef = dbRef(db, `users/${firebaseUser.uid}/preferences`);
+              await dbUpdate(prefRef, prefsToWrite);
+              // remove migrated keys
+              try { localStorage.removeItem('wgys.showMyMenuItems'); } catch (e) { logger.error('removing localStorage wgys.showMyMenuItems failed', e); }
+              try { localStorage.removeItem('theme'); } catch (e) { logger.error('removing localStorage theme failed', e); }
+            }
+          } catch (e) {
+            logger.error('Preference migration to RTDB failed', e);
+          }
+          // Load preferences from RTDB and apply to store
+          try {
+            const prefRef = dbRef(db, `users/${firebaseUser.uid}/preferences`);
+            const prefSnap = await get(prefRef);
+            if (prefSnap.exists()) {
+              const prefs = prefSnap.val();
+              // Apply well-known preferences into the store and also cache them for fast access
+              if (prefs.theme) {
+                dispatch(setTheme(prefs.theme === 'dark'));
+                try { localStorage.setItem('wgys.theme', prefs.theme); } catch (e) { logger.error('failed to cache theme locally', e); }
+              }
+              if (typeof prefs.showMyMenuItems !== 'undefined') {
+                dispatch(setShowMyMenuItems(!!prefs.showMyMenuItems));
+                try { localStorage.setItem('wgys.showMyMenuItems', prefs.showMyMenuItems ? '1' : '0'); } catch (e) { logger.error('failed to cache showMyMenuItems locally', e); }
+              }
+              if (typeof prefs.debugLogging !== 'undefined') {
+                try { localStorage.setItem('wgys.debugLogging', prefs.debugLogging ? '1' : '0'); } catch (e) { logger.error('failed to cache debugLogging locally', e); }
+                try { dispatch(setDebugLogging(!!prefs.debugLogging)); } catch (e) { logger.error('failed to set debugLogging in store', e);}
+              }
+
+              // Cache any other preferences under wgys.pref.<key> for quick local reads
+              try {
+                Object.keys(prefs).forEach((k) => {
+                  try {
+                    const v = prefs[k];
+                    // Store primitives as-is for readability; serialize objects
+                    if (v === null || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+                      localStorage.setItem(`wgys.pref.${k}`, String(v));
+                    } else {
+                      localStorage.setItem(`wgys.pref.${k}`, JSON.stringify(v));
+                    }
+                  } catch (inner) {
+                    logger.error(`failed to cache preference ${k} locally`, inner);
+                  }
+                });
+              } catch (e) {
+                logger.error('failed to iterate preferences for caching', e);
+              }
+            }
+          } catch (e) {
+            logger.error('Failed to load user preferences from RTDB', e);
+          }
+
           // In local development, log id token result and claims to help debugging RTDB rules/claims
           // Only run in DEV to avoid leaking tokens in production
-           
+
           if (process.env.NODE_ENV === 'development') {
             try {
               const idRes = await firebaseUser.getIdTokenResult();
-              console.log('DEBUG: idTokenClaims:', idRes.claims);
+              logger.info('DEBUG: idTokenClaims:', idRes.claims);
               // For deeper debugging, you can also log the raw token (DEV only)
               const rawToken = await firebaseUser.getIdToken();
-              console.log('DEBUG: idToken (DEV only):', rawToken);
+              logger.info('DEBUG: idToken (DEV only):', rawToken);
             } catch (tokErr) {
-              console.warn('Failed to fetch id token for debug logging', tokErr);
+              logger.error('Failed to fetch id token for debug logging', tokErr);
             }
           }
         } else {
           dispatch(setUser({ user: null, role: 'user' }));
         }
       } catch (error) {
-        console.error('Auth error:', error);
+        logger.error('Auth error:', error);
         dispatch(setUser({ user: null, role: 'user' }));
       } finally {
         dispatch(setLoading(false));
