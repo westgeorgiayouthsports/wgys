@@ -38,19 +38,13 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
         endDate: season.endDate ? dayjs(season.endDate) : undefined,
         registrationOpen: (season as any).registrationOpen ? dayjs((season as any).registrationOpen) : undefined,
         registrationClose: (season as any).registrationClose ? dayjs((season as any).registrationClose) : undefined,
-        fiscalYearStart: season.fiscalYearStart ? dayjs(season.fiscalYearStart) : undefined,
-        fiscalYearEnd: season.fiscalYearEnd ? dayjs(season.fiscalYearEnd) : undefined,
         description: season.description,
         status: season.status,
       });
     } else {
       // Defaults for new season
-      const year = new Date().getFullYear();
-      const defaultFiscalStart = dayjs(`${year}-08-16`);
       form.setFieldsValue({
         status: SeasonStatusValues.active,
-        fiscalYearStart: defaultFiscalStart,
-        fiscalYearEnd: defaultFiscalStart.add(1, 'year'),
       });
     }
   }, [season, form]);
@@ -73,8 +67,6 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
       startDate: date,
       seasonType: meta.type,
       year: meta.year,
-      fiscalYearStart: fyStart,
-      fiscalYearEnd: fyEnd,
       endDate: clampedEnd,
     });
     form.setFields([{ name: 'startDate', errors: [] }]);
@@ -172,52 +164,6 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
     return false;
   };
 
-  const disabledWithinFiscal = (current: Dayjs | null) => {
-    if (!current) return false;
-    const fyStart = form.getFieldValue('fiscalYearStart') as Dayjs | undefined;
-    const fyEnd = form.getFieldValue('fiscalYearEnd') as Dayjs | undefined;
-    if (!fyStart || !fyEnd) return false;
-    return current.isBefore(fyStart, 'day') || current.isAfter(fyEnd, 'day');
-  };
-
-  const handleFiscalYearStartChange = (date: Dayjs | null) => {
-    if (!date) return;
-    const fyStart = date;
-    const fyEnd = date.add(1, 'year');
-    const currentStart = form.getFieldValue('startDate') as Dayjs | undefined;
-    const currentEnd = form.getFieldValue('endDate') as Dayjs | undefined;
-    form.setFieldsValue({ fiscalYearStart: fyStart, fiscalYearEnd: fyEnd });
-    if (currentStart) {
-      if (currentStart.isBefore(fyStart, 'day') || currentStart.isAfter(fyEnd, 'day')) {
-        form.setFields([{ name: 'startDate', errors: ['Start date is outside fiscal year range'] }]);
-      } else {
-        form.setFields([{ name: 'startDate', errors: [] }]);
-      }
-    }
-    if (currentEnd) {
-      if (currentEnd.isBefore(fyStart, 'day') || currentEnd.isAfter(fyEnd, 'day')) {
-        form.setFields([{ name: 'endDate', errors: ['End date is outside fiscal year range'] }]);
-      } else {
-        form.setFields([{ name: 'endDate', errors: [] }]);
-      }
-    }
-  };
-
-  const handleEndDateChange = (date: Dayjs | null) => {
-    if (!date) {
-      form.setFieldsValue({ endDate: null });
-      return;
-    }
-    const fyStart = form.getFieldValue('fiscalYearStart') as Dayjs | undefined;
-    const fyEnd = form.getFieldValue('fiscalYearEnd') as Dayjs | undefined;
-    let clamped = date;
-    if (fyStart && fyEnd) {
-      if (date.isBefore(fyStart, 'day')) clamped = fyStart;
-      if (date.isAfter(fyEnd, 'day')) clamped = fyEnd;
-    }
-    form.setFieldsValue({ endDate: clamped });
-  };
-
   return (
     <div>
       {contextHolder}
@@ -243,7 +189,6 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
               style={{ width: '100%' }}
               format="YYYY-MM-DD"
               onChange={handleStartDateChange}
-              disabledDate={disabledWithinFiscal}
               disabled={!!readOnly} />
           </Form.Item>
         </Col>
@@ -254,8 +199,6 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
               allowClear={false}
               style={{ width: '100%' }}
               format="YYYY-MM-DD"
-              onChange={handleEndDateChange}
-              disabledDate={disabledWithinFiscal}
               disabled={!!readOnly} />
           </Form.Item>
         </Col>
@@ -273,8 +216,6 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
                   const regClose = getFieldValue('registrationClose') as Dayjs | undefined;
                   if (!value) return Promise.resolve();
                   if (regClose && value.isAfter(regClose, 'day')) return Promise.reject(new Error('Registration start must be before registration end'));
-                  const fyStart = getFieldValue('fiscalYearStart') as Dayjs | undefined;
-                  if (fyStart && value.isBefore(fyStart, 'day')) return Promise.reject(new Error('Registration start must be on or after fiscal year start'));
                   const year = getFieldValue('year') as number | undefined;
                   if (year) {
                     const earliest = dayjs(`${year - 1}-01-01`);
@@ -318,29 +259,6 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
               format="YYYY-MM-DD"
               disabled={!!readOnly}
               onChange={() => { try { form.validateFields(['registrationOpen']); } catch (error) { logger.error("Failed to validate fields", error); } } } />
-          </Form.Item>
-        </Col>
-      </Row>
-
-      <Row gutter={12}>
-        <Col span={12}>
-          <Form.Item name="fiscalYearStart" label="Fiscal Year Start">
-            <DatePicker
-              allowClear={false}
-              style={{ width: '100%' }}
-              format="YYYY-MM-DD"
-              onChange={handleFiscalYearStartChange}
-              disabled={!!readOnly} />
-          </Form.Item>
-        </Col>
-
-        <Col span={12}>
-          <Form.Item
-            name="fiscalYearEnd"
-            label="Fiscal Year End"
-            tooltip="Derived from fiscal year start"
-          >
-            <DatePicker allowClear={false} style={{ width: '100%' }} format="YYYY-MM-DD" disabled={true} />
           </Form.Item>
         </Col>
       </Row>

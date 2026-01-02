@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import calculateCurrentGrade from '../../utils/grade';
 import { Form, Input, InputNumber, Select, Button, Space, Typography, Tag, theme, Checkbox, Upload, message, Modal, Progress } from 'antd';
@@ -27,6 +28,7 @@ export default function Register(props: Props) {
   const dispatch = useDispatch();
   const [form] = Form.useForm();
   const { token } = theme.useToken();
+  const navigate = useNavigate();
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(athleteId || null);
   const [seasonName, setSeasonName] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
@@ -263,6 +265,12 @@ export default function Register(props: Props) {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
+            <div style={{ marginBottom: 8 }}>
+              <Button type="link" onClick={() => {
+                const sex = (program as any).sport === 'softball' ? 'female' : 'male';
+                navigate(`/registration-help?sex=${sex}`);
+              }}>Registration Help</Button>
+            </div>
             {program.maxParticipants && (
               <div style={{ marginTop: 8 }}>
                 <Text strong>Limit</Text>

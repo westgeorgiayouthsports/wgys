@@ -66,7 +66,9 @@ const db = admin.database();
 const sports = [
   { name: 'Baseball', ageControlDate: '05-01' },
   { name: 'Softball', ageControlDate: '01-01' },
+  { name: 'Softball Travel', ageControlDate: '09-01' },
   { name: 'Soccer', ageControlDate: '01-01' },
+  { name: 'Basketball', ageControlDate: '09-01' },
   { name: 'Football', ageControlDate: '09-01' },
 ];
 

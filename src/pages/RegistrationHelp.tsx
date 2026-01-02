@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Typography,
@@ -7,31 +7,52 @@ import {
   Select,
   Space,
   Alert,
-  Divider,
   Tag,
+  Collapse,
 } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
+import { sportsService } from '../services/firebaseSports';
+import { getAgeControlDateForSeason, DEFAULT_SPORT_AGE_CONTROL } from '../utils/season';
+import { parseDateStringToDayjs, localDayjsFromUTCDate } from '../utils/dateHelpers';
+import logger from '../utils/logger';
+
 
 const { Title, Text, Paragraph } = Typography;
 
-export default function RegistrationHelp() {
+export default function RegistrationHelp({ compact = false }: { compact?: boolean }) {
   const [searchParams] = useSearchParams();
 
-  const [selectedSport, setSelectedSport] = useState<string>(() => {
+  const [selectedSportId, setSelectedSportId] = useState<string | null>(() => {
     const sex = searchParams.get('sex');
     return sex === 'female' ? 'softball' : 'baseball';
   });
 
+  const [sports, setSports] = useState<Array<{ id?: string; name?: string; ageControlDate?: string }>>([]);
+
   const [seasonDate, setSeasonDate] = useState(() => {
     const now = dayjs();
     const isAfterAugust = now.month() >= 7;
-    const year = isAfterAugust ? now.year() + 1 : now.year();
     const sex = searchParams.get('sex');
     const sport = sex === 'female' ? 'softball' : 'baseball';
-    const month = sport === 'softball' ? 0 : 4; // January 1 for softball, May 1 for baseball
-    return dayjs().year(year).month(month).date(1);
+    // Use util to compute control date; fallback to previous behavior when util not present
+    try {
+      const term = isAfterAugust ? 'fall' : 'spring';
+      // compute control date for this year first, then decide whether to use next year
+      const ctrlThisYear = getAgeControlDateForSeason({ term: term as any, year: now.year() }, sport);
+      const ctrlThisLocal = localDayjsFromUTCDate(ctrlThisYear);
+      const useYear = now.isAfter(dayjs().year(now.year()).month(ctrlThisLocal.month()).date(ctrlThisLocal.date())) ? now.year() + 1 : now.year();
+      const controlDate = getAgeControlDateForSeason({ term: term as any, year: useYear }, sport);
+      return localDayjsFromUTCDate(controlDate);
+    } catch (e) {
+      logger.error('Error computing control date from registration util', e);
+      const key = (sport || '').toLowerCase();
+      const md = DEFAULT_SPORT_AGE_CONTROL[key] ?? DEFAULT_SPORT_AGE_CONTROL.default;
+      const controlThisYear = dayjs().year(now.year()).month(md.month).date(md.day);
+      const useYear = now.isAfter(controlThisYear) ? now.year() + 1 : now.year();
+      return dayjs().year(useYear).month(md.month).date(md.day);
+    }
   });
 
   const [selectedBirthDate, setSelectedBirthDate] = useState<dayjs.Dayjs | null>(() => {
@@ -40,18 +61,68 @@ export default function RegistrationHelp() {
   });
 
   // Update season date when sport changes
-  const updateSeasonDateForSport = (sport: string) => {
+  // This is necessary for baseball & softball because players are required to move up in age group during fall season
+  // The yearly sport cycle technically goes from August 16 to August 15
+  const updateSeasonDateForSport = (sportName: string) => {
     const now = dayjs();
     const isAfterAugust = now.month() >= 7;
-    const year = isAfterAugust ? now.year() + 1 : now.year();
-    const month = sport === 'softball' ? 0 : 4; // January 1 for softball, May 1 for baseball
-    setSeasonDate(dayjs().year(year).month(month).date(1));
+    // prefer sports table value when available
+    try {
+      const term = isAfterAugust ? 'fall' : 'spring';
+      // find sport record by id or name
+      const sport = (sports || []).find(s => s.id === sportName || (s.name || '').toLowerCase() === (sportName || '').toLowerCase());
+      // compute control date for this year and decide if we should use next year
+      const ctrlThisYear = getAgeControlDateForSeason({ term: term as any, year: now.year() }, sport ?? sportName);
+      const ctrlThisLocal = localDayjsFromUTCDate(ctrlThisYear);
+      const useYear = now.isAfter(dayjs().year(now.year()).month(ctrlThisLocal.month()).date(ctrlThisLocal.date())) ? now.year() + 1 : now.year();
+      const controlDate = getAgeControlDateForSeason({ term: term as any, year: useYear }, sport ?? sportName);
+      setSeasonDate(localDayjsFromUTCDate(controlDate));
+      return;
+    } catch (e) {
+      logger.error('Error computing age control date from registration util', e);
+      const key = (sportName || '').toLowerCase().replace(/\s+/g, '_');
+      const md = DEFAULT_SPORT_AGE_CONTROL[key] ?? DEFAULT_SPORT_AGE_CONTROL.default;
+      const controlThisYear = dayjs().year(now.year()).month(md.month).date(md.day);
+      const useYear = now.isAfter(controlThisYear) ? now.year() + 1 : now.year();
+      setSeasonDate(dayjs().year(useYear).month(md.month).date(md.day));
+    }
   };
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await sportsService.getSports();
+        const sorted = (s || []).slice().sort((a: any, b: any) => {
+          const na = (a?.name || '').toLowerCase();
+          const nb = (b?.name || '').toLowerCase();
+          if (na < nb) return -1;
+          if (na > nb) return 1;
+          return 0;
+        });
+        setSports(sorted);
+        const sex = searchParams.get('sex');
+        const defaultName = sex === 'female' ? 'softball' : 'baseball';
+        const found = (s || []).find((sp: any) => (sp.name || '').toLowerCase().includes(defaultName));
+        if (found) setSelectedSportId(found.id || found.name || defaultName);
+      } catch (e) {
+        logger.error('Error loading sports', e);
+      }
+    })();
+  }, []);
+
+  const compactMode = !!compact;
+
+  // Compute the display/school year from the season control date (no selectable dropdown)
+  // Default to next year when the season control month/day for the current year has already passed
+  const now = dayjs();
+  const controlThisYear = dayjs().year(now.year()).month(seasonDate.month()).date(seasonDate.date());
+  const displayYear = now.isAfter(controlThisYear) ? now.year() + 1 : now.year();
+  const controlAnchor = seasonDate.clone().year(displayYear);
+
   const calculateSeasonAge = (birthDate: dayjs.Dayjs): number => {
-    let age = seasonDate.year() - birthDate.year();
-    if (seasonDate.month() < birthDate.month() ||
-        (seasonDate.month() === birthDate.month() && seasonDate.date() <= birthDate.date())) {
+    let age = controlAnchor.year() - birthDate.year();
+    if (controlAnchor.month() < birthDate.month() ||
+        (controlAnchor.month() === birthDate.month() && controlAnchor.date() <= birthDate.date())) {
       age--;
     }
     return age;
@@ -60,16 +131,17 @@ export default function RegistrationHelp() {
   const generateAgeGroups = () => {
     const groups = [];
     for (let age = 3; age <= 18; age++) {
-      const fromDate = seasonDate.clone().subtract(age + 1, 'year');
-      const toDate = seasonDate.clone().subtract(age, 'year').subtract(1, 'day');
+      const fromDate = controlAnchor.clone().subtract(age + 1, 'year');
+      const toDate = controlAnchor.clone().subtract(age, 'year').subtract(1, 'day');
 
       groups.push({
         ageGroup: `${age}U`,
         age,
         fromDate: fromDate.format('YYYY-MM-DD'),
         toDate: toDate.format('YYYY-MM-DD'),
-        fromDateDisplay: fromDate.format('MMM D, YYYY'),
-        toDateDisplay: toDate.format('MMM D, YYYY'),
+        fromDateDisplay: fromDate.locale('en').format('MMM D, YYYY'),
+        toDateDisplay: toDate.locale('en').format('MMM D, YYYY'),
+        gradYear: controlAnchor.year() + 18 - age,
       });
     }
     return groups;
@@ -91,7 +163,7 @@ export default function RegistrationHelp() {
 
   const columns = [
     {
-      title: 'Age Division',
+      title: 'Division',
       dataIndex: 'ageGroup',
       key: 'ageGroup',
       render: (text: string, _record: any) => (
@@ -106,41 +178,66 @@ export default function RegistrationHelp() {
       key: 'age',
     },
     {
-      title: 'Birth Date Range',
-      key: 'dateRange',
-      render: (_record: any) => (
-        <div>
-          <div><strong>From:</strong> {_record.fromDateDisplay}</div>
-          <div><strong>To:</strong> {_record.toDateDisplay}</div>
-        </div>
-      ),
+      title: 'Grade Exemption',
+      key: 'gradeExemption',
+      render: (_: any, record: any) => {
+        const age = record.age;
+        const grade = age - 6;
+        if (grade < 0) return '';
+        return grade === 0 ? 'K' : grade;
+      }
+    },
+    {
+      title: 'Graduation Year',
+      key: 'gradYear',
+      render: (_: any, record: any) => {
+        const grade = record.age - 6;
+        return grade < 0 ? '' : record.gradYear;
+      }
+    },
+    {
+      title: 'Born on/after',
+      dataIndex: 'fromDateDisplay',
+      key: 'fromDateDisplay',
+    },
+    {
+      title: 'Born on/before',
+      dataIndex: 'toDateDisplay',
+      key: 'toDateDisplay',
     },
   ];
 
+  // yearOptions removed; display year shown instead of a dropdown
+
   return (
-    <div className="page-container">
-      <Title level={2}>Registration Help</Title>
+    <div className={compactMode ? 'page-container compact-help' : 'page-container'}>
+      <Title level={compactMode ? 4 : 2}>Registration Help</Title>
       <Paragraph>
           Use this tool to understand which age group your athlete belongs to based on their birth date,
           sex, and grade level. Age divisions are determined by the athlete's age on the season control date.
       </Paragraph>
 
-      <Card title="Age Group Calculator" style={{ marginBottom: '24px' }}>
-        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-          <Space size="large" wrap>
+      <Card title="Age Group Calculator" style={{ marginBottom: compactMode ? '12px' : '24px' }} styles={{ body: compactMode ? { padding: 8 } : undefined }}>
+        <Space orientation="vertical" size={compactMode ? 'small' : 'large'} style={{ width: '100%' }}>
+          <Space size={compactMode ? 'small' : 'large'} wrap>
             <div>
               <Text strong>Sport:</Text>
               <br />
               <Select
-                value={selectedSport}
-                onChange={(sport) => {
-                  setSelectedSport(sport);
-                  updateSeasonDateForSport(sport);
+                value={selectedSportId ?? undefined}
+                onChange={(sportId) => {
+                  setSelectedSportId(sportId);
+                  updateSeasonDateForSport(sportId);
                 }}
-                style={{ width: 120 }}
+                size={compactMode ? 'small' : undefined}
+                style={{ width: 200 }}
+                placeholder="Select sport"
               >
-                <Select.Option value="baseball">Baseball</Select.Option>
-                <Select.Option value="softball">Softball</Select.Option>
+                {sports.map((sp) => (
+                  <Select.Option key={sp.id || sp.name} value={sp.id || sp.name}>
+                    {sp.name}
+                  </Select.Option>
+                ))}
               </Select>
             </div>
 
@@ -149,8 +246,14 @@ export default function RegistrationHelp() {
               <br />
               <DatePicker
                 value={seasonDate}
-                onChange={(date) => date && setSeasonDate(date)}
-                format="MMMM D, YYYY"
+                allowClear={false}
+                size={compactMode ? 'small' : undefined}
+                onChange={(date, dateString) => {
+                  if (date) return setSeasonDate(date);
+                  const parsed = parseDateStringToDayjs(dateString);
+                  if (parsed) setSeasonDate(parsed);
+                }}
+                format={['MMMM D, YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD']}
               />
             </div>
 
@@ -159,8 +262,14 @@ export default function RegistrationHelp() {
               <br />
               <DatePicker
                 value={selectedBirthDate}
-                onChange={setSelectedBirthDate}
-                format="MMMM D, YYYY"
+                allowClear={false}
+                size={compactMode ? 'small' : undefined}
+                onChange={(date, dateString) => {
+                  if (date) return setSelectedBirthDate(date);
+                  const parsed = parseDateStringToDayjs(dateString);
+                  if (parsed) setSelectedBirthDate(parsed);
+                }}
+                format={['MMMM D, YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD']}
                 placeholder="Select birth date"
               />
             </div>
@@ -170,15 +279,21 @@ export default function RegistrationHelp() {
             <Alert
               title={
                 eligibleGroup ? (
-                  <div>
-                    <strong>Eligible Age Group: {eligibleGroup.ageGroup}</strong>
-                    <br />
-                      Season Age: {seasonAge} years old
-                    <br />
-                      Birth Date Range: {eligibleGroup.fromDateDisplay} to {eligibleGroup.toDateDisplay}
-                    <br />
-                    <strong>Grade Exemption (if applicable):</strong> {eligibleGroup.age - 6}th grade or graduation year {seasonDate.year() + 18 - eligibleGroup.age}
-                  </div>
+                  compactMode ? (
+                    <div>
+                      <strong>{eligibleGroup.ageGroup}</strong> — {eligibleGroup.fromDateDisplay} to {eligibleGroup.toDateDisplay}
+                    </div>
+                  ) : (
+                    <div>
+                      <strong>Eligible Age Group: {eligibleGroup.ageGroup}</strong>
+                      <br />
+                        Season Age: {seasonAge} years old
+                      <br />
+                        Birth Date Range: {eligibleGroup.fromDateDisplay} to {eligibleGroup.toDateDisplay}
+                      <br />
+                      <strong>Grade Exemption (if applicable):</strong> {eligibleGroup.age - 6}th grade or graduation year {controlAnchor.year() + 18 - eligibleGroup.age}
+                    </div>
+                  )
                 ) : (
                   <div>
                     <strong>No eligible age group found</strong>
@@ -194,62 +309,64 @@ export default function RegistrationHelp() {
         </Space>
       </Card>
 
-      <Card title={`${seasonDate.year()} Age Divisions`}>
+      <Card
+        title={<span>{' '}
+          <span style={{ marginRight: 8 }}>Age Divisions (school year):</span>
+          <span style={{ fontWeight: 600 }}>{`${displayYear - 1}-${displayYear}`}</span>
+        </span>}
+        style={compactMode ? { padding: 8 } : undefined}
+      >
         <Paragraph>
           <Text type="secondary">
-              Athletes must be born between the "From" and "To" dates to be eligible for each age division.
-              Age is calculated as of the season control date ({seasonDate.format('MMMM D, YYYY')}).
+              Athletes must be born between the "Born on/after" and "Born on/before" dates to be eligible for each age division.
+              Age is calculated as of the season control date ({seasonDate.locale('en').format('MMMM D, YYYY')}).
           </Text>
         </Paragraph>
 
-        <Table
-          columns={columns}
-          dataSource={ageGroups}
-          rowKey="ageGroup"
-          pagination={false}
-          size="small"
-        />
+        <div style={{ display: 'block', width: '100%', padding: 0 }}>
+          <Table
+            columns={columns}
+            dataSource={ageGroups}
+            rowKey="ageGroup"
+            pagination={false}
+            size={compactMode ? 'small' : 'small'}
+            tableLayout="auto"
+            style={{ width: 'auto', whiteSpace: 'nowrap', minWidth: 'max-content' }}
+            scroll={{ x: 'max-content' }}
+          />
+        </div>
       </Card>
 
-      <Card title="Important Notes" style={{ marginTop: '24px' }}>
-        <Space orientation="vertical" size="middle">
-          <div>
-            <Title level={4}>Sex Restrictions</Title>
-            <Paragraph>
-                Some programs may have sex restrictions:
-              <ul>
-                <li><strong>Co-ed:</strong> Open to male or female athletes</li>
-                <li><strong>Male Only:</strong> Restricted to male athletes</li>
-                <li><strong>Female Only:</strong> Restricted to female athletes (e.g., softball)</li>
-              </ul>
-            </Paragraph>
-          </div>
-
-          <Divider />
-
-          <div>
-            <Title level={4}>Grade Eligibility</Title>
-            <Paragraph>
-                Some programs may also have grade exemptions in addition to age restrictions:
-              <ul>
-                <li>Programs may specify minimum and maximum grade levels</li>
-                <li>Grade exemptions may be available for certain programs</li>
-                <li>Contact the program administrator if you need a grade exemption</li>
-              </ul>
-            </Paragraph>
-          </div>
-
-          <Divider />
-
-          <div>
-            <Title level={4}>Season Control Date</Title>
-            <Paragraph>
-                The season control date is used to determine an athlete's "season age" - their age as of this specific date.
-                This ensures fair competition by grouping athletes who will be similar ages throughout the season.
-                The age control date for baseball is typically May 1st, but may vary by program.
-            </Paragraph>
-          </div>
-        </Space>
+      <Card title="Important Notes" style={{ marginTop: compactMode ? '8px' : '24px' }} styles={{ body: compactMode ? { padding: 8 } : undefined }}>
+        <Collapse defaultActiveKey={compactMode ? [] : ['1']} ghost items={[
+          {
+            key: '1',
+            label: 'Sex Restrictions',
+            children: (
+              <Paragraph>
+                Some programs may have sex restrictions: Co-ed / Male Only / Female Only (e.g., softball).
+              </Paragraph>
+            ),
+          },
+          {
+            key: '2',
+            label: 'Grade Eligibility',
+            children: (
+              <Paragraph>
+                Some programs may also have grade exemptions in addition to age restrictions. Contact the program administrator for exemptions.
+              </Paragraph>
+            ),
+          },
+          {
+            key: '3',
+            label: 'Season Control Date',
+            children: (
+              <Paragraph>
+                The season control date is used to determine an athlete's "season age" — the age as of this specific date. The age control date for baseball is typically May 1st.
+              </Paragraph>
+            ),
+          },
+        ]} />
       </Card>
     </div>
   );

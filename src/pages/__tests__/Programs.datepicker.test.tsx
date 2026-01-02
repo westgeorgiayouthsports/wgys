@@ -16,7 +16,7 @@ jest.mock('antd', () => {
   const React = require('react');
   const dayjs = require('dayjs');
   function DatePickerMock(props: any) {
-    const { value, onChange, placeholder, ...rest } = props;
+    const { value, onChange, placeholder, _allowClear, _size, _format, ...rest } = props;
     const display = value && typeof value === 'object' && typeof value.format === 'function'
       ? value.format('YYYY-MM-DD')
       : value ?? '';

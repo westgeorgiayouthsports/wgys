@@ -67,6 +67,13 @@
   min-height: 100vh;
 }
 
+/* Compact variant used inside modals */
+.page-container.compact-help {
+  padding: var(--spacing-md);
+  min-height: auto;
+  max-width: 100%;
+}
+
 .page-header {
   margin-bottom: var(--spacing-md);
 }

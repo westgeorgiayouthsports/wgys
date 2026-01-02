@@ -34,6 +34,7 @@ import type { Season } from '../types/season';
 import { SeasonStatusValues } from '../types/enums/season';
 import dayjs from 'dayjs';
 import logger from '../utils/logger';
+import { getAgeControlDateForSeason, normalizeSeason, getMaxGradeFromBirthDate, getMaxGradeFromBirthDateCurrentSchoolYear } from '../utils/season';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -495,16 +496,34 @@ const Programs = forwardRef(function Programs(_props, ref) {
 
                 // Auto-compute max grade when birth date start changes and grade exemptions are enabled
                 if (allowGradeExemption && birthDateStart) {
-                  const now = dayjs();
-                  const currentYear = now.year();
-                  const isBeforeAugust = now.month() < 7; // January to July (months 0-6)
-                  const schoolYear = isBeforeAugust ? currentYear - 1 : currentYear;
-
-                  const calculatedMaxGrade = schoolYear - dayjs(birthDateStart).year() - 6;
-                  if (calculatedMaxGrade >= 0 && calculatedMaxGrade <= 12) {
-                    setTimeout(() => {
-                      form.setFieldsValue({ maxGrade: calculatedMaxGrade });
-                    }, 0);
+                  try {
+                    // prefer explicit season selection, otherwise derive from current date
+                    const seasonId = getFieldValue('seasonId');
+                    let simpleSeason: any = undefined;
+                    if (seasonId) {
+                      const found = seasons.find(s => s.id === seasonId);
+                      if (found) simpleSeason = normalizeSeason(found);
+                    }
+                    if (!simpleSeason) {
+                      const now = dayjs();
+                      const isAfterAugust = now.month() >= 7;
+                      simpleSeason = { term: isAfterAugust ? 'fall' : 'spring', year: isAfterAugust ? now.year() + 1 : now.year() };
+                    }
+                    const sportVal = getFieldValue('sport');
+                    const controlDate = getAgeControlDateForSeason(simpleSeason, sportVal);
+                    const calculatedMaxGrade = getMaxGradeFromBirthDate(birthDateStart, controlDate);
+                    if (calculatedMaxGrade && calculatedMaxGrade >= 0 && calculatedMaxGrade <= 12) {
+                      setTimeout(() => {
+                        form.setFieldsValue({ maxGrade: calculatedMaxGrade });
+                      }, 0);
+                    }
+                  } catch (e) {
+                    logger.error('Error calculating max grade from birth date', e);
+                    // fallback to previous behavior
+                    const calculatedMaxGrade = getMaxGradeFromBirthDateCurrentSchoolYear(birthDateStart);
+                    if (calculatedMaxGrade >= 0 && calculatedMaxGrade <= 12) {
+                      setTimeout(() => { form.setFieldsValue({ maxGrade: calculatedMaxGrade }); }, 0);
+                    }
                   }
                 }
 

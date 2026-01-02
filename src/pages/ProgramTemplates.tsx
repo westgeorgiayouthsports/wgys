@@ -34,7 +34,7 @@ const { Title } = Typography;
 
 // program type labels are provided by `getProgramTypeLabel` from enums
 
-export default function AdminProgramTemplates() {
+export default function ProgramTemplates() {
   const { role, user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<ProgramTemplate[]>([]);

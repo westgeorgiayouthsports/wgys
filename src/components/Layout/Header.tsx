@@ -1,7 +1,8 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Dropdown, Button, Badge, Modal, Select, Radio, Space, Tooltip } from 'antd';
-import { UserOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined, ShoppingCartOutlined, FileTextOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined, ShoppingCartOutlined, FileTextOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import RegistrationHelp from '../../pages/RegistrationHelp';
 import { useState, useEffect } from 'react';
 import type { RootState } from '../../store/store';
 import { logout } from '../../store/slices/authSlice';
@@ -60,6 +61,12 @@ export default function Header() {
       onClick: () => navigate('/my-registrations'),
     },
     {
+      key: 'registration-help',
+      icon: <FileTextOutlined />,
+      label: 'Registration Help',
+      onClick: () => navigate('/registration-help'),
+    },
+    {
       key: 'theme',
       icon: <BulbOutlined />,
       label: isDarkMode ? 'Light Mode' : 'Dark Mode',
@@ -111,6 +118,8 @@ export default function Header() {
 
   const currentHref = typeof window !== 'undefined' ? window.location.href : '/';
 
+  const [helpModalVisible, setHelpModalVisible] = useState(false);
+
   const openMobilePreview = () => setMobilePreviewVisible(true);
   const closeMobilePreview = () => setMobilePreviewVisible(false);
 
@@ -147,6 +156,7 @@ export default function Header() {
               <ShoppingCartOutlined style={{ fontSize: 18 }} />
             </Badge>
           </Button>
+
           <Dropdown
           menu={{ items: menuItems as any }}
           trigger={['click']}
@@ -218,6 +228,23 @@ export default function Header() {
             })()}
           </div>
         </Modal>
+
+          <Tooltip title="Registration Help">
+            <Button type="text" onClick={() => setHelpModalVisible(true)} style={{ fontSize: 14 }}>
+              <QuestionCircleOutlined style={{ fontSize: 18 }} />
+            </Button>
+          </Tooltip>
+
+          <Modal
+            title="Registration Help"
+            open={helpModalVisible}
+            onCancel={() => setHelpModalVisible(false)}
+            footer={null}
+            width={700}
+          >
+            <RegistrationHelp compact />
+          </Modal>
+
         </div>
         {/* lazy-load cart drawer to avoid circular deps */}
         {cartOpen && (

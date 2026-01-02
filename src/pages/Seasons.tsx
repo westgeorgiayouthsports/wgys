@@ -200,8 +200,6 @@ export default function Seasons() {
       // normalize date fields to YYYY-MM-DD strings
       const startDate = values.startDate ? (values.startDate as Dayjs).format('YYYY-MM-DD') : undefined;
       const endDate = values.endDate ? (values.endDate as Dayjs).format('YYYY-MM-DD') : undefined;
-      const fiscalYearStart = values.fiscalYearStart ? (values.fiscalYearStart as Dayjs).format('YYYY-MM-DD') : undefined;
-      const fiscalYearEnd = values.fiscalYearEnd ? (values.fiscalYearEnd as Dayjs).format('YYYY-MM-DD') : undefined;
 
       const formData: SeasonFormData = {
         name: values.name,
@@ -209,8 +207,6 @@ export default function Seasons() {
         year: values.year,
         startDate,
         endDate,
-        fiscalYearStart,
-        fiscalYearEnd,
         description: values.description,
         status: values.status || SeasonStatusValues.draft,
       } as any;

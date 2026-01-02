@@ -16,6 +16,8 @@ import {
 import dayjs from 'dayjs';
 import calculateCurrentGrade from '../utils/grade';
 import calculateAgeAt from '../utils/age';
+import { getAgeControlDateForSeason, calculateAgeOnDate, normalizeSeason } from '../utils/season';
+import { sportsService } from '../services/firebaseSports';
 import type { RootState } from '../store/store';
 import { programsService } from '../services/firebasePrograms';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
@@ -37,6 +39,7 @@ export default function RegistrationPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [modalProgram, setModalProgram] = useState<Program | null>(null);
   const [seasons, setSeasons] = useState<any[]>([]);
+  const [sports, setSports] = useState<any[]>([]);
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [parentInfo, setParentInfo] = useState<{ name: string; email: string; phone: string } | null>(null);
@@ -48,6 +51,17 @@ export default function RegistrationPage() {
   useEffect(() => {
     loadPrograms();
     loadPaymentMethods();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await sportsService.getSports();
+        setSports(s || []);
+      } catch (e) {
+        logger.error('Failed to load sports:', e);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -229,12 +243,28 @@ export default function RegistrationPage() {
 
               const isSelected = selectedAthleteId === athlete.id;
 
-              // Compute season age when a program context is available (modalProgram or route param),
+              // Compute season age using sport's age control date when a program context is available,
               // otherwise compute current age as of today.
               const programForDisplay = modalProgram || (programId ? programs.find(p => p.id === programId) : undefined);
               let ageVal = null as number | null;
-              if (programForDisplay && programForDisplay.birthDateEnd) {
-                ageVal = calculateAgeAt(athlete.dateOfBirth, dayjs(programForDisplay.birthDateEnd));
+              if (programForDisplay) {
+                try {
+                  // derive simple season from program or seasons list
+                  let simpleSeason = normalizeSeason(programForDisplay.season ?? { year: programForDisplay.year, seasonType: programForDisplay.season });
+                  // if program references a seasonId, try to find it
+                  if (!simpleSeason || (!simpleSeason.year && programForDisplay.seasonId)) {
+                    const found = seasons.find((s: any) => s.id === programForDisplay.seasonId);
+                    if (found) simpleSeason = normalizeSeason(found);
+                  }
+                  // find sport by id to get ageControlDate
+                  const sport = sports.find(s => s.id === programForDisplay.sport) || undefined;
+                  const controlDate = getAgeControlDateForSeason(simpleSeason, sport);
+                  ageVal = calculateAgeOnDate(athlete.dateOfBirth, controlDate);
+                } catch (e) {
+                  logger.error('Failed to compute season age, falling back to program birthDateEnd or today', e);
+                  if (programForDisplay.birthDateEnd) ageVal = calculateAgeAt(athlete.dateOfBirth, dayjs(programForDisplay.birthDateEnd));
+                  else ageVal = calculateAgeAt(athlete.dateOfBirth);
+                }
               } else {
                 ageVal = calculateAgeAt(athlete.dateOfBirth);
               }

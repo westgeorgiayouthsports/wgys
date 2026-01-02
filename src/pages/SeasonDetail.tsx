@@ -92,8 +92,6 @@ export default function SeasonDetail() {
       const endDate = values.endDate ? (values.endDate as any).format('YYYY-MM-DD') : undefined;
       const registrationOpen = values.registrationOpen ? (values.registrationOpen as any).format('YYYY-MM-DD') : undefined;
       const registrationClose = values.registrationClose ? (values.registrationClose as any).format('YYYY-MM-DD') : undefined;
-      const fiscalYearStart = values.fiscalYearStart ? (values.fiscalYearStart as any).format('YYYY-MM-DD') : undefined;
-      const fiscalYearEnd = values.fiscalYearEnd ? (values.fiscalYearEnd as any).format('YYYY-MM-DD') : undefined;
 
       const payload = {
         name: values.name,
@@ -103,8 +101,6 @@ export default function SeasonDetail() {
         endDate,
         registrationOpen,
         registrationClose,
-        fiscalYearStart,
-        fiscalYearEnd,
         description: values.description,
         status: values.status || SeasonStatusValues.draft,
       } as any;
