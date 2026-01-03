@@ -4,6 +4,7 @@ import type { ProgramTemplate } from '../types/programTemplate';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
 import logger from '../utils/logger';
+import { slugify } from '../utils/slugify';
 
 export const programTemplatesService = {
   async getTemplates(): Promise<ProgramTemplate[]> {
@@ -32,7 +33,15 @@ export const programTemplatesService = {
   async createTemplate(data: Omit<ProgramTemplate, 'id' | 'createdAt' | 'updatedAt'>, _userId?: string) {
     try {
       const now = new Date().toISOString();
-      const id = Date.now().toString();
+      // derive a stable human-readable id from sportId and programType (slugified)
+      const base = slugify(`${data.sportId || 'template'}-${data.programType || 'template'}`);
+      let id = base;
+      // ensure uniqueness
+      let suffix = 0;
+      while ((await get(ref(db, `programTemplates/${id}`))).exists()) {
+        suffix += 1;
+        id = `${base}-${suffix}`;
+      }
       const toWrite = { ...data, createdAt: now, updatedAt: now } as any;
       await set(ref(db, `programTemplates/${id}`), toWrite);
       try {
@@ -64,6 +73,31 @@ export const programTemplatesService = {
       try { await auditLogService.logDelete(AuditEntity.ProgramTemplate, id, data, userId); } catch (e) { logger.error('Error auditing programTemplate.delete', e); }
     } catch (e) {
       logger.error('Error deleting program template', e);
+      throw e;
+    }
+  }
+,
+  // Ensure default base program templates exist (idempotent).
+  async ensureDefaultProgramTemplates(): Promise<string[]> {
+    try {
+      const existing = await this.getTemplates();
+      const created: string[] = [];
+      const defaults: Array<Omit<ProgramTemplate, 'id' | 'createdAt' | 'updatedAt'>> = [
+        { sportId: 'baseball', programType: 'recreation', defaultBaseFee: 200, sex: 'any', defaultMinAge: 3, defaultMaxAge: 18, active: true },
+        { sportId: 'softball', programType: 'recreation', defaultBaseFee: 200, sex: 'female', defaultMinAge: 3, defaultMaxAge: 18, active: true },
+        { sportId: 'baseball', programType: 'select', defaultBaseFee: 200, sex: 'any', defaultMinAge: 5, defaultMaxAge: 18, active: true },
+        { sportId: 'softball', programType: 'select', defaultBaseFee: 200, sex: 'female', defaultMinAge: 5, defaultMaxAge: 18, active: true },
+      ];
+      for (const d of defaults) {
+        const found = existing.find(t => (t.sportId === d.sportId) && (t.programType === d.programType));
+        if (!found) {
+          const id = await this.createTemplate(d as any);
+          created.push(id);
+        }
+      }
+      return created;
+    } catch (e) {
+      logger.error('Error ensuring default program templates', e);
       throw e;
     }
   }

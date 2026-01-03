@@ -84,8 +84,8 @@ describe('Programs datepicker persistence', () => {
         sport: 'baseball',
         sexRestriction: 'coed',
         basePrice: 25.00,
-        registrationStart: dayjs('2025-01-01'),
-        registrationEnd: dayjs('2025-01-31'),
+        registrationOpen: dayjs('2025-01-01'),
+        registrationClose: dayjs('2025-01-31'),
         birthDateStart: dayjs('2010-01-01'),
         birthDateEnd: dayjs('2015-12-31'),
       });

@@ -23,6 +23,7 @@ export interface ProgramFormResponse {
 export interface Program {
   id: string;
   name: string;
+  templateId?: string;
   sport?: SportType;
   seasonId?: string; // Reference to Season document
   season?: SeasonType;
@@ -35,8 +36,8 @@ export interface Program {
   maxGrade?: number; // Maximum school grade (K=0, 1st=1, etc.)
   allowGradeExemption?: boolean; // Allow grade eligibility exemption
   active: boolean;
-  registrationStart: string;
-  registrationEnd: string;
+  registrationOpen: string;
+  registrationClose: string;
   basePrice: number;
   maxParticipants?: number;
   currentRegistrants: number;
@@ -51,8 +52,10 @@ export interface Program {
 export interface ProgramFormData {
   name: string;
   sport: SportType;
+  templateId?: string;
   type: ProgramType;
   season?: SeasonType;
+  seasonId?: string;
   year?: number;
   ageGroup?: string; // e.g., "10U", "12U"
   description: string;

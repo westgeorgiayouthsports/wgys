@@ -55,6 +55,7 @@ import calculateAgeAt from '../utils/age';
 import { storageService } from '../services/storageService';
 import { firebaseFilesService } from '../services/firebaseFiles';
 import { getCachedPref } from '../utils/prefs';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 const { Title, Text } = Typography;
 
@@ -748,59 +749,19 @@ export default function People() {
 
   return (
     <div className="page-container">
-      <div style={{ marginBottom: '24px' }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Title level={2} style={{ margin: 0 }}>
-              People Management
-            </Title>
-            <Text type="secondary">
-              {people.length} Total People
-            </Text>
-          </Col>
-          <Col>
-            <Space>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={() => activeTab === 'accounts' ? loadUsers() : loadPeople()}
-                loading={loading}
-              >
-                Refresh
-              </Button>
-              {(role === 'admin' || role === 'owner') && (
-                <Button
-                  type="default"
-                  loading={syncing}
-                  onClick={handleSyncUsers}
-                >
-                  Sync Users
-                </Button>
-              )}
-              <Button
-                icon={<LinkOutlined />}
-                onClick={() => setLinkModalVisible(true)}
-                disabled={selectedPeople.length < 2}
-              >
-                Link Family ({selectedPeople.length})
-              </Button>
-              <Button
-                icon={<MergeCellsOutlined />}
-                onClick={() => setMergeModalVisible(true)}
-                disabled={selectedPeople.length !== 2}
-              >
-                Merge Duplicates
-              </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAddPerson}
-              >
-                Add Person
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </div>
+      <AdminPageHeader
+        title={<>
+          <Title level={2} style={{ margin: 0 }}>People Management</Title>
+          <Text type="secondary">{people.length} Total People</Text>
+        </>}
+        actions={<Space>
+          <Button icon={<ReloadOutlined />} onClick={() => activeTab === 'accounts' ? loadUsers() : loadPeople()} loading={loading}>Refresh</Button>
+          {(role === 'admin' || role === 'owner') && (<Button type="default" loading={syncing} onClick={handleSyncUsers}>Sync Users</Button>)}
+          <Button icon={<LinkOutlined />} onClick={() => setLinkModalVisible(true)} disabled={selectedPeople.length < 2}>Link Family ({selectedPeople.length})</Button>
+          <Button icon={<MergeCellsOutlined />} onClick={() => setMergeModalVisible(true)} disabled={selectedPeople.length !== 2}>Merge Duplicates</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddPerson}>Add Person</Button>
+        </Space>}
+      />
 
       {/* Stats Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>

@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Table, Card, Input, Select, Button, Space, Typography, Popconfirm, message, Tooltip } from 'antd';
+import { Table, Card, Input, Select, Button, Space, Popconfirm, message, Tooltip } from 'antd';
 import { auditLogService } from '../services/auditLog';
 import type { AuditRecord } from '../services/auditLog';
 import type { RootState } from '../store/store';
 import { useSelector } from 'react-redux';
 import dayjs from 'dayjs';
 import { DeleteOutlined } from '@ant-design/icons';
-
-const { Title } = Typography;
+import AdminPageHeader from '../components/AdminPageHeader';
 
 export default function AuditLogs() {
   const { role } = useSelector((state: RootState) => state.auth);
@@ -51,14 +50,7 @@ export default function AuditLogs() {
 
   return (
     <div className="page-container">
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <div>
-          <Title level={2} style={{ margin: 0 }}>Audit Logs</Title>
-        </div>
-        <Space>
-          <Button onClick={load}>Refresh</Button>
-        </Space>
-      </div>
+      <AdminPageHeader title="Audit Logs" actions={<Button onClick={load}>Refresh</Button>} />
 
       <Card>
         <Space style={{ marginBottom: 12 }}>

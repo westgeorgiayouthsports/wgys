@@ -21,6 +21,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:all": "npm run test && npm run test:e2e",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "seed:program-templates": "node scripts/seed-program-templates.mjs",
+    "migrate:program-templates": "node scripts/migrate-program-templates.mjs",
     "typecheck:watch": "tsc --noEmit -p tsconfig.json --watch"
   },
   "dependencies": {

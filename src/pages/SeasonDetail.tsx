@@ -89,16 +89,14 @@ export default function SeasonDetail() {
         logger.error('Could not perform client-side duplicate check', err);
       }
       const startDate = values.startDate ? (values.startDate as any).format('YYYY-MM-DD') : undefined;
-      const endDate = values.endDate ? (values.endDate as any).format('YYYY-MM-DD') : undefined;
-      const registrationOpen = values.registrationOpen ? (values.registrationOpen as any).format('YYYY-MM-DD') : undefined;
-      const registrationClose = values.registrationClose ? (values.registrationClose as any).format('YYYY-MM-DD') : undefined;
+        const registrationOpen = values.registrationOpen ? (values.registrationOpen as any).format('YYYY-MM-DD') : undefined;
+        const registrationClose = values.registrationClose ? (values.registrationClose as any).format('YYYY-MM-DD') : undefined;
 
       const payload = {
         name: values.name,
         seasonType: values.seasonType,
         year: values.year,
         startDate,
-        endDate,
         registrationOpen,
         registrationClose,
         description: values.description,

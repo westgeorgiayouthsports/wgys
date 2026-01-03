@@ -2,8 +2,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Dropdown, Button, Badge, Modal, Select, Radio, Space, Tooltip } from 'antd';
 import { UserOutlined, LogoutOutlined, DownOutlined, BulbOutlined, TeamOutlined, ShoppingCartOutlined, FileTextOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import RegistrationHelp from '../../pages/RegistrationHelp';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
+const RegistrationHelp = lazy(() => import('../../pages/RegistrationHelp'));
 import type { RootState } from '../../store/store';
 import { logout } from '../../store/slices/authSlice';
 import { setTheme } from '../../store/slices/themeSlice';
@@ -242,7 +242,9 @@ export default function Header() {
             footer={null}
             width={700}
           >
-            <RegistrationHelp compact />
+            <Suspense fallback={<div style={{ padding: 24 }}>Loading help...</div>}>
+              <RegistrationHelp compact />
+            </Suspense>
           </Modal>
 
         </div>

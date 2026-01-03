@@ -30,6 +30,7 @@ const navItems = [
   { key: '/admin/people', label: 'People', icon: <ContactsOutlined /> },
   { key: '/admin/settings', label: 'Settings', icon: <SettingOutlined /> },
   { key: '/admin/payment-plans', label: 'Payment Plans', icon: <CreditCardOutlined /> },
+  { key: '/admin/discounts', label: 'Discounts', icon: <UsergroupAddOutlined /> },
 
   // User items
   { key: '/profile', label: 'My Profile', icon: <UserOutlined /> },
@@ -61,6 +62,7 @@ const USER_KEYS = new Set([
   const ADMIN_KEYS = new Set([
   '/admin/dashboard',
   '/admin/seasons',
+  '/admin/discounts',
   '/admin/sports',
   '/admin/program-templates',
   '/admin/audit',

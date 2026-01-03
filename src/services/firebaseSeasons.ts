@@ -9,6 +9,7 @@ import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
 import { SeasonStatusValues } from '../types/enums/season';
 import logger from '../utils/logger';
+import { slugify } from '../utils/slugify';
 
 export const seasonsService = {
   deriveSeasonMeta(startDateStr: string): { type: SeasonType; year: number } {
@@ -152,8 +153,30 @@ export const seasonsService = {
         if (dupByTypeYear) throw new Error('A season with that type and year already exists');
       }
       const now = new Date().toISOString();
-      const newSeasonRef = ref(db, `seasons/${Date.now()}`);
-      const seasonId = newSeasonRef.key!;
+      let seasonId: string;
+      let newSeasonRef;
+      if (candidateType && candidateYear) {
+        const baseId = slugify(`${candidateYear}-${candidateType}`);
+        // we already checked for duplicate season by type/year above and would have thrown.
+        // still ensure the id isn't taken (defensive)
+        const exists = (await get(ref(db, `seasons/${baseId}`))).exists();
+        if (exists) {
+          // defensive: append suffix until unique
+          let i = 1;
+          let candidate = `${baseId}-${i}`;
+          while ((await get(ref(db, `seasons/${candidate}`))).exists()) {
+            i += 1;
+            candidate = `${baseId}-${i}`;
+          }
+          seasonId = candidate;
+        } else {
+          seasonId = baseId;
+        }
+        newSeasonRef = ref(db, `seasons/${seasonId}`);
+      } else {
+        newSeasonRef = ref(db, `seasons/${Date.now()}`);
+        seasonId = newSeasonRef.key!;
+      }
       // Remove undefined or empty string fields to avoid Firebase set errors
       const cleanedData = Object.fromEntries(
         Object.entries(formData).filter(([_, v]) => v !== undefined && v !== '')
@@ -166,8 +189,7 @@ export const seasonsService = {
         derived.seasonType = meta.type;
         derived.year = meta.year;
       }
-      const seasonData: Season = {
-        id: seasonId,
+      const seasonDataToStore: any = {
         ...(cleanedData as any),
         ...derived,
         status: (cleanedData as any).status || SeasonStatusValues.active,
@@ -176,13 +198,13 @@ export const seasonsService = {
         createdBy: userId,
       };
 
-      await set(newSeasonRef, seasonData);
+      await set(newSeasonRef, seasonDataToStore);
       try {
         await auditLogService.log({
           action: 'season.created',
           entityType: AuditEntity.Season,
           entityId: seasonId,
-          details: seasonData,
+          details: { id: seasonId, ...seasonDataToStore },
         });
       } catch (e) {
         logger.error('Error auditing season.created:', e);

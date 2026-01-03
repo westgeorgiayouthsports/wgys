@@ -41,6 +41,8 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const AdminRegistrations = lazy(() => import('./pages/AdminRegistrations'));
 const AdminPayments = lazy(() => import('./pages/AdminPayments'));
 const PaymentPlans = lazy(() => import('./pages/PaymentPlans'));
+const Discounts = lazy(() => import('./pages/Discounts'));
+const SeasonDiscounts = lazy(() => import('./pages/SeasonDiscounts'));
 const ProgramTemplates = lazy(() => import('./pages/ProgramTemplates'));
 
 // Lazy load views
@@ -221,6 +223,16 @@ function Router() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/admin/discounts" element={
+                <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                  <Discounts />
+                </ProtectedRoute>
+              } />
+                <Route path="/admin/season-discounts" element={
+                  <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
+                    <SeasonDiscounts />
+                  </ProtectedRoute>
+                } />
               <Route path="/admin/sports" element={
                 <ProtectedRoute isAuthenticated={isAuthenticated} requiredRole="admin">
                   <Sports />

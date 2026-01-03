@@ -337,7 +337,7 @@ export default function RegistrationPage() {
             <Card size="small" title={`${getSeasonName(p) ? getSeasonName(p) + ' - ' : ''}${p.name}`} extra={<Text strong>${(p.basePrice || 0).toFixed(2)}</Text>}>
               {/* Registration Deadline */}
               <div style={{ marginBottom: 8 }}>
-                <Text type="secondary">Last Day: {dayjs(p.registrationEnd).format('MMM D, YYYY')}</Text>
+                <Text type="secondary">Last Day: {dayjs(p.registrationClose).format('MMM D, YYYY')}</Text>
               </div>
 
               {/* Requirements Section */}

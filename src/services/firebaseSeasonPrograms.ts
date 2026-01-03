@@ -11,8 +11,8 @@ export type SeasonProgram = {
   enabled?: boolean;
   basePrice?: number | null;
   maxParticipants?: number | null;
-  registrationStart?: string | null;
-  registrationEnd?: string | null;
+  registrationOpen?: string | null;
+  registrationClose?: string | null;
   questions?: any[] | null;
   createdAt?: string;
   updatedAt?: string;

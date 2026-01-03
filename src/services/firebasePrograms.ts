@@ -4,6 +4,7 @@ import type { Program, ProgramFormData } from '../types/program';
 import { auditLogService } from './auditLog';
 import { AuditEntity } from '../types/enums';
 import logger from '../utils/logger';
+import { programTemplatesService } from './firebaseProgramTemplates';
 
 export const programsService = {
   async getPrograms(): Promise<Program[]> {
@@ -48,20 +49,51 @@ export const programsService = {
       const programsRef = ref(db, 'programs');
       const now = new Date().toISOString();
 
+      // Require templateId and seasonId
+      if (!programData.templateId) throw new Error('templateId is required to create a program');
+      if (!programData.seasonId) throw new Error('seasonId is required to create a program');
+
+      // Fetch template defaults (if available)
+      let tplDefaults: any = {};
+      try {
+        const tpl = await programTemplatesService.getTemplateById(programData.templateId as string);
+        if (tpl) tplDefaults = tpl as any;
+      } catch (e) {
+        logger.error('Failed to load program template for defaults', e);
+      }
+
       const cleanedData = Object.fromEntries(
         Object.entries(programData).filter(([_, value]) => value !== undefined && value !== '')
       );
 
-      const newProgram = {
+      // Apply defaults from template when not provided in the form
+      const applied: any = {
+        ...tplDefaults,
         ...cleanedData,
+      };
+
+      // Ensure specific fields map: defaultBaseFee -> basePrice, sex -> sexRestriction
+      if (tplDefaults.defaultBaseFee !== undefined && (applied.basePrice === undefined || applied.basePrice === null)) {
+        applied.basePrice = tplDefaults.defaultBaseFee;
+      }
+      if (tplDefaults.sex && !applied.sexRestriction) applied.sexRestriction = tplDefaults.sex;
+
+      const newProgram = {
+        ...applied,
         registrationOpen: true,
         currentParticipants: 0,
+        totalPayments: 0,
         createdAt: now,
         updatedAt: now,
         createdBy,
-      };
+      } as any;
 
       const result = await push(programsRef, newProgram);
+      try {
+        await auditLogService.log({ action: 'program.created', entityType: AuditEntity.Program, entityId: result.key, details: newProgram });
+      } catch (e) {
+        logger.error('Error auditing program.create', e);
+      }
       return result.key!;
     } catch (error) {
       logger.error('Error creating program:', error);
@@ -103,6 +135,22 @@ export const programsService = {
     } catch (error) {
       logger.error('Error deleting program:', error);
       throw error;
+    }
+  },
+
+  async unlinkProgram(programId: string): Promise<void> {
+    try {
+      const programRef = ref(db, `programs/${programId}`);
+      const now = new Date().toISOString();
+      await update(programRef, { seasonId: null, updatedAt: now } as any);
+      try {
+        await auditLogService.log({ action: 'program.unlinked_from_season', entityType: AuditEntity.Program, entityId: programId, details: { seasonId: null } });
+      } catch (e) {
+        logger.error('Error auditing program.unlinked_from_season', e);
+      }
+    } catch (e) {
+      logger.error('Error unlinking program', e);
+      throw e;
     }
   },
 

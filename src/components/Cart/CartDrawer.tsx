@@ -6,11 +6,13 @@ import { RootState } from '../../store/store';
 import { removeItem, clearCart } from '../../store/slices/cartSlice';
 import { programRegistrationsService } from '../../services/firebaseProgramRegistrations';
 import { seasonsService } from '../../services/firebaseSeasons';
+import { firebaseDiscounts } from '../../services/firebaseDiscounts';
 import { paymentPlansService } from '../../services/paymentPlans';
 import { auditLogService } from '../../services/auditLog';
 import { AuditEntity } from '../../types/enums';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import logger from '../../utils/logger';
 
 const { Text, Title } = Typography;
 
@@ -73,6 +75,15 @@ export default function CartDrawer({ open, onClose }: Props) {
   useEffect(() => {
     (async () => {
       try {
+        // attempt to load global group-discounts mapping from firebaseDiscounts
+        let globalGroupDiscounts: Record<string, any> | null = null;
+        try {
+          globalGroupDiscounts = await firebaseDiscounts.getGroupDiscounts();
+        } catch (e) {
+          logger.error('Error fetching global group discounts', e);
+          globalGroupDiscounts = null;
+        }
+
         // group items by season
         const bySeason: Record<string, typeof items> = {};
         for (const it of items) {
@@ -82,12 +93,24 @@ export default function CartDrawer({ open, onClose }: Props) {
         }
 
         let groupTotal = 0;
-        // for each season, apply group discounts if defined on season
+        // for each season, apply group discounts (prefer global mapping if available)
         for (const sid of Object.keys(bySeason)) {
           if (sid === 'no-season') continue;
-          const season = await seasonsService.getSeasonById(sid);
-          if (!season) continue;
-          const discounts = season.groupDiscounts || {};
+          let discounts: Record<string, number> = {};
+          if (globalGroupDiscounts) {
+            discounts = globalGroupDiscounts[sid] || {};
+          } else if (firebaseDiscounts && (firebaseDiscounts as any).getGroupDiscountsForSeason) {
+            try {
+              discounts = await (firebaseDiscounts as any).getGroupDiscountsForSeason(sid) || {};
+            } catch (e) {
+              logger.error('Error fetching group discounts for season', e);
+              discounts = {};
+            }
+          } else {
+            const season = await seasonsService.getSeasonById(sid);
+            if (!season) continue;
+            discounts = (season as any).groupDiscounts || {};
+          }
           if (!discounts || Object.keys(discounts).length === 0) continue;
           const list = bySeason[sid].slice().sort((a,b)=> (a.price - b.price));
           // discounts keys are registration positions (numbers)
@@ -113,10 +136,14 @@ export default function CartDrawer({ open, onClose }: Props) {
           const sid = appliedCode.seasonId;
           const seasonItems = items.filter(i => (i.programSeasonId || 'no-season') === sid);
           const seasonSubtotal = seasonItems.reduce((s,i)=> s + (i.price * (i.quantity || 1)), 0);
-          if (appliedCode.type === 'fixed') {
-            codeTotal = Math.min(appliedCode.amount, seasonSubtotal);
+          const amtType = (appliedCode.type || 'fixed');
+          const amt = appliedCode.amount || 0;
+          if (amtType === 'fixed') {
+            // fixed amounts are stored as dollars
+            codeTotal = Math.min(amt, seasonSubtotal);
           } else {
-            codeTotal = Math.round((appliedCode.amount / 100) * seasonSubtotal);
+            // percent
+            codeTotal = Math.round((amt / 100) * seasonSubtotal);
           }
         }
 
@@ -235,14 +262,19 @@ export default function CartDrawer({ open, onClose }: Props) {
     try {
       const seasonIds = Array.from(new Set(items.map(i => i.programSeasonId).filter(Boolean) as string[]));
       for (const sid of seasonIds) {
-        const season = await seasonsService.getSeasonById(sid);
-        if (!season || !season.discountCodes) continue;
-        const found = (season.discountCodes || []).find(c => c.code.toLowerCase() === discountCodeInput.trim().toLowerCase() && (c.active ?? true));
-        if (found) {
-          setAppliedCode({ seasonId: sid, code: found.code, type: found.type || 'fixed', amount: found.amount });
-          message.success('Discount code applied');
-          return;
+        let found: any = null;
+        try {
+          found = await firebaseDiscounts.findByCode(discountCodeInput.trim(), sid);
+        } catch (e) {
+          logger.error('Error looking up discount code via service', e);
+          found = null;
         }
+        if (!found) continue;
+        const amountType = (found.amountType as string) || (found.type as string) || 'fixed';
+        const amount = found.amount ?? 0;
+        setAppliedCode({ seasonId: sid, code: found.code, type: amountType, amount });
+        message.success('Discount code applied');
+        return;
       }
       message.error('Discount code not found for items in your cart');
     } catch (e) {

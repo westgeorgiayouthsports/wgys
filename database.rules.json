@@ -86,15 +86,22 @@
       "$tplId": {
         ".read": "auth != null",
         ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
-        ".validate": "newData.hasChildren(['sportId','divisionKey','programType'])",
+        ".validate": "newData.hasChildren(['sportId','programType'])",
         "sportId": { ".validate": "newData.isString() && newData.val().length > 0" },
-        "divisionKey": { ".validate": "newData.isString() && newData.val().length > 0" },
         "programType": { ".validate": "newData.isString() && (newData.val() == 'recreation' || newData.val() == 'select' || newData.val() == 'sport' || newData.val() == 'lesson' || newData.val() == 'training' || newData.val() == 'tryout' || newData.val() == 'camp')" },
         "sex": { ".validate": "newData.val() == null || (newData.isString() && (newData.val() == 'any' || newData.val() == 'male' || newData.val() == 'female'))" },
         "defaultMinAge": { ".validate": "newData.val() == null || newData.isNumber()" },
         "defaultMaxAge": { ".validate": "newData.val() == null || newData.isNumber()" },
         "defaultBaseFee": { ".validate": "newData.val() == null || newData.isNumber()" },
         "active": { ".validate": "newData.val() == null || newData.isBoolean()" }
+      }
+    },
+    "discounts": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      "$discountId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')"
       }
     },
     "seasons": {
@@ -126,8 +133,8 @@
         "enabled": { ".validate": "newData.isBoolean()" },
         "basePrice": { ".validate": "newData.val() == null || newData.isNumber()" },
         "maxParticipants": { ".validate": "newData.val() == null || newData.isNumber()" },
-        "registrationStart": { ".validate": "newData.val() == null || newData.isString()" },
-        "registrationEnd": { ".validate": "newData.val() == null || newData.isString()" },
+        "registrationOpen": { ".validate": "newData.val() == null || newData.isString()" },
+        "registrationClose": { ".validate": "newData.val() == null || newData.isString()" },
         "questions": { ".validate": "newData.val() == null || newData.hasChildren()" },
         "createdAt": { ".validate": "newData.isString()" },
         "updatedAt": { ".validate": "newData.isString()" }

@@ -1,8 +1,9 @@
-import { useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import { useEffect, forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import logger from '../utils/logger';
 import { Form, Input, Row, Col, DatePicker, InputNumber, Segmented, Select, message } from 'antd';
 import type { Season } from '../types/season';
 import { seasonsService } from '../services/firebaseSeasons';
+import { slugify } from '../utils/slugify';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { SeasonStatusValues } from '../types/enums/season';
@@ -22,6 +23,8 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
   ref) => {
   const [form] = Form.useForm();
   const [msgApi, contextHolder] = message.useMessage();
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [previewTaken, setPreviewTaken] = useState(false);
 
   useImperativeHandle(ref, () => ({
     submit: () => form.submit(),
@@ -35,7 +38,6 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
         seasonType: season.seasonType,
         year: season.year,
         startDate: season.startDate ? dayjs(season.startDate) : undefined,
-        endDate: season.endDate ? dayjs(season.endDate) : undefined,
         registrationOpen: (season as any).registrationOpen ? dayjs((season as any).registrationOpen) : undefined,
         registrationClose: (season as any).registrationClose ? dayjs((season as any).registrationClose) : undefined,
         description: season.description,
@@ -53,21 +55,10 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
     if (!date) return;
     const startStr = date.format('YYYY-MM-DD');
     const meta = seasonsService.deriveSeasonMeta(startStr);
-    const currentEnd = form.getFieldValue('endDate');
-    const fyStart = date;
-    const fyEnd = date.add(1, 'year');
-    const defaultEnd = (currentEnd || date.add(3, 'month')) as Dayjs;
-    const clampedEnd = defaultEnd.isBefore(fyStart, 'day')
-      ? fyStart
-      : defaultEnd.isAfter(fyEnd, 'day')
-        ? fyEnd
-        : defaultEnd;
-
     form.setFieldsValue({
       startDate: date,
       seasonType: meta.type,
       year: meta.year,
-      endDate: clampedEnd,
     });
     form.setFields([{ name: 'startDate', errors: [] }]);
     // revalidate registrationClose when season start changes
@@ -86,9 +77,44 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
     if (readOnly) return;
     if (dupTimer.current) clearTimeout(dupTimer.current);
     dupTimer.current = window.setTimeout(() => {
-      void checkForDuplicates(values);
+      void (async () => {
+        await computePreviewId(values);
+        await checkForDuplicates(values);
+      })();
     }, 300) as unknown as number;
   };
+
+  async function computePreviewId(values?: any) {
+    try {
+      if (season) {
+        setPreviewId(season.id);
+        setPreviewTaken(false);
+        return;
+      }
+      const v = values || form.getFieldsValue();
+      let seasonType = v.seasonType as string | undefined;
+      let year = v.year as number | undefined;
+      const startDate = v.startDate as any;
+      if (startDate && typeof startDate.format === 'function') {
+        const meta = seasonsService.deriveSeasonMeta(startDate.format('YYYY-MM-DD'));
+        seasonType = meta.type as any;
+        year = meta.year;
+      }
+      if (seasonType && year) {
+        const baseId = slugify(`${year}-${seasonType}`);
+        setPreviewId(baseId);
+        const existing = await seasonsService.getSeasonById(baseId);
+        setPreviewTaken(!!existing && existing.id !== (season as any)?.id);
+      } else {
+        setPreviewId(null);
+        setPreviewTaken(false);
+      }
+    } catch (e) {
+      logger.error('Error computing preview id', e);
+      setPreviewId(null);
+      setPreviewTaken(false);
+    }
+  }
 
   const formatSeasonLabel = (s: Season) => {
     const t = s.seasonType || (s as any).seasonType || '';
@@ -173,9 +199,20 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
         runDebouncedCheck(all);
       }
     } }>
-      <Form.Item name="name" label="Season Name" rules={[{ required: true, message: 'Please enter season name' }]}>
-        <Input placeholder="e.g., Spring 2026" disabled={!!readOnly} onBlur={() => runDebouncedCheck()} />
-      </Form.Item>
+      <Row gutter={12}>
+        <Col span={12}>
+          <Form.Item name="name" label="Season Name" rules={[{ required: true, message: 'Please enter season name' }]}>
+            <Input placeholder="e.g., Spring 2026" disabled={!!readOnly} onBlur={() => runDebouncedCheck()} />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item label="Season ID (computed)">
+            <Input value={previewId || ''} readOnly />
+            {previewId && previewTaken && <div style={{ color: '#d46b08', marginTop: 6 }}>ID already exists; a unique suffix will be appended on save.</div>}
+            {!previewId && <div style={{ color: '#777', marginTop: 6 }}>ID will be generated from year and season type (e.g., 2026-spring).</div>}
+          </Form.Item>
+        </Col>
+      </Row>
 
       <Row gutter={12}>
         <Col span={12}>
@@ -193,33 +230,25 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
           </Form.Item>
         </Col>
 
-        <Col span={12}>
-          <Form.Item name="endDate" label="End Date">
-            <DatePicker
-              allowClear={false}
-              style={{ width: '100%' }}
-              format="YYYY-MM-DD"
-              disabled={!!readOnly} />
-          </Form.Item>
-        </Col>
+        {/* endDate removed — seasons only require a start date */}
       </Row>
 
       <Row gutter={12}>
         <Col span={12}>
           <Form.Item
-            name="registrationStart"
-            label="Registration Start"
+            name="registrationOpen"
+            label="Registration Open"
             rules={[
               { required: true, message: 'Please select registration start' },
               ({ getFieldValue }) => ({
                 validator(_, value: Dayjs | undefined) {
                   const regClose = getFieldValue('registrationClose') as Dayjs | undefined;
                   if (!value) return Promise.resolve();
-                  if (regClose && value.isAfter(regClose, 'day')) return Promise.reject(new Error('Registration start must be before registration end'));
+                  if (regClose && value.isAfter(regClose, 'day')) return Promise.reject(new Error('Registration open must be before registration close'));
                   const year = getFieldValue('year') as number | undefined;
                   if (year) {
                     const earliest = dayjs(`${year - 1}-01-01`);
-                    if (value.isBefore(earliest, 'day')) return Promise.reject(new Error(`Registration start cannot be earlier than ${earliest.format('YYYY-MM-DD')}`));
+                    if (value.isBefore(earliest, 'day')) return Promise.reject(new Error(`Registration open cannot be earlier than ${earliest.format('YYYY-MM-DD')}`));
                   }
                   return Promise.resolve();
                 }
@@ -237,17 +266,15 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
 
         <Col span={12}>
           <Form.Item
-            name="registrationEnd"
-            label="Registration End"
+            name="registrationClose"
+            label="Registration Close"
             rules={[
-              { required: true, message: 'Please select registration end' },
+              { required: true, message: 'Please select registration close' },
               ({ getFieldValue }) => ({
                 validator(_, value: Dayjs | undefined) {
                   const regOpen = getFieldValue('registrationOpen') as Dayjs | undefined;
-                  const endDate = getFieldValue('endDate') as Dayjs | undefined;
                   if (!value) return Promise.resolve();
-                  if (regOpen && value.isBefore(regOpen, 'day')) return Promise.reject(new Error('Registration end must be after registration start'));
-                  if (endDate && !value.isBefore(endDate, 'day')) return Promise.reject(new Error('Registration end must be before season end date'));
+                  if (regOpen && value.isBefore(regOpen, 'day')) return Promise.reject(new Error('Registration close must be after registration open'));
                   return Promise.resolve();
                 }
               })
@@ -294,6 +321,8 @@ const SeasonEditor = forwardRef<SeasonEditorRef, Props>(({ season, onFinish, rea
           </Form.Item>
         </Col>
       </Row>
+
+      {/* Preview moved next to season name */}
 
       <Form.Item name="description" label="Description">
         <Input.TextArea rows={3} placeholder="Season details" disabled={!!readOnly} />

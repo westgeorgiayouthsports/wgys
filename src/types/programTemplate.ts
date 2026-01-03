@@ -3,13 +3,11 @@ import type { ProgramType, ProgramSex } from './enums/program';
 export interface ProgramTemplate {
   id: string;
   sportId: string;
-  divisionKey: string;
+  // divisionKey removed — base templates are not division-specific
   programType: ProgramType;
   sex?: ProgramSex;
   defaultMinAge?: number;
   defaultMaxAge?: number;
-  defaultTeamSizeMin?: number;
-  defaultTeamSizeMax?: number;
   defaultBaseFee?: number;
   active?: boolean;
   createdAt?: string;

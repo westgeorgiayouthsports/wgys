@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Table, Card, Button, Space, Modal, Form, Input, message, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { sportsService } from '../services/firebaseSports';
+import { slugify } from '../utils/slugify';
 import logger from '../utils/logger';
 
 export default function Sports() {
@@ -10,6 +12,7 @@ export default function Sports() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [form] = Form.useForm();
+  const dupTimer = useRef<number | undefined>(undefined);
 
   const load = async () => {
     setLoading(true);
@@ -33,10 +36,37 @@ export default function Sports() {
     setEditing(s);
     // defensive mapping in case DB keys differ
     form.setFieldsValue({
+      id: s?.id ?? '',
       name: s?.name ?? s?.Name ?? '',
       ageControlDate: s?.ageControlDate ?? s?.age_control_date ?? s?.age ?? '',
     });
     setModalVisible(true);
+  };
+
+  useEffect(() => {
+    return () => { if (dupTimer.current) clearTimeout(dupTimer.current); };
+  }, []);
+
+  const runDebouncedNameCheck = (name?: string) => {
+    if (dupTimer.current) clearTimeout(dupTimer.current);
+    dupTimer.current = window.setTimeout(async () => {
+      try {
+        const checkName = String(name || form.getFieldValue('name') || '').trim();
+        if (!checkName) {
+          form.setFields([{ name: 'name', errors: [] }]);
+          return;
+        }
+        const list = await sportsService.getSports();
+        const dup = list.find(s => (s.name || '').trim().toLowerCase() === checkName.toLowerCase() && (!(editing && editing.id) || s.id !== editing.id));
+        if (dup) {
+          form.setFields([{ name: 'name', errors: ['A sport with that name already exists'] }]);
+        } else {
+          form.setFields([{ name: 'name', errors: [] }]);
+        }
+      } catch (e) {
+        logger.error('Name duplicate check failed', e);
+      }
+    }, 300) as unknown as number;
   };
 
   const handleDelete = async (id: string) => {
@@ -70,9 +100,16 @@ export default function Sports() {
 
       // Validate unique name (case-insensitive) among loaded sports
       const name = String(vals.name || '').trim();
+      const formId = String(vals.id || slugify(name));
       const duplicate = sports.find(s => (s.name || '').toLowerCase() === name.toLowerCase() && (!(editing && editing.id) || s.id !== editing.id));
       if (duplicate) {
         message.error('A sport with that name already exists');
+        return;
+      }
+
+      const duplicateId = sports.find(s => s.id === formId && (!(editing && editing.id) || s.id !== editing.id));
+      if (duplicateId) {
+        message.error('A sport with that id already exists');
         return;
       }
 
@@ -80,7 +117,7 @@ export default function Sports() {
         await sportsService.updateSport(editing.id, { ...vals, name, ageControlDate: mmdd });
         message.success('Sport updated');
       } else {
-        await sportsService.createSport({ ...vals, name, ageControlDate: mmdd });
+        await sportsService.createSport({ ...vals, id: formId, name, ageControlDate: mmdd });
         message.success('Sport created');
       }
       setModalVisible(false);
@@ -93,6 +130,7 @@ export default function Sports() {
 
   const columns = [
     { title: 'Name', dataIndex: 'name', key: 'name' },
+    { title: 'ID', dataIndex: 'id', key: 'id', render: (id: any) => (<span style={{ fontFamily: 'monospace' }}>{id}</span>) },
     { title: 'Age Control', dataIndex: 'ageControlDate', key: 'ageControlDate' },
     {
       title: 'Actions', key: 'actions', render: (r: any) => (
@@ -108,26 +146,24 @@ export default function Sports() {
 
   return (
     <div className="page-container full-width">
-      <div style={{ marginBottom: 16 }}>
-        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-          <div>
-            <h2 style={{ margin: 0 }}>Sports</h2>
-            <div style={{ color: '#999' }}>Manage sports and their age control dates</div>
-          </div>
-          <div>
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Sport</Button>
-          </div>
-        </Space>
-      </div>
+      <AdminPageHeader title={<h2 style={{ margin: 0 }}>Sports</h2>} subtitle={"Manage sports and their age control dates"} actions={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Sport</Button>} />
 
       <Card>
         <Table dataSource={sports} columns={columns} rowKey="id" loading={loading} />
       </Card>
 
       <Modal title={editing ? 'Edit Sport' : 'Add Sport'} open={modalVisible} onOk={handleOk} onCancel={() => setModalVisible(false)}>
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" onValuesChange={(changed, all) => {
+          if (changed.name !== undefined) {
+            try { form.setFieldsValue({ id: slugify(String(all.name || '')) }); } catch (e) { logger.error('Failed computing id', e); }
+            if (changed.name !== undefined) runDebouncedNameCheck(all.name);
+          }
+        }}>
           <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-            <Input />
+              <Input onBlur={() => runDebouncedNameCheck()} onChange={() => { /* keep computing id in onValuesChange */ }} />
+            </Form.Item>
+          <Form.Item name="id" label="ID (computed)">
+            <Input readOnly style={{ fontFamily: 'monospace' }} />
           </Form.Item>
           <Form.Item name="ageControlDate" label="Age Control (MM-DD)" rules={[{ required: true, pattern: /^\d{2}-\d{2}$/ }]}>
             <Input placeholder="MM-DD" />

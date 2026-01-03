@@ -839,8 +839,10 @@ export default function Family() {
                         <Select
                           placeholder="Select state"
                           disabled={sameAddress}
-                          showSearch
-                          optionFilterProp="children"
+                          showSearch={{ filterOption: (input: string, option: any) => {
+                            const label = (option as any)?.label ?? (option as any)?.children;
+                            return String(label || '').toLowerCase().includes(String(input).toLowerCase());
+                          } }}
                         >
                           <Select.Option value="AL">Alabama</Select.Option>
                           <Select.Option value="AK">Alaska</Select.Option>

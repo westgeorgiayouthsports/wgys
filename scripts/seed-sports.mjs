@@ -72,19 +72,30 @@ const sports = [
   { name: 'Football', ageControlDate: '09-01' },
 ];
 
+function slugify(s) {
+  return String(s || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-');
+}
+
 async function seed() {
   try {
     const ref = db.ref('sports');
     for (const s of sports) {
-      const snap = await ref.orderByChild('name').equalTo(s.name).get();
+      const id = slugify(s.name);
+      const sportRef = ref.child(id);
+      const snap = await sportRef.get();
       if (snap.exists()) {
-        console.log(`Skipping existing sport: ${s.name}`);
+        console.log(`Skipping existing sport id=${id} name=${s.name}`);
         continue;
       }
       const now = new Date().toISOString();
-      const payload = { ...s, createdAt: now, updatedAt: now };
-      const res = await ref.push(payload);
-      console.log(`Created sport ${s.name} -> ${res.key}`);
+      const payload = { id, name: s.name, ageControlDate: s.ageControlDate, createdAt: now, updatedAt: now };
+      await sportRef.set(payload);
+      console.log(`Created sport ${s.name} -> ${id}`);
     }
     console.log('Seeding complete');
     process.exit(0);

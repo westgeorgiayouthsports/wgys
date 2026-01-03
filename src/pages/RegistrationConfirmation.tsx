@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Card, Typography, Descriptions, Spin, Button } from 'antd';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Card, Typography, Descriptions, Spin, Button, Space } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
 import { programsService } from '../services/firebasePrograms';
 import { peopleService } from '../services/firebasePeople';
@@ -11,6 +12,9 @@ const { Title } = Typography;
 
 export default function RegistrationConfirmation() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const location = (window as any).__wgys_location__ || undefined;
+  const fromPath = (location && (location.state as any)?.from) || undefined;
   const [loading, setLoading] = useState(true);
   const [reg, setReg] = useState<any>(null);
   const [programName, setProgramName] = useState<string>('');
@@ -104,7 +108,7 @@ export default function RegistrationConfirmation() {
         }
       } catch (e) {
         // non-blocking enhancements
-         
+
         console.error('Failed to resolve confirmation display fields', e);
       }
     })();
@@ -115,7 +119,12 @@ export default function RegistrationConfirmation() {
 
   return (
     <div className="page-container">
-      <Title level={2}>Registration Confirmation</Title>
+      <div style={{ marginBottom: 16 }}>
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => { if (fromPath) return navigate(fromPath); navigate(-1); }}>Back</Button>
+          <Title level={2} style={{ margin: 0 }}>Registration Confirmation</Title>
+        </Space>
+      </div>
       <Card>
         <Descriptions column={1} bordered>
           <Descriptions.Item label="Program">{programName || reg.programName || reg.programId}</Descriptions.Item>

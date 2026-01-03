@@ -18,9 +18,11 @@ import {
 } from 'antd';
 import logger from '../utils/logger';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
+import AdminPageHeader from '../components/AdminPageHeader';
 import type { RootState } from '../store/store';
 import { seasonsService } from '../services/firebaseSeasons';
 import { programsService } from '../services/firebasePrograms';
+import type { Program } from '../types/program';
 import type { Season, SeasonFormData } from '../types/season';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -53,6 +55,7 @@ export default function Seasons() {
   const initialSeasonsPageSize = getCachedPref<number>('seasonsPageSize') ?? 15;
   const [pagination, setPagination] = useState({ current: 1, pageSize: initialSeasonsPageSize });
   const [programCountBySeason, setProgramCountBySeason] = useState<Record<string, number>>({});
+  const [programs, setPrograms] = useState<Program[]>([]);
   const editorRef = useRef<SeasonEditorRef>(null);
   // modal form moved into shared SeasonEditor component
 
@@ -122,6 +125,7 @@ export default function Seasons() {
       // load programs to count assignments per season
       try {
         const programs = await programsService.getPrograms();
+        setPrograms(programs || []);
         const counts: Record<string, number> = {};
         (programs || []).forEach((p: any) => {
           const sid = p.seasonId || (p.season && typeof p.season === 'string' ? p.season : undefined);
@@ -159,14 +163,44 @@ export default function Seasons() {
     }
   };
 
+  const unlinkProgramFromSeason = async (programId: string) => {
+    try {
+      await programsService.unlinkProgram(programId);
+      message.success('Program unlinked from season');
+      await loadSeasons();
+      return true;
+    } catch (err) {
+      logger.error('Error unlinking program from season', err);
+      message.error('Failed to unlink program');
+      return false;
+    }
+  };
+
   const handleDeleteSeason = async (seasonId: string) => {
     try {
       await seasonsService.deleteSeason(seasonId, user?.uid || undefined);
       await loadSeasons();
+      // verify deletion actually occurred
+      try {
+        const still = await seasonsService.getSeasonById(seasonId);
+        if (still) {
+          logger.error('Delete reported success but season still exists on server', { seasonId, still });
+          message.error('Delete reported success but season still exists — check server logs');
+          return;
+        }
+      } catch (verifyErr) {
+        logger.error('Error verifying season deletion', verifyErr);
+      }
+
+      // ensure UI returns to the main seasons list and modal is closed
+      setModalVisible(false);
+      setEditingSeason(null);
+      navigate('/admin/seasons', { replace: true });
       message.success('Season deleted');
     } catch (error) {
       logger.error('Error deleting season:', error);
-      message.error('Failed to delete season');
+      const emsg = (error && (error as any).message) ? (error as any).message : String(error);
+      message.error(emsg || 'Failed to delete season');
     }
   };
   // Date handling and form UI moved to `SeasonEditor` to share logic between pages.
@@ -199,14 +233,12 @@ export default function Seasons() {
       }
       // normalize date fields to YYYY-MM-DD strings
       const startDate = values.startDate ? (values.startDate as Dayjs).format('YYYY-MM-DD') : undefined;
-      const endDate = values.endDate ? (values.endDate as Dayjs).format('YYYY-MM-DD') : undefined;
 
       const formData: SeasonFormData = {
         name: values.name,
         seasonType: values.seasonType,
         year: values.year,
         startDate,
-        endDate,
         description: values.description,
         status: values.status || SeasonStatusValues.draft,
       } as any;
@@ -224,12 +256,14 @@ export default function Seasons() {
         }, user?.uid || undefined);
           message.success('Season updated successfully');
       } else {
-        await seasonsService.createSeason(formData, user?.uid || '');
+        const newId = await seasonsService.createSeason(formData, user?.uid || '');
+        const newSeason = await seasonsService.getSeasonById(newId);
+        setEditingSeason(newSeason);
         message.success('Season created successfully');
+        await loadSeasons();
+        // keep modal open and show created season so the DB key is visible in the editor
+        setModalVisible(true);
       }
-
-      await loadSeasons();
-      setModalVisible(false);
     } catch (error: any) {
       logger.error('Error saving season:', error);
       message.error(error?.message || 'Failed to save season');
@@ -239,21 +273,18 @@ export default function Seasons() {
 
   const columns = [
     {
-      title: 'Status',
-      key: 'status',
-      width: 100,
-      render: (record: Season) => (
-        <Tag color={record.status === SeasonStatusValues.active ? 'green' : record.status === SeasonStatusValues.archived ? 'red' : 'default'}>
-          {record.status === SeasonStatusValues.active ? 'Active' : record.status === SeasonStatusValues.archived ? 'Archived' : 'Draft'}
-        </Tag>
-      ),
-    },
-    {
       title: 'Season Name',
       dataIndex: 'name',
       key: 'name',
-      width: 200,
+      width: 150,
       render: (name: string) => <Text strong>{name}</Text>,
+    },
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 150,
+      render: (id: string) => <Text strong>{id}</Text>,
     },
     {
       title: 'Type',
@@ -278,13 +309,7 @@ export default function Seasons() {
       width: 140,
       render: (val: string) => val ? dayjs(val).format('MMM D, YYYY') : '-',
     },
-    {
-      title: 'End Date',
-      dataIndex: 'endDate',
-      key: 'endDate',
-      width: 140,
-      render: (val: string) => val ? dayjs(val).format('MMM D, YYYY') : '-',
-    },
+    // End Date removed — seasons only require a start date
     {
       title: 'Description',
       dataIndex: 'description',
@@ -296,6 +321,16 @@ export default function Seasons() {
       key: 'createdAt',
       width: 150,
       render: (record: Season) => dayjs(record.createdAt).format('MMM D, YYYY'),
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      width: 100,
+      render: (record: Season) => (
+        <Tag color={record.status === SeasonStatusValues.active ? 'green' : record.status === SeasonStatusValues.archived ? 'red' : 'default'}>
+          {record.status === SeasonStatusValues.active ? 'Active' : record.status === SeasonStatusValues.archived ? 'Archived' : 'Draft'}
+        </Tag>
+      ),
     },
     {
       title: 'Actions',
@@ -310,7 +345,7 @@ export default function Seasons() {
             <Button
               size="small"
               icon={<EditOutlined />}
-              onClick={() => navigate(`/admin/seasons/${record.id}`, { state: { from: location.pathname + location.search } })}
+              onClick={() => navigate(`/admin/seasons?openSeason=${record.id}`, { state: { from: location.pathname + location.search } })}
               disabled={record.status === SeasonStatusValues.archived}
             >
               Edit
@@ -343,21 +378,43 @@ export default function Seasons() {
     },
   ];
 
+  const expandable = {
+    expandedRowRender: (record: Season) => {
+      const linked = programs.filter(p => p.seasonId === record.id);
+      if (!linked || linked.length === 0) return <div style={{ color: '#888' }}>No programs linked to this season</div>;
+      return (
+        <div>
+          {linked.map((item: Program) => (
+            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+              <div>
+                <div style={{ fontWeight: 600 }}>{item.name}</div>
+                <div style={{ color: '#666' }}>{item.sport || ''} — {item.ageGroup || ''} {item.basePrice != null ? `— $${item.basePrice}` : ''}</div>
+              </div>
+              <div>
+                <Popconfirm
+                  key={`unlink-${item.id}`}
+                  title={`Unlink program '${item.name}' from this season?`}
+                  onConfirm={() => unlinkProgramFromSeason(item.id)}
+                  okText="Yes"
+                  cancelText="No"
+                >
+                  <Button size="small">Unlink</Button>
+                </Popconfirm>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    },
+  };
+
   return (
     <div className="page-container">
-      <div style={{ marginBottom: '24px' }}>
-        <Space style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <Title level={2} style={{ margin: 0 }}>Seasons</Title>
-            <Text type="secondary">Manage program seasons</Text>
-          </div>
-          <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/admin/seasons/new')}>
-              New Season
-            </Button>
-          </Space>
-        </Space>
-      </div>
+      <AdminPageHeader
+        title="Seasons"
+        subtitle="Manage program seasons"
+        actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/admin/seasons/new')}>New Season</Button>}
+      />
 
       <Card title="Season Directory">
         <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
@@ -382,6 +439,7 @@ export default function Seasons() {
             if (statusFilter === 'draft') return s.status === SeasonStatusValues.draft;
             return true;
           })}
+          expandable={expandable}
           rowKey="id"
           pagination={{
             current: pagination.current,

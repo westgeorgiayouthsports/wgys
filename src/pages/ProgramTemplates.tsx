@@ -5,14 +5,13 @@ import {
   Card,
   Button,
   Space,
-  Typography,
   Modal,
   Form,
   Select,
-  AutoComplete,
   InputNumber,
   Switch,
   message,
+  notification,
   DatePicker,
   Tag,
 } from 'antd';
@@ -25,12 +24,12 @@ import { sportsService } from '../services/firebaseSports';
 import type { SeasonProgram } from '../services/firebaseSeasonPrograms';
 import type { ProgramTemplate } from '../types/programTemplate';
 import type { Season } from '../types/season';
-import { ProgramDivisionList, getProgramTypeLabel, ProgramTypeItems } from '../types/enums/program';
+import { getProgramTypeLabel, ProgramTypeItems } from '../types/enums/program';
 import dayjs from 'dayjs';
 import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+import AdminPageHeader from '../components/AdminPageHeader';
 import logger from '../utils/logger';
-
-const { Title } = Typography;
+import { slugify } from '../utils/slugify';
 
 // program type labels are provided by `getProgramTypeLabel` from enums
 
@@ -38,6 +37,8 @@ export default function ProgramTemplates() {
   const { role, user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<ProgramTemplate[]>([]);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [previewTaken, setPreviewTaken] = useState(false);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [sports, setSports] = useState<any[]>([]);
   const [seasonPrograms, setSeasonPrograms] = useState<SeasonProgram[]>([]);
@@ -77,12 +78,16 @@ export default function ProgramTemplates() {
   const handleAdd = () => {
     setEditing(null);
     form.resetFields();
+    setPreviewId(null);
+    setPreviewTaken(false);
     setModalVisible(true);
   };
 
   const handleEdit = (tpl: ProgramTemplate) => {
     setEditing(tpl);
     form.setFieldsValue({ ...tpl });
+    setPreviewId(tpl.id);
+    setPreviewTaken(false);
     setModalVisible(true);
   };
 
@@ -97,6 +102,25 @@ export default function ProgramTemplates() {
     }
   };
 
+  const computeTemplatePreview = (values: any) => {
+    if (editing) {
+      setPreviewId(editing.id);
+      setPreviewTaken(false);
+      return;
+    }
+    const sportId = values.sportId || '';
+    const programType = values.programType || '';
+    if (sportId && programType) {
+      const id = slugify(`${sportId}-${programType}`);
+      setPreviewId(id);
+      const taken = templates.find(t => t.id === id);
+      setPreviewTaken(!!taken);
+    } else {
+      setPreviewId(null);
+      setPreviewTaken(false);
+    }
+  };
+
   const submitTemplate = async (vals: any) => {
     try {
       if (editing) {
@@ -105,8 +129,15 @@ export default function ProgramTemplates() {
         message.success('Template updated');
       } else {
         const id = await programTemplatesService.createTemplate(vals, user?.uid);
-        setTemplates([...templates, { id, ...vals } as ProgramTemplate]);
+        const created = await programTemplatesService.getTemplateById(id);
+        setEditing(created);
+        setPreviewId(id);
+        setPreviewTaken(false);
         message.success('Template created');
+        await loadAll();
+        // keep modal open so user can see the generated template id
+        setModalVisible(true);
+        return;
       }
       setModalVisible(false);
       form.resetFields();
@@ -127,8 +158,8 @@ export default function ProgramTemplates() {
         programId: attachTemplate.id,
         enabled: vals.isOpenForRegistration ?? true,
         basePrice: vals.feeOverride ?? attachTemplate.defaultBaseFee ?? null,
-        registrationStart: vals.registrationStart ? dayjs(vals.registrationStart).format('YYYY-MM-DD') : null,
-        registrationEnd: vals.registrationEnd ? dayjs(vals.registrationEnd).format('YYYY-MM-DD') : null,
+        registrationOpen: vals.registrationOpen ? dayjs(vals.registrationOpen).format('YYYY-MM-DD') : null,
+        registrationClose: vals.registrationClose ? dayjs(vals.registrationClose).format('YYYY-MM-DD') : null,
         createdBy: user?.uid || null,
       } as any;
       await seasonProgramsService.createSeasonProgram(payload, user?.uid);
@@ -138,20 +169,15 @@ export default function ProgramTemplates() {
   };
 
   const columns = [
-    { title: 'Active', key: 'active', render: (r: ProgramTemplate) => (<TagActive active={!!r.active} />) },
-    { title: 'Template ID', dataIndex: 'id', key: 'id' },
     { title: 'Sport', key: 'sport', render: (r: ProgramTemplate) => {
       const s = sports.find(s => s.id === r.sportId);
       return s ? s.name : (r.sportId || '-');
     } },
-    { title: 'Division', key: 'divisionKey', render: (r: ProgramTemplate) => {
-      const div = r.divisionKey;
-      if (!div) return '-';
-      const isStd = ProgramDivisionList.includes(div as any);
-      return isStd ? <Tag>{div}</Tag> : <span>{div}</span>;
-    } },
+    // Division column removed — base templates are not division-specific
     { title: 'Type', key: 'programType', render: (r: ProgramTemplate) => getProgramTypeLabel(r.programType as any) },
+    { title: 'Template ID', dataIndex: 'id', key: 'id' },
     { title: 'Default Fee', dataIndex: 'defaultBaseFee', key: 'defaultBaseFee', render: (v:number) => v ? `$${(v)}` : '-' },
+    { title: 'Status', key: 'active', render: (r: ProgramTemplate) => (<TagActive active={!!r.active} />) },
     { title: 'Actions', key: 'actions', render: (r: ProgramTemplate) => (
       <Space>
         <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)}>Edit</Button>
@@ -174,30 +200,30 @@ export default function ProgramTemplates() {
               const isOpen = (sp.enabled !== undefined && sp.enabled !== null) ? sp.enabled : (baseTemplate.active ?? false);
               const feeVal = (sp.basePrice !== undefined && sp.basePrice !== null) ? sp.basePrice : (baseTemplate.defaultBaseFee ?? null);
               const feeDisplay = feeVal != null ? `$${feeVal}` : '-';
-              const regStartSrc = sp.registrationStart ? 'seasonProgram' : (s?.startDate ? 'season' : undefined);
-              const regEndSrc = sp.registrationEnd ? 'seasonProgram' : (s?.endDate ? 'season' : undefined);
+              const regOpenSrc = sp.registrationOpen ? 'seasonProgram' : (s?.startDate ? 'season' : undefined);
+              const regCloseSrc = sp.registrationClose ? 'seasonProgram' : (s?.endDate ? 'season' : undefined);
 
-              const regStart = regStartSrc === 'seasonProgram'
-                ? dayjs(sp.registrationStart).format('MMM D, YYYY')
-                : regStartSrc === 'season'
+              const regOpen = regOpenSrc === 'seasonProgram'
+                ? dayjs(sp.registrationOpen).format('MMM D, YYYY')
+                : regOpenSrc === 'season'
                   ? dayjs(s!.startDate as string).format('MMM D, YYYY')
                   : '-';
 
-              const regEnd = regEndSrc === 'seasonProgram'
-                ? dayjs(sp.registrationEnd).format('MMM D, YYYY')
-                : regEndSrc === 'season'
+              const regClose = regCloseSrc === 'seasonProgram'
+                ? dayjs(sp.registrationClose).format('MMM D, YYYY')
+                : regCloseSrc === 'season'
                   ? dayjs(s!.endDate as string).format('MMM D, YYYY')
                   : '-';
 
-              const regStartLabel = regStart;
-              const regEndLabel = regEnd;
+              const regOpenLabel = regOpen;
+              const regCloseLabel = regClose;
 
               return (
                 <div key={sp.id} style={{ marginBottom: 8 }}>
                   <Tag color="blue" style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/seasons/${s ? s.id : sp.seasonId}`)}>{s ? s.name : sp.seasonId}</Tag>
                   <span style={{ marginLeft: 8, marginRight: 12 }}>{isOpen ? 'Open' : 'Closed'}</span>
                   <span style={{ marginRight: 12 }}>Fee: {feeDisplay}</span>
-                  <span>Reg: {regStartLabel} → {regEndLabel}</span>
+                  <span>Reg: {regOpenLabel} → {regCloseLabel}</span>
                 </div>
               );
             })}
@@ -208,31 +234,56 @@ export default function ProgramTemplates() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={2}>Program Templates</Title>
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} disabled={loading}>New Template</Button>
-        </Space>
-      </div>
+      <AdminPageHeader
+        title="Program Templates"
+        actions={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} disabled={loading}>New Template</Button>
+            <Button onClick={async () => {
+              try {
+                const created = await programTemplatesService.ensureDefaultProgramTemplates();
+                if (created && created.length) {
+                  message.success(`Created defaults: ${created.join(', ')}`);
+                } else {
+                  message.info('Default program templates already present');
+                }
+                await loadAll();
+              } catch (e) {
+                  logger.error('Failed to ensure default templates', e);
+                  const emsg = (e && (e as any).message) ? (e as any).message : String(e);
+                  if (emsg.toLowerCase().includes('permission') || emsg.includes('PERMISSION_DENIED')) {
+                    notification.error({
+                      message: 'Permission denied',
+                      description: 'Your Firebase Realtime Database rules prevented writing program templates. As an admin, either run the server-side seed script (`npm run seed:program-templates` with a service account and `FIREBASE_DATABASE_URL`) or update your RTDB rules to allow admin writes.',
+                      duration: 10,
+                    });
+                  } else {
+                    message.error('Failed to ensure defaults');
+                  }
+                }
+            }}>Ensure Defaults</Button>
+          </div>
+        }
+      />
 
       <Card>
         <Table dataSource={templates} columns={columns as any} rowKey="id" loading={loading} expandable={expandable} />
       </Card>
 
       <Modal open={modalVisible} title={editing ? 'Edit Template' : 'New Template'} onCancel={() => setModalVisible(false)} onOk={() => form.submit()}>
-        <Form form={form} layout="vertical" onFinish={submitTemplate}>
+        <Form form={form} layout="vertical" onFinish={submitTemplate} onValuesChange={(all) => computeTemplatePreview(all)}>
           <Form.Item name="sportId" label="Sport" rules={[{ required: true }]}>
             <Select>
               {sports.map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
             </Select>
           </Form.Item>
-          <Form.Item name="divisionKey" label="Division" rules={[{ required: true }]}>
-            <AutoComplete
-              options={ProgramDivisionList.map((d) => ({ value: d }))}
-              placeholder="Select or type division (e.g. 10U)"
-              filterOption={(inputValue, option) => (option?.value as string).toLowerCase().includes(inputValue.toLowerCase())}
-            />
+          <Form.Item label="Template ID (computed)">
+            <InputNumber style={{ display: 'none' }} />
+            <input value={previewId || ''} readOnly style={{ width: '100%', fontFamily: 'monospace', border: '1px solid #d9d9d9', padding: '6px 8px', borderRadius: 2 }} />
+            {previewId && previewTaken && <div style={{ color: '#d46b08', marginTop: 6 }}>ID already exists; a unique suffix will be appended on save.</div>}
+            {!previewId && <div style={{ color: '#777', marginTop: 6 }}>ID will be generated from sport and program type (e.g., baseball-recreation).</div>}
           </Form.Item>
+          {/* Division removed from base templates UI per request */}
           <Form.Item name="sex" label="Sex Restriction">
             <Select allowClear>
               <Select.Option value="any">Any</Select.Option>
@@ -266,10 +317,10 @@ export default function ProgramTemplates() {
           <Form.Item name="isOpenForRegistration" label="Open for Registration" valuePropName="checked">
             <Switch />
           </Form.Item>
-          <Form.Item name="registrationStart" label="Registration Start">
+          <Form.Item name="registrationOpen" label="Registration Open">
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="registrationEnd" label="Registration End">
+          <Form.Item name="registrationClose" label="Registration Close">
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="feeOverride" label="Fee Override (dollars)">

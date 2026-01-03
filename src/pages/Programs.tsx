@@ -29,12 +29,14 @@ import {
 import type { RootState } from '../store/store';
 import { programsService } from '../services/firebasePrograms';
 import { seasonsService } from '../services/firebaseSeasons';
+import { programTemplatesService } from '../services/firebaseProgramTemplates';
 import type { Program } from '../types/program';
 import type { Season } from '../types/season';
 import { SeasonStatusValues } from '../types/enums/season';
 import dayjs from 'dayjs';
 import logger from '../utils/logger';
 import { getAgeControlDateForSeason, normalizeSeason, getMaxGradeFromBirthDate, getMaxGradeFromBirthDateCurrentSchoolYear } from '../utils/season';
+import AdminPageHeader from '../components/AdminPageHeader';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -44,6 +46,7 @@ const Programs = forwardRef(function Programs(_props, ref) {
   const { role, user } = useSelector((state: RootState) => state.auth);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [selectedSeasonId, setSelectedSeasonId] = useState<string>('all');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [bulkModalVisible, setBulkModalVisible] = useState(false);
@@ -85,6 +88,13 @@ const Programs = forwardRef(function Programs(_props, ref) {
     try {
       const seasonsList = await seasonsService.getSeasons();
       setSeasons(seasonsList);
+      try {
+        const tpls = await programTemplatesService.getTemplates();
+        setTemplates(tpls || []);
+      } catch (e) {
+        logger.error('Error loading templates', e);
+        setTemplates([]);
+      }
       const firstActive = seasonsList.find(s => s.status === SeasonStatusValues.active);
       if (firstActive && selectedSeasonId === 'all') {
         setSelectedSeasonId(firstActive.id);
@@ -130,8 +140,8 @@ const Programs = forwardRef(function Programs(_props, ref) {
     const today = dayjs();
     form.setFieldsValue({
       status: true,
-      registrationStart: today,
-      registrationEnd: today.add(3, 'month')
+      registrationOpen: today,
+      registrationClose: today.add(3, 'month')
     });
     setModalVisible(true);
   };
@@ -152,8 +162,8 @@ const Programs = forwardRef(function Programs(_props, ref) {
       active: program.active,
       birthDateStart: program.birthDateStart ? dayjs(program.birthDateStart) : null,
       birthDateEnd: program.birthDateEnd ? dayjs(program.birthDateEnd) : null,
-      registrationStart: dayjs(program.registrationStart),
-      registrationEnd: dayjs(program.registrationEnd),
+      registrationOpen: dayjs(program.registrationOpen),
+      registrationClose: dayjs(program.registrationClose),
         // payment plan fields removed — plans are now configured at season level
     });
     setModalVisible(true);
@@ -173,16 +183,16 @@ const Programs = forwardRef(function Programs(_props, ref) {
   const handleSubmit = async (values: any) => {
     try {
       const today = dayjs();
-      const regStart = values.registrationStart || today;
-      const regEnd = values.registrationEnd || regStart.add(3, 'month');
+      const regOpen = values.registrationOpen || today;
+      const regClose = values.registrationClose || regOpen.add(3, 'month');
 
       const formData: any = {
         ...values,
         active: values.active || false,
         birthDateStart: values.birthDateStart?.format('YYYY-MM-DD'),
         birthDateEnd: values.birthDateEnd?.format('YYYY-MM-DD'),
-        registrationStart: regStart.toISOString(),
-        registrationEnd: regEnd.toISOString(),
+        registrationOpen: regOpen.toISOString(),
+        registrationClose: regClose.toISOString(),
       };
 
       if (editingProgram) {
@@ -258,15 +268,15 @@ const Programs = forwardRef(function Programs(_props, ref) {
       ),
     },
     {
-      title: 'Registration Start',
-      dataIndex: 'registrationStart',
-      key: 'registrationStart',
+      title: 'Registration Open',
+      dataIndex: 'registrationOpen',
+      key: 'registrationOpen',
       render: (date: string) => dayjs(date).format('MMM D, YYYY'),
     },
     {
-      title: 'Registration End',
-      dataIndex: 'registrationEnd',
-      key: 'registrationEnd',
+      title: 'Registration Close',
+      dataIndex: 'registrationClose',
+      key: 'registrationClose',
       render: (date: string) => dayjs(date).format('MMM D, YYYY'),
     },
     {
@@ -350,40 +360,32 @@ const Programs = forwardRef(function Programs(_props, ref) {
 
   return (
     <div className="page-container full-width">
-      <div style={{ marginBottom: '24px' }}>
-        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-          <div>
-            <Title level={2}>Programs</Title>
-            <Text type="secondary">Manage sports programs and activities</Text>
-          </div>
+      <AdminPageHeader
+        title={<>
+          <Title level={2} style={{ margin: 0 }}>Programs</Title>
+          <Text type="secondary">Manage sports programs and activities</Text>
+        </>}
+        actions={<>
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadPrograms} loading={loading}>
-                Refresh
-            </Button>
-            <Button onClick={() => navigate('/admin/seasons')}>
-                Manage Seasons
-            </Button>
-            <Button onClick={openBulkMove} disabled={selectedRowKeys.length === 0}>
-              Move Selected
-            </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddProgram}>
-                Add Program
-            </Button>
+            <Button icon={<ReloadOutlined />} onClick={loadPrograms} loading={loading}>Refresh</Button>
+            <Button onClick={() => navigate('/admin/seasons')}>Manage Seasons</Button>
+            <Button onClick={openBulkMove} disabled={selectedRowKeys.length === 0}>Move Selected</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddProgram}>Add Program</Button>
           </Space>
-        </Space>
+        </>}
+      />
 
-        <div style={{ marginTop: 12 }}>
-          {(() => {
-            const items = [
-              { key: 'all', label: 'All Seasons' },
-              ...seasons.map(s => ({ key: s.id, label: `${s.name}${s.status === SeasonStatusValues.archived ? ' (Archived)' : ''}` })),
-              { key: 'unassigned', label: 'Unassigned' },
-            ];
-            return (
-              <Tabs activeKey={selectedSeasonId} onChange={(k) => setSelectedSeasonId(k)} items={items} />
-            );
-          })()}
-        </div>
+      <div style={{ marginTop: 12 }}>
+        {(() => {
+          const items = [
+            { key: 'all', label: 'All Seasons' },
+            ...seasons.map(s => ({ key: s.id, label: `${s.name}${s.status === SeasonStatusValues.archived ? ' (Archived)' : ''}` })),
+            { key: 'unassigned', label: 'Unassigned' },
+          ];
+          return (
+            <Tabs activeKey={selectedSeasonId} onChange={(k) => setSelectedSeasonId(k)} items={items} />
+          );
+        })()}
       </div>
 
       <Card title="Program Directory">
@@ -467,6 +469,14 @@ const Programs = forwardRef(function Programs(_props, ref) {
                 ))}
               </Select>
             </Form.Item>
+
+            <Form.Item name="templateId" label="Template" rules={[{ required: true, message: 'Select a template' }]}>
+              <Select placeholder="Select template" style={{ width: 220 }}>
+                {templates.map(t => (
+                  <Select.Option key={t.id} value={t.id}>{t.sportId} — {t.programType}{t.sex ? ` (${t.sex})` : ''}</Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
           </Space>
 
           <Form.Item name="description" label="Description">
@@ -545,17 +555,36 @@ const Programs = forwardRef(function Programs(_props, ref) {
           </Space>
 
           <Space style={{ width: '100%' }} size="large">
-            <Form.Item name="registrationStart" label="Registration Start" rules={[{ required: true }]}>
+            <Form.Item name="registrationOpen" label="Registration Open" rules={[{ required: true }]}>
               <DatePicker />
             </Form.Item>
-            <Form.Item name="registrationEnd" label="Registration End" rules={[{ required: true }]}>
+            <Form.Item name="registrationClose" label="Registration Close" rules={[{ required: true }]}>
               <DatePicker />
             </Form.Item>
           </Space>
 
           <Space style={{ width: '100%' }} size="large">
-            <Form.Item name="basePrice" label="Base Price ($)" rules={[{ required: true }]}>
-              <InputNumber min={0} step={0.01} placeholder="0.00" />
+            <Form.Item noStyle shouldUpdate={(prev, curr) => prev.templateId !== curr.templateId}>
+              {() => {
+                const tplId = form.getFieldValue('templateId');
+                const tpl = templates.find(t => t.id === tplId);
+                if (tpl) {
+                  // only set when basePrice not already set
+                  const curPrice = form.getFieldValue('basePrice');
+                  if ((curPrice === undefined || curPrice === null || curPrice === '') && tpl.defaultBaseFee !== undefined) {
+                    form.setFieldsValue({ basePrice: tpl.defaultBaseFee });
+                  }
+                  const curSex = form.getFieldValue('sexRestriction');
+                  if ((!curSex || curSex === '') && tpl.sex) {
+                    form.setFieldsValue({ sexRestriction: tpl.sex });
+                  }
+                }
+                return (
+                  <Form.Item name="basePrice" label="Base Price ($)" rules={[{ required: true }]}>
+                    <InputNumber min={0} step={0.01} placeholder="0.00" />
+                  </Form.Item>
+                );
+              }}
             </Form.Item>
             <Form.Item name="maxParticipants" label="Max Participants">
               <InputNumber min={1} placeholder="Unlimited" />

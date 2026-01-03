@@ -31,6 +31,7 @@ import {
 } from '@ant-design/icons';
 
 const { Text } = Typography;
+import AdminPageHeader from '../components/AdminPageHeader';
 
 type View = 'list' | 'editor' | 'detail';
 
@@ -217,22 +218,15 @@ export default function Announcements() {
     <div className="page-container">
       {view === 'list' && (
         <>
-          <div style={{ marginBottom: '24px' }}>
-            <Typography.Title level={2} style={{ margin: 0 }}>Announcements</Typography.Title>
-            <Typography.Text type="secondary">Manage team communications and announcements</Typography.Text>
-          </div>
-
-          {/* Create Button - Admin/Owner Only */}
-          {(role === 'admin' || role === 'owner') && (
-            <Card
-              title="Create New Announcement"
-              style={{ marginBottom: '24px' }}
-            >
-              <Button type="primary" icon={<EditOutlined />} onClick={handleCreateNew}>
-                Create Announcement
-              </Button>
-            </Card>
-          )}
+          <AdminPageHeader
+            title={<>
+              <Typography.Title level={2} style={{ margin: 0 }}>Announcements</Typography.Title>
+              <Typography.Text type="secondary">Communications and announcements</Typography.Text>
+            </>}
+            actions={role === 'admin' || role === 'owner' ? (
+              <Button type="primary" icon={<EditOutlined />} onClick={handleCreateNew}>Create Announcement</Button>
+            ) : undefined}
+          />
 
           {/* Statistics Cards */}
           {announcements.length > 0 && (
@@ -261,7 +255,7 @@ export default function Announcements() {
           )}
 
           {/* Announcements Table */}
-          <Card title={`Team Announcements (${announcements.length})`}>
+          <Card title={`Announcements (${announcements.length})`}>
             <Table
               columns={[
                 {

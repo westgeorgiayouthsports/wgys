@@ -28,6 +28,7 @@ import {
   SaveOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
+import AdminPageHeader from '../components/AdminPageHeader';
 import type { RootState } from '../store/store';
 import {
   setLoading,
@@ -122,7 +123,10 @@ export default function Teams() {
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="programId" label="Program" rules={[{ required: true, message: 'Select a program' }]}>
-              <Select placeholder="Select program" showSearch optionFilterProp="label">
+              <Select placeholder="Select program" showSearch={{ filterOption: (input: string, option: any) => {
+                const label = (option as any)?.label ?? (option as any)?.children;
+                return String(label || '').toLowerCase().includes(String(input).toLowerCase());
+              } }}>
                 {programs.map((p: any) => {
                   const rawSid = p?.season && typeof p.season === 'object' && p.season.name ? p.season.name : (p.seasonId || (typeof p.season === 'string' ? p.season : undefined));
                   const resolved = seasons.find((s: any) => s.id === rawSid)?.name || rawSid;
@@ -613,32 +617,16 @@ export default function Teams() {
 
   return (
     <div className="page-container">
-      <div style={{ marginBottom: '24px' }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Title level={2} style={{ margin: 0 }}>Teams Management</Title>
-            <Text type="secondary">Manage your youth sports teams and budgets</Text>
-          </Col>
-          <Col>
-            <Space>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={loadTeams}
-                loading={loading}
-              >
-                Refresh
-              </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => { setEditingId(null); setModalVisible(true); }}
-              >
-                Add Team
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </div>
+      <AdminPageHeader
+        title={<>
+          <Title level={2} style={{ margin: 0 }}>Teams Management</Title>
+          <Text type="secondary">Manage your youth sports teams and budgets</Text>
+        </>}
+        actions={<Space>
+          <Button icon={<ReloadOutlined />} onClick={loadTeams} loading={loading}>Refresh</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingId(null); setModalVisible(true); }}>Add Team</Button>
+        </Space>}
+      />
 
       {/* Summary Statistics */}
       {teams.length > 0 && (

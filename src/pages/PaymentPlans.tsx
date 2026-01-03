@@ -1,13 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
 import { Button, Card, Table, Tag, Space, Modal, Spin, Typography, Popconfirm, notification } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { paymentPlansService } from '../services/paymentPlans';
 import type { PaymentPlan } from '../types/paymentPlan';
 import PaymentPlanForm from './PaymentPlanForm';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 export default function PaymentPlans() {
+  const [notifApi, notifContextHolder] = notification.useNotification();
   const [plans, setPlans] = useState<PaymentPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<PaymentPlan | null>(null);
@@ -30,14 +32,14 @@ export default function PaymentPlans() {
       const msg = (e && (e as any).message) || String(e);
       if (msg.toLowerCase().includes('permission')) {
         errorShownRef.current = true;
-        notification.error({
-          message: 'Permission denied reading payment plans',
-          description: 'Your account does not have permission to read payment plans from the database. Ensure your RTDB rules allow admin reads or run this page from an account with admin access.',
-          duration: 8,
-        });
+          notifApi.error({
+            title: 'Permission denied reading payment plans',
+            description: 'Your account does not have permission to read payment plans from the database. Ensure your RTDB rules allow admin reads or run this page from an account with admin access.',
+            duration: 8,
+          });
       } else {
         errorShownRef.current = true;
-        notification.error({ message: 'Failed to load payment plans' });
+          notifApi.error({ title: 'Failed to load payment plans' });
       }
     } finally {
       setLoading(false);
@@ -62,10 +64,10 @@ export default function PaymentPlans() {
     try {
       if (editing && editing.id) {
         await paymentPlansService.updatePaymentPlan(editing.id, vals);
-        notification.success({ message: 'Payment plan updated' });
+        notifApi.success({ title: 'Payment plan updated' });
       } else {
         await paymentPlansService.createPaymentPlan(vals as any);
-        notification.success({ message: 'Payment plan created' });
+        notifApi.success({ title: 'Payment plan created' });
       }
       setShowModal(false);
       await load();
@@ -79,11 +81,11 @@ export default function PaymentPlans() {
     if (!id) return;
     try {
       await paymentPlansService.deletePaymentPlan(id);
-      notification.success({ message: 'Payment plan deleted' });
+      notifApi.success({ title: 'Payment plan deleted' });
       await load();
     } catch (e) {
       console.error(e);
-      notification.error({ message: 'Failed to delete payment plan' });
+      notifApi.error({ title: 'Failed to delete payment plan' });
     }
   };
 
@@ -109,17 +111,11 @@ export default function PaymentPlans() {
 
   return (
     <div style={{ padding: 24, minHeight: '100vh' }}>
-      <Space style={{ marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>Payment Plans</Title>
-        {/* <Button  type="default" onClick={() => window.history.back()}>Back</Button> */}
-      </Space>
-      <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>Manage global payment plans used by the cart and checkout flows.</Text>
+      {notifContextHolder}
+      <AdminPageHeader title={<Title level={3} style={{ margin: 0 }}>Payment Plans</Title>} subtitle={"Manage global payment plans used by the cart and checkout flows."} actions={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Create Payment Plan</Button>} />
 
       <Card>
         <Spin spinning={loading}>
-          <Space style={{ marginBottom: 12 }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Create Payment Plan</Button>
-          </Space>
 
           <Table
             dataSource={plans.map(p => ({ ...p, key: p.id }))}

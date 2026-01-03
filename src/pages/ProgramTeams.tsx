@@ -17,6 +17,7 @@ import {
   App,
 } from 'antd';
 import { PlusOutlined, ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons';
+import AdminPageHeader from '../components/AdminPageHeader';
 import type { RootState } from '../store/store';
 import type { Program } from '../types';
 import { programsService } from '../services/firebasePrograms';
@@ -33,7 +34,7 @@ export default function ProgramTeams() {
   const { message } = App.useApp();
 
   const [program, setProgram] = useState<Program | null>(null);
-  
+
   const [seasons, setSeasons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [assignmentLoading, setAssignmentLoading] = useState(false);
@@ -177,20 +178,18 @@ export default function ProgramTeams() {
 
   return (
     <div className="page-container">
-      <div style={{ marginBottom: '24px' }}>
-        <Space style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Space orientation="vertical" style={{ flex: 1 }}>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/programs')}>
-              Back to Programs
-            </Button>
+      <AdminPageHeader
+        title={<>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/programs')}>Back to Programs</Button>
             <div>
               <Title level={2} style={{ margin: 0 }}>{((program as any)?.season?.name ? `${(program as any).season.name} - ` : '') + program.name}</Title>
               <Text type="secondary">Team Assignment</Text>
             </div>
-          </Space>
-          <Button onClick={() => navigate(`/admin/programs/${program.id}`)}>Program Details</Button>
-        </Space>
-      </div>
+          </div>
+        </>}
+        actions={<Button onClick={() => navigate(`/admin/programs/${program.id}`)}>Program Details</Button>}
+      />
 
       <Card title="Team Assignment">
           <Space style={{ marginBottom: 16 }}>

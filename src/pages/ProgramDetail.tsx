@@ -146,8 +146,8 @@ export default function ProgramDetail() {
       programForm.setFieldsValue({
         ...program,
         femaleOnlyToggle: program.sexRestriction || 'any',
-        registrationStart: program.registrationStart ? dayjs(program.registrationStart) : null,
-        registrationEnd: program.registrationEnd ? dayjs(program.registrationEnd) : null,
+        registrationOpen: program.registrationOpen ? dayjs(program.registrationOpen) : null,
+        registrationClose: program.registrationClose ? dayjs(program.registrationClose) : null,
         birthDateStart: program.birthDateStart ? dayjs(program.birthDateStart) : null,
         birthDateEnd: program.birthDateEnd ? dayjs(program.birthDateEnd) : null,
             seasonId: program.seasonId || undefined,
@@ -371,8 +371,8 @@ export default function ProgramDetail() {
               ...values,
               sexRestriction,
               questions: cleanedQuestions,
-              registrationStart: values.registrationStart?.format('YYYY-MM-DD'),
-              registrationEnd: values.registrationEnd?.format('YYYY-MM-DD'),
+              registrationOpen: values.registrationOpen?.format('YYYY-MM-DD'),
+              registrationClose: values.registrationClose?.format('YYYY-MM-DD'),
               birthDateStart: values.birthDateStart?.format('YYYY-MM-DD'),
               birthDateEnd: values.birthDateEnd?.format('YYYY-MM-DD'),
             };
@@ -457,12 +457,12 @@ export default function ProgramDetail() {
 
             <Row gutter={16}>
               <Col span={12}>
-                <Form.Item name="registrationStart" label="Registration Start">
+                <Form.Item name="registrationOpen" label="Registration Start">
                   <DatePicker style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item name="registrationEnd" label="Registration End">
+                <Form.Item name="registrationClose" label="Registration End">
                   <DatePicker style={{ width: '100%' }} />
                 </Form.Item>
               </Col>

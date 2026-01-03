@@ -1,4 +1,5 @@
 import logger from "./logger";
+import dayjs from 'dayjs';
 
 export type Term = 'spring' | 'fall';
 
@@ -149,4 +150,66 @@ export function normalizeSeason(raw: any): SimpleSeason {
 
   // last-resort defaults
   return { term: 'spring', year: new Date().getFullYear() };
+}
+
+// Division catalog
+export type SexRestriction = 'male' | 'female' | 'any';
+
+export interface Division {
+  label: string;
+  minAge: number; // inclusive minimum season age
+  maxAge: number; // inclusive maximum season age
+  sex?: SexRestriction;
+}
+
+// Build standard XU divisions from 4U..18U and include any custom overrides
+const standardDivisions: Record<string, Division> = {};
+for (let u = 4; u <= 18; u++) {
+  const key = `${u}u`;
+  standardDivisions[key] = { label: `${u}U`, minAge: u - 1, maxAge: u, sex: 'any' };
+}
+
+export const DIVISIONS: Record<string, Division> = {
+  // include standard divisions
+  ...standardDivisions,
+  // legacy/custom examples (if you want sport-specific naming)
+  '4u-baseball': { label: '4U Baseball', minAge: 3, maxAge: 4, sex: 'any' },
+};
+
+export function getDivision(id: string): Division | undefined {
+  if (!id) return undefined;
+  return DIVISIONS[id];
+}
+
+// Given a control date (season anchor) and a division id, return the birth date range
+// for eligibility for that division. Uses UTC math to avoid timezone shifts.
+export function getDivisionBirthDateRange(controlDate: Date, divisionId: string) {
+  const div = getDivision(divisionId);
+  if (!div) return null;
+  const { minAge, maxAge } = div;
+  const cy = controlDate.getUTCFullYear();
+  const cm = controlDate.getUTCMonth();
+  const cd = controlDate.getUTCDate();
+
+  // fromDate: controlDate - (maxAge + 1) years
+  const from = new Date(Date.UTC(cy - (maxAge + 1), cm, cd));
+  // toDate: controlDate - minAge years - 1 day
+  const toCandidate = new Date(Date.UTC(cy - minAge, cm, cd));
+  const to = new Date(Date.UTC(toCandidate.getUTCFullYear(), toCandidate.getUTCMonth(), toCandidate.getUTCDate() - 1));
+
+  return {
+    fromDate: from,
+    toDate: to,
+    fromDateDisplay: dayjs(from).format('MMM D, YYYY'),
+    toDateDisplay: dayjs(to).format('MMM D, YYYY'),
+  };
+}
+
+// Helper to list divisions enabled for a season. If seasonSpec.divisions is provided
+// it should be an array of division ids; otherwise return full catalog as array.
+export function getDivisionsForSeason(seasonSpec?: { divisions?: string[] }) {
+  if (!seasonSpec || !Array.isArray(seasonSpec.divisions) || seasonSpec.divisions.length === 0) {
+    return Object.entries(DIVISIONS).map(([id, d]) => ({ id, ...d }));
+  }
+  return seasonSpec.divisions.map(id => ({ id, ...(DIVISIONS[id] || { label: id, minAge: 0, maxAge: 100, sex: 'any' }) }));
 }
