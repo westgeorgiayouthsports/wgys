@@ -4,6 +4,22 @@ import mkcert from 'vite-plugin-mkcert';
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
+  const metricsEnv = env.VITE_METRICS_URL;
+
+  // Convert a provided value to a proxy origin (dev proxy needs origin)
+  function metricsProxyTarget(val: string) {
+    try {
+      const parsed = new URL(val);
+      // If they gave a full path, use origin for proxy target
+      return parsed.origin;
+    } catch {
+      // No scheme — assume host (or host/path). Strip any /api/metrics* path and default to https
+      const stripped = val.replace(/\/api\/metrics.*$/i, '').replace(/\/+$/,'');
+      return /^https?:\/\//i.test(stripped) ? stripped : `https://${stripped}`;
+    }
+  }
+
+  const proxyTarget = metricsProxyTarget(metricsEnv);
 
   return {
     plugins: [react(), ...(process.env.ENABLE_HTTPS !== 'false' ? [mkcert()] : [])],
@@ -23,7 +39,7 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         '/api/metrics': {
-          target: 'https://metricsviews-k5dtqbkowq-uc.a.run.app',
+          target: proxyTarget,
           changeOrigin: true,
           headers: {
             origin: 'https://localhost:5173',
@@ -33,7 +49,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      __VITE_ENV__: JSON.stringify(env),
+      'globalThis.__VITE_ENV__': JSON.stringify(env),
     },
     build: {
       outDir: 'dist',

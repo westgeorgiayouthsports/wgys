@@ -9,7 +9,29 @@ export type WebsiteViewsResponse = {
 };
 
 const DEFAULT_METRICS_URL = '/api/metrics/views';
-const METRICS_URL = getEnv('VITE_METRICS_URL') || DEFAULT_METRICS_URL;
+
+function normalizeMetricsUrl(envUrl?: string): string {
+  if (!envUrl) return DEFAULT_METRICS_URL;
+  const u = envUrl.trim();
+  // Relative path already
+  if (u.startsWith('/')) {
+    return u.endsWith('/views') ? u : `${u.replace(/\/+$/,'')}/views`;
+  }
+  // Absolute URL with scheme
+  if (/^https?:\/\//i.test(u)) {
+    // If the URL already refers to /api/metrics, ensure it ends with /views
+    if (u.includes('/api/metrics')) {
+      return u.endsWith('/views') ? u : `${u.replace(/\/+$/,'')}/views`;
+    }
+    // Otherwise treat as a base host and append the full path
+    return `${u.replace(/\/+$/,'')}/api/metrics/views`;
+  }
+  // No scheme provided — treat as host and default to https
+  return `https://${u.replace(/^\/+|\/+$/g,'')}/api/metrics/views`;
+}
+
+const metricsUrl = getEnv('VITE_METRICS_URL');
+const METRICS_URL = normalizeMetricsUrl(metricsUrl);
 
 export async function fetchWebsiteViews(): Promise<number> {
   const urlsToTry = METRICS_URL === DEFAULT_METRICS_URL
