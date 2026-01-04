@@ -1,0 +1,1 @@
+import{l as e}from"./index-lWfxYzVq.js";function n(t){try{const r=localStorage.getItem(`wgys.pref.${t}`);if(r==null)return null;try{return JSON.parse(r)}catch(o){return e.error(o),r}}catch(r){return e.error(r),null}}export{n as g};
