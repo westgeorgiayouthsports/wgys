@@ -1,0 +1,1 @@
+import{j as t}from"./index-DF8YHrAB.js";import"./vendor-react-Ck9bq5u-.js";import"./vendor-router-Ck4ZuSP9.js";import"./vendor-antd-B_zhuBjy.js";import"./vendor-redux-BbD-gcRX.js";import"./vendor-firebase-vGUttujZ.js";function n(){return t.jsx("div",{children:"Settings Page"})}export{n as default};
