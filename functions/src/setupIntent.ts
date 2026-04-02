@@ -30,7 +30,7 @@ export const createSetupIntent = onCall({ region: 'us-central1' }, async (reques
     if (!uid) {
       throw new HttpsError('unauthenticated', 'Must be signed in to create a SetupIntent');
     }
-    
+
     const stripe = getStripe();
     if (!stripe) {
       throw new HttpsError('failed-precondition', 'Stripe is not configured');
@@ -45,7 +45,7 @@ export const createSetupIntent = onCall({ region: 'us-central1' }, async (reques
     if (!stripeCustomerId) {
       // Fetch email/displayName from Auth
       const authUser = await getAuth().getUser(uid);
-      
+
         try {
         const customer = await stripe.customers.create({
           email: authUser.email || undefined,
@@ -66,7 +66,7 @@ export const createSetupIntent = onCall({ region: 'us-central1' }, async (reques
         usage: 'off_session',
         payment_method_types: ['card'],
       });
-      
+
       return { clientSecret: setupIntent.client_secret, customerId: stripeCustomerId };
     } catch (stripeErr: any) {
       console.error('[createSetupIntent] SetupIntent creation error code:', stripeErr?.code);
@@ -105,7 +105,7 @@ export const getPaymentMethodDisplay = onCall({ region: 'us-central1' }, async (
       throw new HttpsError('invalid-argument', 'paymentMethodId is required');
     }
 
-    
+
     const db = getDatabase();
     const userRef = db.ref(`users/${uid}`);
     const snap = await userRef.get();

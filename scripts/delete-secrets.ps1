@@ -1,0 +1,3 @@
+$secrets = "ADMIN_SECRET","ALLOWED_ORIGIN","GA4_KEY","GA4_PROPERTY_ID","STRIPE_SECRET_KEY"; Write-Host "About to delete secrets in project wgys-ls:"; $secrets | ForEach-Object { Write-Host " - $_" }; $confirm = Read-Host "Type DELETE to proceed"; if ($confirm -eq "DELETE") { $secrets | ForEach-Object { gcloud secrets delete $_ --project wgys-ls --quiet }; Write-Host "Deletion complete." } else { Write-Host "Cancelled. No secrets deleted." }
+
+gcloud secrets list --project wgys-ls --filter="name:ADMIN_SECRET OR name:ALLOWED_ORIGIN OR name:GA4_KEY OR name:GA4_PROPERTY_ID OR name:STRIPE_SECRET_KEY"
