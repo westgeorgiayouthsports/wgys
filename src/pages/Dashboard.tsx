@@ -17,6 +17,7 @@ import {
   Popover,
   DatePicker,
   Modal,
+  Select,
 } from 'antd';
 import dayjs from 'dayjs';
 import {
@@ -40,6 +41,7 @@ import { SeasonStatusValues } from '../types/enums/season';
 import { announcementsService } from '../services/firebaseAnnouncements';
 import { registrationsService } from '../services/firebaseRegistrations';
 import { programRegistrationsService } from '../services/firebaseProgramRegistrations';
+import { getAuthEventStats, type AuthEventStats } from '../services/authEvents';
 import type { Program } from '../types/program';
 import type { Announcement } from '../store/slices/announcementsSlice';
 import type { Registration } from '../services/firebaseRegistrations';
@@ -85,6 +87,15 @@ export default function Dashboard() {
   const [dataLoading, setDataLoading] = useState(true);
   const websiteViewsRange = useSelector((state: any) => state.ui?.websiteViewsRange || 30);
   const customRange = useSelector((state: any) => state.ui?.customRange || null);
+  const [authStats, setAuthStats] = useState<AuthEventStats>({
+    successToday: 0,
+    successAvg: 0,
+    failuresByReason: [],
+    failuresTopUsers: [],
+    failuresByProvider: [],
+  });
+  const [authRoleFilter, setAuthRoleFilter] = useState<string>('all');
+  const [authStatsLoading, setAuthStatsLoading] = useState(false);
 
   // Load all dashboard data on mount
   useEffect(() => {
@@ -169,6 +180,22 @@ export default function Dashboard() {
     };
     loadData();
   }, [dispatch]);
+
+  // Load auth analytics for failures and sign-ins
+  useEffect(() => {
+    const loadAuthStats = async () => {
+      try {
+        setAuthStatsLoading(true);
+        const stats = await getAuthEventStats(7, authRoleFilter);
+        setAuthStats(stats);
+      } catch (err) {
+        console.error('Failed to load auth stats', err);
+      } finally {
+        setAuthStatsLoading(false);
+      }
+    };
+    loadAuthStats();
+  }, [authRoleFilter]);
 
   // Calculate metrics when data changes
   useEffect(() => {
@@ -375,6 +402,15 @@ export default function Dashboard() {
 
   const budgetStatus = getBudgetStatus(metrics.budgetUtilization);
 
+  const dailyTrendDirection = authStats.successAvg
+    ? authStats.successToday >= authStats.successAvg
+      ? 'up'
+      : 'down'
+    : undefined;
+  const dailyTrendValue = authStats.successAvg
+    ? Math.abs(authStats.successToday - authStats.successAvg)
+    : undefined;
+
   // Team breakdown table columns
   const teamColumns = [
     {
@@ -490,6 +526,46 @@ export default function Dashboard() {
               value={metrics.activeTeams}
               icon={<TeamOutlined />}
               onClick={() => navigate('/admin/teams')}            />
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              title="Daily Sign-ins"
+              loading={authStatsLoading}
+              extra={
+                <Select
+                  size="small"
+                  value={authRoleFilter}
+                  style={{ width: 150 }}
+                  onChange={(v) => setAuthRoleFilter(v)}
+                  options={[
+                    { label: 'All roles', value: 'all' },
+                    { label: 'Admins', value: 'admin' },
+                    { label: 'Owners', value: 'owner' },
+                    { label: 'Coaches', value: 'coach' },
+                    { label: 'Team Managers', value: 'teamManager' },
+                    { label: 'Users', value: 'user' },
+                  ]}
+                />
+              }
+            >
+              <Space orientation="vertical" size={8} style={{ width: '100%' }}>
+                <Space align="baseline" style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <Text type="secondary">Today</Text>
+                  <Title level={3} style={{ margin: 0 }}>{authStats.successToday}</Title>
+                </Space>
+                <Space align="baseline" style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <Text type="secondary">7d avg</Text>
+                  <Space>
+                    <Text strong>{authStats.successAvg}</Text>
+                    {dailyTrendDirection && dailyTrendValue !== undefined && (
+                      <Tag color={dailyTrendDirection === 'up' ? 'green' : 'red'}>
+                        {dailyTrendDirection === 'up' ? '▲' : '▼'} {dailyTrendValue}
+                      </Tag>
+                    )}
+                  </Space>
+                </Space>
+              </Space>
+            </Card>
           </Col>
         </Row>
 

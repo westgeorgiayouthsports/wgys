@@ -22,7 +22,7 @@ if (getApps().length === 0) {
  * Create a Stripe SetupIntent for the authenticated user and return the client secret.
  * Ensures a Stripe Customer exists and is linked to users/{uid}/stripeCustomerId.
  */
-export const createSetupIntent = onCall({ region: 'us-central1', secrets: ['STRIPE_SECRET_KEY'] }, async (request) => {
+export const createSetupIntent = onCall({ region: 'us-central1' }, async (request) => {
     try {
         const uid = request.auth?.uid;
         if (!uid) {
@@ -83,7 +83,7 @@ export const createSetupIntent = onCall({ region: 'us-central1', secrets: ['STRI
  * Return sanitized PaymentMethod display data (brand, last4, exp) for the authenticated user.
  * Verifies the payment method belongs to the user's Stripe Customer.
  */
-export const getPaymentMethodDisplay = onCall({ region: 'us-central1', secrets: ['STRIPE_SECRET_KEY'] }, async (request) => {
+export const getPaymentMethodDisplay = onCall({ region: 'us-central1' }, async (request) => {
     try {
         const uid = request.auth?.uid;
         if (!uid) {

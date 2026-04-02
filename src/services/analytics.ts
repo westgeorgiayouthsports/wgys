@@ -206,6 +206,26 @@ export function sendEvent({ action, params }: GtagEvent) {
   window.gtag('event', action, params);
 }
 
+// Lightweight auth event wrapper so auth flows can track login success/failure
+// without importing GA4 helpers everywhere.
+export async function trackAuthEvent(action: string, params?: Record<string, unknown>) {
+  const measurementId = getEnv('VITE_FIREBASE_MEASUREMENT_ID') as string | undefined;
+  const apiSecret = getEnv('VITE_GA4_API_SECRET') as string | undefined;
+
+  if (window.gtag) {
+    window.gtag('event', action, params);
+  }
+
+  // Fire a Measurement Protocol fallback so events arrive even when gtag is blocked.
+  if (measurementId && apiSecret) {
+    try {
+      await sendMeasurementProtocolEvent(measurementId, apiSecret, action, params || {});
+    } catch (err) {
+      logger.error('[ga][auth] MP send failed', err);
+    }
+  }
+}
+
 declare global {
   interface Window {
     dataLayer?: unknown[];

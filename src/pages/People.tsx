@@ -66,6 +66,8 @@ interface User {
   systemRole: 'user' | 'admin' | 'owner' | 'coach' | 'teamManager';
   createdAt?: string;
   updatedAt?: string;
+  lastLoginAt?: string;
+  lastLoginProvider?: string;
 }
 
 export default function People() {
@@ -173,7 +175,9 @@ export default function People() {
         email: userData.email || 'No email',
         systemRole: userData.role || 'user',
         createdAt: userData.createdAt,
-        updatedAt: userData.updatedAt
+        updatedAt: userData.updatedAt,
+        lastLoginAt: userData.lastLoginAt,
+        lastLoginProvider: userData.lastLoginProvider,
       }));
 
       setUsers(usersList);
@@ -526,6 +530,15 @@ export default function People() {
           {record.source}
         </Tag>
       ),
+    },
+    {
+      title: 'Last Login',
+      key: 'lastLoginAt',
+      render: (record: Person) => {
+        const linkedUser = users.find(u => u.uid === record.userId);
+        const ts = linkedUser?.lastLoginAt;
+        return ts ? dayjs(ts).format('MMM D, YYYY h:mm A') : <Text type="secondary">—</Text>;
+      },
     },
     {
       title: 'System Role',

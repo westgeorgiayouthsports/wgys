@@ -1,7 +1,7 @@
 import React from 'react';
 import { Typography } from 'antd';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface AdminPageHeaderProps {
   title?: React.ReactNode;
@@ -18,7 +18,7 @@ export default function AdminPageHeader({ title, subtitle, actions, nav, classNa
         <div style={{ flex: 1 }}>
           {/* navigation above the title for easier scanning */}
           {nav && <div style={{ marginBottom: 8 }}>{nav}</div>}
-          {title && <Title level={2} style={{ margin: 0 }}>{title}</Title>}
+          {title && <div style={{ margin: 0 }}>{title}</div>}
           {subtitle && <Text type="secondary">{subtitle}</Text>}
         </div>
         <div style={{ marginLeft: 12 }}>

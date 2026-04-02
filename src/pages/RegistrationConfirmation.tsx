@@ -120,7 +120,7 @@ export default function RegistrationConfirmation() {
   return (
     <div className="page-container">
       <div style={{ marginBottom: 16 }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <Button icon={<ArrowLeftOutlined />} onClick={() => { if (fromPath) return navigate(fromPath); navigate(-1); }}>Back</Button>
           <Title level={2} style={{ margin: 0 }}>Registration Confirmation</Title>
         </Space>

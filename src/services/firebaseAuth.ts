@@ -7,6 +7,8 @@ import {
 } from 'firebase/auth';
 import { ref, set, get, push, update as _update } from 'firebase/database';
 import { auth, db } from './firebase';
+import { trackAuthEvent } from './analytics';
+import { logAuthEvent } from './authEvents';
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -57,6 +59,9 @@ export const signInWithEmail = async (email: string, password: string) => {
   try {
     return await signInWithEmailAndPassword(auth, email, password);
   } catch (error: any) {
+    const reason = error?.code || error?.message || 'unknown';
+    trackAuthEvent('login_failure', { method: 'password', reason, email }).catch(() => {});
+    logAuthEvent('login_failure', { email, provider: 'password', reason }).catch(() => {});
     throw new Error(error.message || 'Failed to sign in');
   }
 };
@@ -103,6 +108,9 @@ export const signInWithGoogle = async () => {
 
     return user;
   } catch (error: any) {
+    const reason = error?.code || error?.message || 'unknown';
+    trackAuthEvent('login_failure', { method: 'google', reason, email: error?.email }).catch(() => {});
+    logAuthEvent('login_failure', { email: error?.email, provider: 'google', reason }).catch(() => {});
     throw new Error(error.message || 'Failed to sign in with Google');
   }
 };

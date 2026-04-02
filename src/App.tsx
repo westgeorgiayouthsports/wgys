@@ -9,12 +9,13 @@ import { setUser, setLoading } from './store/slices/authSlice';
 import type { RootState } from './store/store';
 import { darkTheme, lightTheme } from './theme/themeConfig';
 import Router from './Router';
-import { setUserProperties } from './services/analytics';
+import { setUserProperties, trackAuthEvent } from './services/analytics';
 import './App.css';
 import './styles/theme-variables.css';
 import { setTheme } from './store/slices/themeSlice';
 import { setShowMyMenuItems, setDebugLogging } from './store/slices/uiSlice';
 import logger from './utils/logger';
+import { logAuthEvent, updateLastLogin } from './services/authEvents';
 
 export default function App() {
   const [geoAllowed, setGeoAllowed] = useState<boolean | null>(null);
@@ -113,6 +114,13 @@ export default function App() {
             photoURL: firebaseUser.photoURL,
           };
 
+          const providerId = firebaseUser.providerData?.[0]?.providerId || (firebaseUser as any)?.providerId || 'unknown';
+          const lastSignInIso = firebaseUser.metadata?.lastSignInTime
+            ? new Date(firebaseUser.metadata.lastSignInTime).toISOString()
+            : new Date().toISOString();
+          const lastLoginKey = `wgys.lastLoginEvent.${firebaseUser.uid}`;
+          const alreadyLogged = localStorage.getItem(lastLoginKey);
+
           dispatch(
             setUser({
               user: enhancedUser,
@@ -120,6 +128,32 @@ export default function App() {
               createdAt: firebaseUser.metadata.creationTime ? new Date(firebaseUser.metadata.creationTime).getTime() : undefined,
             })
           );
+
+          if (!alreadyLogged || alreadyLogged !== firebaseUser.metadata?.lastSignInTime) {
+            trackAuthEvent('login_success', {
+              method: providerId,
+              role,
+              user_id: firebaseUser.uid,
+              email: firebaseUser.email,
+              last_login_at: lastSignInIso,
+            }).catch(() => {});
+
+            logAuthEvent('login_success', {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              provider: providerId,
+              role,
+              ts: lastSignInIso,
+            }).catch(() => {});
+
+            updateLastLogin(firebaseUser.uid, { provider: providerId, lastLoginAt: lastSignInIso }).catch(() => {});
+
+            try {
+              localStorage.setItem(lastLoginKey, firebaseUser.metadata?.lastSignInTime || lastSignInIso);
+            } catch (e) {
+              logger.error('failed to cache last login marker', e);
+            }
+          }
 
           // Migrate legacy localStorage preferences into RTDB under users/{uid}/preferences
           try {

@@ -12,9 +12,10 @@ if (getApps().length === 0) initializeApp();
  *
  * POST JSON: { userId: string, familyId?: string | null }
  */
-export const adminSetFamily = onRequest({ region: 'us-central1', secrets: ['ADMIN_SECRET'] }, async (req: Request, res: Response) => {
+export const adminSetFamily = onRequest({ region: 'us-central1' }, async (req: Request, res: Response) => {
+
   try {
-    // The ADMIN_SECRET is provided via Functions Secrets (Secret Manager)
+    // ADMIN_SECRET is provided via Functions environment variables
     const secret = process.env.ADMIN_SECRET;
 
     // Allow three ways to present the secret: Authorization: Bearer <secret>,

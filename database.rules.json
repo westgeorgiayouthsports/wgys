@@ -31,6 +31,48 @@
         }
       }
     },
+    "authEvents": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+      ".write": false,
+      ".indexOn": ["ts", "event", "role", "provider"],
+      "$dateKey": {
+        ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+        "$eventId": {
+          ".write": "auth != null && (!data.exists() || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
+          ".validate": "newData.hasChildren(['event','ts'])",
+          "event": {
+            ".validate": "newData.isString() && (newData.val() == 'login_success' || newData.val() == 'login_failure')"
+          },
+          "ts": {
+            ".validate": "newData.isString() && newData.val().length >= 20"
+          },
+          "uid": {
+            ".validate": "newData.val() == null || newData.isString()"
+          },
+          "email": {
+            ".validate": "newData.val() == null || newData.isString()"
+          },
+          "provider": {
+            ".validate": "newData.val() == null || newData.isString()"
+          },
+          "role": {
+            ".validate": "newData.val() == null || newData.isString()"
+          },
+          "reason": {
+            ".validate": "newData.val() == null || newData.isString()"
+          },
+          "ip": {
+            ".validate": "newData.val() == null || newData.isString()"
+          },
+          "userAgent": {
+            ".validate": "newData.val() == null || newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
     "users": {
       ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",
       ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'owner')",

@@ -16,7 +16,7 @@ jest.mock('antd', () => {
   const React = require('react');
   const dayjs = require('dayjs');
   function DatePickerMock(props: any) {
-    const { value, onChange, placeholder, _allowClear, _size, _format, ...rest } = props;
+    const { value, onChange, placeholder, allowClear, size, format, ...rest } = props;
     const display = value && typeof value === 'object' && typeof value.format === 'function'
       ? value.format('YYYY-MM-DD')
       : value ?? '';
@@ -53,6 +53,27 @@ jest.mock('../../services/firebasePrograms', () => ({
     createProgram: jest.fn(async (_programData: any, _createdBy: string) => 'new-program-id'),
     updateProgram: jest.fn(),
     deleteProgram: jest.fn(),
+    bulkUpdatePrograms: jest.fn(),
+  },
+}));
+
+jest.mock('../../services/firebaseSeasons', () => ({
+  seasonsService: {
+    getSeasons: jest.fn(async () => []),
+  },
+}));
+
+jest.mock('../../services/firebaseProgramTemplates', () => ({
+  programTemplatesService: {
+    getTemplates: jest.fn(async () => [
+      {
+        id: 'tpl-1',
+        sportId: 'baseball',
+        programType: 'league',
+        sex: 'any',
+        defaultBaseFee: 25,
+      },
+    ]),
   },
 }));
 
@@ -82,7 +103,8 @@ describe('Programs datepicker persistence', () => {
         ref.current.form.setFieldsValue({
         name: 'Test Program',
         sport: 'baseball',
-        sexRestriction: 'coed',
+        sexRestriction: 'any',
+        templateId: 'tpl-1',
         basePrice: 25.00,
         registrationOpen: dayjs('2025-01-01'),
         registrationClose: dayjs('2025-01-31'),
